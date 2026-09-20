@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { useApp } from '../../context/AppContext';
-import { Card, CardHeader, CardTitle } from '../common/Card';
-import { Button } from '../common/Button';
-import { Input } from '../common/Input';
-import { Modal } from '../common/Modal';
-import { StorageEngine } from '../../services/storageEngine';
+import React, { useState } from "react";
+import { useAuth } from "../../context/AuthContext";
+import { useApp } from "../../context/AppContext";
+import { Card, CardHeader, CardTitle } from "../common/Card";
+import { Button } from "../common/Button";
+import { Input } from "../common/Input";
+import { Modal } from "../common/Modal";
+import { StorageEngine } from "../../services/storageEngine";
+import { isTauriEnvironment } from "../../services/sqliteEngine";
+import { sqliteRepository } from "../../services/sqliteRepository";
 import {
   Settings,
   Save,
@@ -18,8 +20,8 @@ import {
   AlertTriangle,
   ShieldAlert,
   ShieldCheck,
-} from 'lucide-react';
-import { formatDateTime } from '../../lib/utils';
+} from "lucide-react";
+import { formatDateTime } from "../../lib/utils";
 
 export const SettingsView: React.FC = () => {
   const { organization, updateOrganization, role } = useAuth();
@@ -27,14 +29,16 @@ export const SettingsView: React.FC = () => {
 
   const [form, setForm] = useState({
     name: organization.name,
-    phone: organization.phone || '',
-    email: organization.email || '',
-    address: organization.address || '',
-    invoice_prefix: organization.invoice_prefix || 'YE-',
-    currency: organization.currency || 'PKR',
-    currency_symbol: organization.currency_symbol || 'Rs.',
+    phone: organization.phone || "",
+    email: organization.email || "",
+    address: organization.address || "",
+    invoice_prefix: organization.invoice_prefix || "YE-",
+    currency: organization.currency || "PKR",
+    currency_symbol: organization.currency_symbol || "Rs.",
     tax_rate: organization.tax_rate || 0,
-    receipt_footer: organization.receipt_footer || 'Thank you for choosing Yaqoob Enterprises!',
+    receipt_footer:
+      organization.receipt_footer ||
+      "Thank you for choosing Yaqoob Enterprises!",
   });
 
   // Backup restore validation modal state
@@ -51,37 +55,60 @@ export const SettingsView: React.FC = () => {
 
   const [isRestoring, setIsRestoring] = useState(false);
 
-  const isOwner = role === 'OWNER';
+  const isOwner = role === "OWNER";
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isOwner) {
-      showToast('error', 'Access Denied', 'Only OWNER role can modify business configuration');
+      showToast(
+        "error",
+        "Access Denied",
+        "Only OWNER role can modify business configuration",
+      );
       return;
     }
     updateOrganization(form);
-    showToast('success', 'Settings Saved', 'Business profile and receipt formatting updated');
+    showToast(
+      "success",
+      "Settings Saved",
+      "Business profile and receipt formatting updated",
+    );
   };
 
-  const handleExportBackup = () => {
+  const handleExportBackup = async () => {
     if (!isOwner) {
-      showToast('error', 'Access Denied', 'Database export requires OWNER privileges');
+      showToast(
+        "error",
+        "Access Denied",
+        "Database export requires OWNER privileges",
+      );
       return;
     }
-    const backupJson = StorageEngine.exportData();
-    const blob = new Blob([backupJson], { type: 'application/json' });
+    const backupJson =
+      isTauriEnvironment() ?
+        await sqliteRepository.exportDatabaseBackup(organization.id)
+      : StorageEngine.exportData();
+    const blob = new Blob([backupJson], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = `yaqoob_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `yaqoob_backup_${new Date().toISOString().split("T")[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast('success', 'Database Exported', 'Downloaded verified business archive with checksum');
+    showToast(
+      "success",
+      "Database Exported",
+      "Downloaded verified business archive with checksum",
+    );
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isOwner) {
-      showToast('error', 'Access Denied', 'Database restore requires OWNER privileges');
+      showToast(
+        "error",
+        "Access Denied",
+        "Database restore requires OWNER privileges",
+      );
       return;
     }
 
@@ -89,45 +116,77 @@ export const SettingsView: React.FC = () => {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       try {
         const text = ev.target?.result as string;
-        const validation = StorageEngine.validateBackup(text);
+        const validation =
+          isTauriEnvironment() ?
+            sqliteRepository.validateDatabaseBackup(text, organization.id)
+          : StorageEngine.validateBackup(text);
         if (validation.valid && validation.archive) {
           setPendingRestore({
             rawText: text,
             archive: {
               format: validation.archive.format,
-              version: validation.archive.version,
+              version: String(
+                validation.archive.version || validation.archive.schema_version,
+              ),
               exported_at: validation.archive.exported_at,
-              organization_name: validation.archive.organization_name,
-              counts: validation.archive.counts,
+              organization_name:
+                validation.archive.organization_name || organization.name,
+              counts: validation.archive.counts || {},
             },
           });
         } else {
-          showToast('error', 'Invalid Backup File', validation.error || 'Corrupt or unreadable JSON file');
+          showToast(
+            "error",
+            "Invalid Backup File",
+            validation.error || "Corrupt or unreadable JSON file",
+          );
         }
       } catch (err: any) {
-        showToast('error', 'Import Error', err.message);
+        showToast("error", "Import Error", err.message);
       }
     };
     reader.readAsText(file);
     // Reset input value so same file can be chosen again
-    e.target.value = '';
+    e.target.value = "";
   };
 
-  const handleConfirmRestore = () => {
+  const handleConfirmRestore = async () => {
     if (!pendingRestore) return;
     setIsRestoring(true);
 
     try {
-      const success = StorageEngine.importData(pendingRestore.rawText);
-      if (success) {
-        showToast('success', 'Database Restored', 'Verified business archive restored successfully.');
+      if (isTauriEnvironment()) {
+        await sqliteRepository.restoreDatabaseBackup(
+          pendingRestore.rawText,
+          organization.id,
+        );
+        showToast(
+          "success",
+          "Database Restored",
+          "Verified SQLite archive restored transactionally.",
+        );
         setPendingRestore(null);
         refreshData();
       } else {
-        showToast('error', 'Restore Failed', 'Failed to parse and mount backup data.');
+        const success = StorageEngine.importData(pendingRestore.rawText);
+        if (success) {
+          showToast(
+            "success",
+            "Database Restored",
+            "Verified business archive restored successfully.",
+          );
+          setPendingRestore(null);
+          refreshData();
+        } else {
+          showToast(
+            "error",
+            "Restore Failed",
+            "Failed to parse and mount backup data.",
+          );
+        }
       }
     } finally {
       setIsRestoring(false);
@@ -136,12 +195,28 @@ export const SettingsView: React.FC = () => {
 
   const handleResetDemo = () => {
     if (!isOwner) {
-      showToast('error', 'Access Denied', 'Factory reset requires OWNER privileges');
+      showToast(
+        "error",
+        "Access Denied",
+        "Factory reset requires OWNER privileges",
+      );
       return;
     }
-    if (confirm('Reset entire system back to clean default starter inventory, sales, and accounts?')) {
+    if (
+      confirm(
+        "Reset entire system back to clean default starter inventory, sales, and accounts?",
+      )
+    ) {
+      if (isTauriEnvironment()) {
+        showToast(
+          "error",
+          "Unavailable on Desktop",
+          "Use a verified SQLite backup restore instead of deleting the production database.",
+        );
+        return;
+      }
       StorageEngine.resetToDefaults();
-      showToast('info', 'Reset Complete', 'Loaded clean initial demo datasets');
+      showToast("info", "Reset Complete", "Loaded clean initial demo datasets");
       refreshData();
     }
   };
@@ -155,7 +230,8 @@ export const SettingsView: React.FC = () => {
             System Settings & Enterprise Data
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            Configure receipt header, currency symbols, database backups, and cloud synchronization.
+            Configure receipt header, currency symbols, database backups, and
+            cloud synchronization.
           </p>
         </div>
       </div>
@@ -205,19 +281,25 @@ export const SettingsView: React.FC = () => {
                   label="Invoice Prefix"
                   disabled={!isOwner}
                   value={form.invoice_prefix}
-                  onChange={(e) => setForm({ ...form, invoice_prefix: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, invoice_prefix: e.target.value })
+                  }
                 />
                 <Input
                   label="Currency Code"
                   disabled={!isOwner}
                   value={form.currency}
-                  onChange={(e) => setForm({ ...form, currency: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, currency: e.target.value })
+                  }
                 />
                 <Input
                   label="Currency Symbol"
                   disabled={!isOwner}
                   value={form.currency_symbol}
-                  onChange={(e) => setForm({ ...form, currency_symbol: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, currency_symbol: e.target.value })
+                  }
                 />
               </div>
 
@@ -227,14 +309,21 @@ export const SettingsView: React.FC = () => {
                 step="any"
                 disabled={!isOwner}
                 value={form.tax_rate}
-                onChange={(e) => setForm({ ...form, tax_rate: parseFloat(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    tax_rate: parseFloat(e.target.value) || 0,
+                  })
+                }
               />
 
               <Input
                 label="Receipt Thermal Print Footer Note"
                 disabled={!isOwner}
                 value={form.receipt_footer}
-                onChange={(e) => setForm({ ...form, receipt_footer: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, receipt_footer: e.target.value })
+                }
               />
 
               <div className="pt-2 flex justify-end">
@@ -256,8 +345,8 @@ export const SettingsView: React.FC = () => {
               <CardTitle>Cloud Supabase Connection</CardTitle>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Connect a hosted Supabase PostgreSQL backend with Row-Level Security for multi-device
-              synchronization.
+              Connect a hosted Supabase PostgreSQL backend with Row-Level
+              Security for multi-device synchronization.
             </p>
             <Button
               variant="outline"
@@ -276,8 +365,8 @@ export const SettingsView: React.FC = () => {
               <CardTitle>Local Database Backup & Restore</CardTitle>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Export an archive of all tables or safely restore from a verified backup. Restricted to
-              OWNER role.
+              Export an archive of all tables or safely restore from a verified
+              backup. Restricted to OWNER role.
             </p>
 
             {!isOwner && (
@@ -301,9 +390,9 @@ export const SettingsView: React.FC = () => {
 
               <label
                 className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs transition-colors ${
-                  isOwner
-                    ? 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 cursor-pointer'
-                    : 'border-slate-800 bg-slate-900 text-slate-500 cursor-not-allowed'
+                  isOwner ?
+                    "border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 cursor-pointer"
+                  : "border-slate-800 bg-slate-900 text-slate-500 cursor-not-allowed"
                 }`}
               >
                 <Upload className="h-4 w-4 text-teal-400" />
@@ -353,7 +442,9 @@ export const SettingsView: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Archive Version:</span>
-                <span className="font-mono text-cyan-400">{pendingRestore.archive.version}</span>
+                <span className="font-mono text-cyan-400">
+                  {pendingRestore.archive.version}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Exported Timestamp:</span>
@@ -365,7 +456,9 @@ export const SettingsView: React.FC = () => {
 
             {/* Counts Summary */}
             <div className="space-y-1.5">
-              <span className="font-semibold text-slate-300">Archive Collections Summary:</span>
+              <span className="font-semibold text-slate-300">
+                Archive Collections Summary:
+              </span>
               <div className="grid grid-cols-2 gap-2 font-mono text-[11px]">
                 <div className="p-2 rounded bg-slate-950 border border-slate-800 flex justify-between">
                   <span className="text-slate-400">Products:</span>
@@ -412,8 +505,8 @@ export const SettingsView: React.FC = () => {
               <div className="space-y-0.5">
                 <p className="font-bold">Irreversible Action</p>
                 <p className="text-[11px] text-rose-300/80 leading-relaxed">
-                  Restoring will overwrite your current active shop records with the data from this
-                  backup file.
+                  Restoring will overwrite your current active shop records with
+                  the data from this backup file.
                 </p>
               </div>
             </div>
@@ -429,7 +522,11 @@ export const SettingsView: React.FC = () => {
                 className="bg-rose-600 hover:bg-rose-500 text-white"
               >
                 <Check className="h-4 w-4" />
-                <span>{isRestoring ? 'Restoring...' : 'Confirm & Restore Live Database'}</span>
+                <span>
+                  {isRestoring ?
+                    "Restoring..."
+                  : "Confirm & Restore Live Database"}
+                </span>
               </Button>
             </div>
           </div>

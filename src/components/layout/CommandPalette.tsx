@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { useApp, AppView } from '../../context/AppContext';
-import { useAuth } from '../../context/AuthContext';
-import { StorageEngine } from '../../services/storageEngine';
-import { Product, Service, Customer, Sale } from '../../types';
+import React, { useState, useEffect } from "react";
+import { useApp, AppView } from "../../context/AppContext";
+import { useAuth } from "../../context/AuthContext";
+import { salesRepo, inventoryRepo, customerRepo } from "../../services";
+import { Product, Service, Customer, Sale } from "../../types";
 import {
   Search,
   Zap,
@@ -16,13 +16,17 @@ import {
   X,
   FileText,
   ArrowRight,
-} from 'lucide-react';
+} from "lucide-react";
 
 export const CommandPalette: React.FC = () => {
-  const { isCommandPaletteOpen, setIsCommandPaletteOpen, setCurrentView, setActiveReceiptSale } =
-    useApp();
+  const {
+    isCommandPaletteOpen,
+    setIsCommandPaletteOpen,
+    setCurrentView,
+    setActiveReceiptSale,
+  } = useApp();
   const { organization } = useAuth();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
 
   const [products, setProducts] = useState<Product[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -31,11 +35,18 @@ export const CommandPalette: React.FC = () => {
 
   useEffect(() => {
     if (isCommandPaletteOpen) {
-      setProducts(StorageEngine.getProducts(organization.id));
-      setServices(StorageEngine.getServices(organization.id));
-      setCustomers(StorageEngine.getCustomers(organization.id));
-      setSales(StorageEngine.getSales(organization.id).slice(0, 10));
-      setQuery('');
+      Promise.all([
+        inventoryRepo.getProducts(organization.id),
+        inventoryRepo.getServices(organization.id),
+        customerRepo.getCustomers(organization.id),
+        salesRepo.getSales(organization.id),
+      ]).then(([productList, serviceList, customerList, saleList]) => {
+        setProducts(productList);
+        setServices(serviceList);
+        setCustomers(customerList);
+        setSales(saleList.slice(0, 10));
+      });
+      setQuery("");
     }
   }, [isCommandPaletteOpen, organization.id]);
 
@@ -48,41 +59,71 @@ export const CommandPalette: React.FC = () => {
 
   const q = query.trim().toLowerCase();
 
-  const filteredProducts = q
-    ? products.filter(
-        (p) => p.name.toLowerCase().includes(q) || (p.sku && p.sku.toLowerCase().includes(q))
-      ).slice(0, 5)
+  const filteredProducts =
+    q ?
+      products
+        .filter(
+          (p) =>
+            p.name.toLowerCase().includes(q) ||
+            (p.sku && p.sku.toLowerCase().includes(q)),
+        )
+        .slice(0, 5)
     : [];
 
-  const filteredServices = q
-    ? services.filter(
-        (s) => s.name.toLowerCase().includes(q) || (s.sku && s.sku.toLowerCase().includes(q))
-      ).slice(0, 5)
+  const filteredServices =
+    q ?
+      services
+        .filter(
+          (s) =>
+            s.name.toLowerCase().includes(q) ||
+            (s.sku && s.sku.toLowerCase().includes(q)),
+        )
+        .slice(0, 5)
     : [];
 
-  const filteredCustomers = q
-    ? customers.filter(
-        (c) => c.name.toLowerCase().includes(q) || (c.phone && c.phone.includes(q))
-      ).slice(0, 4)
+  const filteredCustomers =
+    q ?
+      customers
+        .filter(
+          (c) =>
+            c.name.toLowerCase().includes(q) ||
+            (c.phone && c.phone.includes(q)),
+        )
+        .slice(0, 4)
     : [];
 
-  const filteredInvoices = q
-    ? sales.filter(
-        (s) =>
-          s.invoice_number.toLowerCase().includes(q) ||
-          (s.customer_name && s.customer_name.toLowerCase().includes(q))
-      ).slice(0, 4)
+  const filteredInvoices =
+    q ?
+      sales
+        .filter(
+          (s) =>
+            s.invoice_number.toLowerCase().includes(q) ||
+            (s.customer_name && s.customer_name.toLowerCase().includes(q)),
+        )
+        .slice(0, 4)
     : [];
 
   const quickPages = [
-    { label: 'Quick Sale Terminal', view: 'pos' as AppView, icon: Zap },
-    { label: 'Executive Dashboard', view: 'dashboard' as AppView, icon: LayoutDashboard },
-    { label: 'Products & Inventory', view: 'inventory' as AppView, icon: Boxes },
-    { label: 'Sales History', view: 'sales' as AppView, icon: History },
-    { label: 'Expense Ledger', view: 'expenses' as AppView, icon: ReceiptText },
-    { label: 'Accounts & Cash Drawer', view: 'accounts' as AppView, icon: Landmark },
-    { label: 'Customer Directory', view: 'customers' as AppView, icon: Users },
-    { label: 'System Settings', view: 'settings' as AppView, icon: Settings },
+    { label: "Quick Sale Terminal", view: "pos" as AppView, icon: Zap },
+    {
+      label: "Executive Dashboard",
+      view: "dashboard" as AppView,
+      icon: LayoutDashboard,
+    },
+    {
+      label: "Products & Inventory",
+      view: "inventory" as AppView,
+      icon: Boxes,
+    },
+    { label: "Sales History", view: "sales" as AppView, icon: History },
+    { label: "Expense Ledger", view: "expenses" as AppView, icon: ReceiptText },
+    {
+      label: "Accounts & Cash Drawer",
+      view: "accounts" as AppView,
+      icon: Landmark,
+    },
+    { label: "Customer Directory", view: "customers" as AppView, icon: Users },
+    { label: "System Settings", view: "settings" as AppView, icon: Settings },
   ];
 
   return (
@@ -147,13 +188,17 @@ export const CommandPalette: React.FC = () => {
                   {filteredProducts.map((p) => (
                     <div
                       key={p.id}
-                      onClick={() => navigateTo('inventory')}
+                      onClick={() => navigateTo("inventory")}
                       className="flex items-center justify-between px-3 py-2 rounded-lg text-xs hover:bg-slate-800/70 cursor-pointer transition-colors"
                     >
                       <div className="flex items-center gap-2">
                         <Boxes className="h-3.5 w-3.5 text-indigo-400" />
-                        <span className="text-slate-200 font-medium">{p.name}</span>
-                        <span className="text-[10px] font-mono text-slate-400">{p.sku}</span>
+                        <span className="text-slate-200 font-medium">
+                          {p.name}
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-400">
+                          {p.sku}
+                        </span>
                       </div>
                       <span className="font-mono font-medium text-indigo-300">
                         {organization.currency_symbol} {p.selling_price}
@@ -171,12 +216,14 @@ export const CommandPalette: React.FC = () => {
                   {filteredServices.map((s) => (
                     <div
                       key={s.id}
-                      onClick={() => navigateTo('pos')}
+                      onClick={() => navigateTo("pos")}
                       className="flex items-center justify-between px-3 py-2 rounded-lg text-xs hover:bg-slate-800 cursor-pointer"
                     >
                       <div className="flex items-center gap-2">
                         <Zap className="h-3.5 w-3.5 text-emerald-400" />
-                        <span className="text-slate-200 font-medium">{s.name}</span>
+                        <span className="text-slate-200 font-medium">
+                          {s.name}
+                        </span>
                       </div>
                       <span className="font-mono text-emerald-300">
                         {organization.currency_symbol} {s.selling_price}
@@ -194,14 +241,18 @@ export const CommandPalette: React.FC = () => {
                   {filteredCustomers.map((c) => (
                     <div
                       key={c.id}
-                      onClick={() => navigateTo('customers')}
+                      onClick={() => navigateTo("customers")}
                       className="flex items-center justify-between px-3 py-2 rounded-lg text-xs hover:bg-slate-800 cursor-pointer"
                     >
                       <div className="flex items-center gap-2">
                         <Users className="h-3.5 w-3.5 text-purple-400" />
-                        <span className="text-slate-200 font-medium">{c.name}</span>
+                        <span className="text-slate-200 font-medium">
+                          {c.name}
+                        </span>
                         {c.phone && (
-                          <span className="text-[11px] text-slate-400 font-mono">{c.phone}</span>
+                          <span className="text-[11px] text-slate-400 font-mono">
+                            {c.phone}
+                          </span>
                         )}
                       </div>
                       <ArrowRight className="h-3.5 w-3.5 text-slate-500" />
@@ -229,7 +280,9 @@ export const CommandPalette: React.FC = () => {
                         <span className="font-mono font-semibold text-slate-200">
                           #{inv.invoice_number}
                         </span>
-                        <span className="text-slate-400">{inv.customer_name}</span>
+                        <span className="text-slate-400">
+                          {inv.customer_name}
+                        </span>
                       </div>
                       <span className="font-mono font-medium text-emerald-300">
                         {organization.currency_symbol} {inv.grand_total}

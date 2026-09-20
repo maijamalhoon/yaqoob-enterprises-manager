@@ -8,6 +8,8 @@ import {
   IAuditRepository,
 } from './contracts';
 import { StorageEngine } from './storageEngine';
+import { isTauriEnvironment } from './sqliteEngine';
+import { sqliteRepository } from './sqliteRepository';
 import {
   Sale,
   Product,
@@ -22,17 +24,27 @@ import {
   StockMovement,
   Category,
   SplitPayment,
+  UserProfile,
 } from '../types';
+
+const desktopRepository = isTauriEnvironment() ? sqliteRepository : null;
+
+export async function getProfiles(organizationId: string): Promise<UserProfile[]> {
+  if (desktopRepository) return desktopRepository.getProfiles(organizationId);
+  return StorageEngine.getProfiles(organizationId);
+}
 
 export class SalesRepository implements ISalesRepository {
   async getSales(
     organizationId: string,
     options?: { startDate?: string; endDate?: string; customerId?: string; status?: string }
   ): Promise<Sale[]> {
+    if (desktopRepository) return desktopRepository.getSales(organizationId, options);
     return StorageEngine.getSales(organizationId, options);
   }
 
   async getSaleById(organizationId: string, saleId: string): Promise<Sale | null> {
+    if (desktopRepository) return desktopRepository.getSaleById(organizationId, saleId);
     return StorageEngine.getSaleById(organizationId, saleId);
   }
 
@@ -62,6 +74,7 @@ export class SalesRepository implements ISalesRepository {
       notes?: string;
     }
   ): Promise<Sale> {
+    if (desktopRepository) return desktopRepository.createSale(organizationId, payload);
     return StorageEngine.createSaleTransaction(organizationId, payload);
   }
 
@@ -72,16 +85,19 @@ export class SalesRepository implements ISalesRepository {
     cashierName: string,
     reason: string
   ): Promise<Sale> {
+    if (desktopRepository) return desktopRepository.voidSale(organizationId, saleId, cashierId, cashierName, reason);
     return StorageEngine.voidSaleTransaction(organizationId, saleId, cashierId, cashierName, reason);
   }
 }
 
 export class InventoryRepository implements IInventoryRepository {
   async getProducts(organizationId: string): Promise<Product[]> {
+    if (desktopRepository) return desktopRepository.getProducts(organizationId);
     return StorageEngine.getProducts(organizationId);
   }
 
   async getProductById(organizationId: string, productId: string): Promise<Product | null> {
+    if (desktopRepository) return desktopRepository.getProductById(organizationId, productId);
     return StorageEngine.getProductById(organizationId, productId);
   }
 
@@ -89,6 +105,7 @@ export class InventoryRepository implements IInventoryRepository {
     organizationId: string,
     product: Partial<Product> & { name: string; unit: string; selling_price: number }
   ): Promise<Product> {
+    if (desktopRepository) return desktopRepository.saveProduct(organizationId, product);
     const fullProduct: Product = {
       id: product.id || `prod-${Date.now()}`,
       organization_id: organizationId,
@@ -114,10 +131,12 @@ export class InventoryRepository implements IInventoryRepository {
   }
 
   async deleteProduct(organizationId: string, productId: string): Promise<boolean> {
+    if (desktopRepository) return desktopRepository.deleteProduct(organizationId, productId);
     return StorageEngine.deleteProduct(organizationId, productId);
   }
 
   async getServices(organizationId: string): Promise<Service[]> {
+    if (desktopRepository) return desktopRepository.getServices(organizationId);
     return StorageEngine.getServices(organizationId);
   }
 
@@ -125,6 +144,7 @@ export class InventoryRepository implements IInventoryRepository {
     organizationId: string,
     service: Partial<Service> & { name: string; selling_price: number }
   ): Promise<Service> {
+    if (desktopRepository) return desktopRepository.saveService(organizationId, service);
     const fullService: Service = {
       id: service.id || `srv-${Date.now()}`,
       organization_id: organizationId,
@@ -143,6 +163,7 @@ export class InventoryRepository implements IInventoryRepository {
   }
 
   async deleteService(organizationId: string, serviceId: string): Promise<boolean> {
+    if (desktopRepository) return desktopRepository.deleteService(organizationId, serviceId);
     return StorageEngine.deleteService(organizationId, serviceId);
   }
 
@@ -150,6 +171,7 @@ export class InventoryRepository implements IInventoryRepository {
     organizationId: string,
     movement: Omit<StockMovement, 'id' | 'created_at'>
   ): Promise<StockMovement> {
+    if (desktopRepository) return desktopRepository.recordStockMovement(organizationId, movement);
     const fullMovement: StockMovement = {
       ...movement,
       id: `mov-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -159,10 +181,12 @@ export class InventoryRepository implements IInventoryRepository {
   }
 
   async getStockMovements(organizationId: string, productId?: string): Promise<StockMovement[]> {
+    if (desktopRepository) return desktopRepository.getStockMovements(organizationId, productId);
     return StorageEngine.getStockMovements(organizationId, productId);
   }
 
   async getCategories(organizationId: string): Promise<Category[]> {
+    if (desktopRepository) return desktopRepository.getCategories(organizationId);
     return StorageEngine.getCategories(organizationId);
   }
 
@@ -170,6 +194,7 @@ export class InventoryRepository implements IInventoryRepository {
     organizationId: string,
     category: Partial<Category> & { name: string; type: 'PRODUCT' | 'SERVICE' | 'BOTH' }
   ): Promise<Category> {
+    if (desktopRepository) return desktopRepository.saveCategory(organizationId, category);
     const fullCategory: Category = {
       id: category.id || `cat-${Date.now()}`,
       organization_id: organizationId,
@@ -187,6 +212,7 @@ export class ExpenseRepository implements IExpenseRepository {
     organizationId: string,
     options?: { startDate?: string; endDate?: string; categoryId?: string }
   ): Promise<Expense[]> {
+    if (desktopRepository) return desktopRepository.getExpenses(organizationId, options);
     return StorageEngine.getExpenses(organizationId, options);
   }
 
@@ -203,6 +229,7 @@ export class ExpenseRepository implements IExpenseRepository {
       entered_by: string;
     }
   ): Promise<Expense> {
+    if (desktopRepository) return desktopRepository.createExpense(organizationId, payload);
     const categories = StorageEngine.getExpenseCategories(organizationId);
     const cat = categories.find((c) => c.id === payload.category_id);
     const accounts = StorageEngine.getAccounts(organizationId);
@@ -228,10 +255,12 @@ export class ExpenseRepository implements IExpenseRepository {
   }
 
   async voidExpense(organizationId: string, expenseId: string, userId: string, userName: string): Promise<Expense> {
+    if (desktopRepository) return desktopRepository.voidExpense(organizationId, expenseId, userId, userName);
     return StorageEngine.voidExpense(organizationId, expenseId, userId, userName);
   }
 
   async getCategories(organizationId: string): Promise<ExpenseCategory[]> {
+    if (desktopRepository) return desktopRepository.getExpenseCategories(organizationId);
     return StorageEngine.getExpenseCategories(organizationId);
   }
 
@@ -239,6 +268,7 @@ export class ExpenseRepository implements IExpenseRepository {
     organizationId: string,
     category: Partial<ExpenseCategory> & { name: string }
   ): Promise<ExpenseCategory> {
+    if (desktopRepository) return desktopRepository.saveExpenseCategory(organizationId, category);
     const fullCat: ExpenseCategory = {
       id: category.id || `expcat-${Date.now()}`,
       organization_id: organizationId,
@@ -253,10 +283,12 @@ export class ExpenseRepository implements IExpenseRepository {
 
 export class CustomerRepository implements ICustomerRepository {
   async getCustomers(organizationId: string, query?: string): Promise<Customer[]> {
+    if (desktopRepository) return desktopRepository.getCustomers(organizationId, query);
     return StorageEngine.getCustomers(organizationId, query);
   }
 
   async getCustomerById(organizationId: string, id: string): Promise<Customer | null> {
+    if (desktopRepository) return desktopRepository.getCustomerById(organizationId, id);
     return StorageEngine.getCustomerById(organizationId, id);
   }
 
@@ -264,6 +296,7 @@ export class CustomerRepository implements ICustomerRepository {
     organizationId: string,
     customer: Partial<Customer> & { name: string }
   ): Promise<Customer> {
+    if (desktopRepository) return desktopRepository.saveCustomer(organizationId, customer);
     const fullCustomer: Customer = {
       id: customer.id || `cust-${Date.now()}`,
       organization_id: organizationId,
@@ -283,10 +316,12 @@ export class CustomerRepository implements ICustomerRepository {
 
 export class AccountRepository implements IAccountRepository {
   async getAccounts(organizationId: string): Promise<PaymentAccount[]> {
+    if (desktopRepository) return desktopRepository.getAccounts(organizationId);
     return StorageEngine.getAccounts(organizationId);
   }
 
   async getAccountById(organizationId: string, id: string): Promise<PaymentAccount | null> {
+    if (desktopRepository) return desktopRepository.getAccountById(organizationId, id);
     return StorageEngine.getAccountById(organizationId, id);
   }
 
@@ -294,6 +329,7 @@ export class AccountRepository implements IAccountRepository {
     organizationId: string,
     account: Partial<PaymentAccount> & { name: string; type: PaymentAccount['type'] }
   ): Promise<PaymentAccount> {
+    if (desktopRepository) return desktopRepository.saveAccount(organizationId, account);
     const fullAccount: PaymentAccount = {
       id: account.id || `acc-${Date.now()}`,
       organization_id: organizationId,
@@ -320,6 +356,7 @@ export class AccountRepository implements IAccountRepository {
       created_by: string;
     }
   ): Promise<AccountTransfer> {
+    if (desktopRepository) return desktopRepository.transferFunds(organizationId, payload);
     const accounts = StorageEngine.getAccounts(organizationId);
     const fromAcc = accounts.find((a) => a.id === payload.from_account_id);
     const toAcc = accounts.find((a) => a.id === payload.to_account_id);
@@ -341,16 +378,19 @@ export class AccountRepository implements IAccountRepository {
   }
 
   async getTransactions(organizationId: string, accountId?: string) {
+    if (desktopRepository) return desktopRepository.getTransactions(organizationId, accountId);
     return StorageEngine.getTransactions(organizationId, accountId);
   }
 }
 
 export class ClosingRepository implements IClosingRepository {
   async getClosings(organizationId: string): Promise<DailyClosing[]> {
+    if (desktopRepository) return desktopRepository.getClosings(organizationId);
     return StorageEngine.getDailyClosings(organizationId);
   }
 
   async getDailyClosingSummary(organizationId: string, date: string) {
+    if (desktopRepository) return desktopRepository.getDailyClosingSummary(organizationId, date);
     return StorageEngine.getDailyClosingSummary(organizationId, date);
   }
 
@@ -363,16 +403,19 @@ export class ClosingRepository implements IClosingRepository {
       closed_by: string;
     }
   ): Promise<DailyClosing> {
+    if (desktopRepository) return desktopRepository.recordDailyClosing(organizationId, payload);
     return StorageEngine.recordDailyClosing(organizationId, payload);
   }
 }
 
 export class AuditRepository implements IAuditRepository {
   async getLogs(organizationId: string, limit = 100): Promise<AuditLog[]> {
+    if (desktopRepository) return desktopRepository.getLogs(organizationId, limit);
     return StorageEngine.getAuditLogs(organizationId, limit);
   }
 
   async log(organizationId: string, log: Omit<AuditLog, 'id' | 'created_at'>): Promise<AuditLog> {
+    if (desktopRepository) return desktopRepository.log(organizationId, log);
     const fullLog: AuditLog = {
       ...log,
       id: `log-${Date.now()}-${Math.floor(Math.random() * 1000)}`,

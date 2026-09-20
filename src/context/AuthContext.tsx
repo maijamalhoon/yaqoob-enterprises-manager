@@ -1,14 +1,17 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Organization, UserProfile, UserRole } from '../types';
-import { DEFAULT_ORGANIZATION } from '../lib/mockData';
-import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
-import { StorageEngine } from '../services/storageEngine';
-import type { User } from '@supabase/supabase-js';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { Organization, UserProfile } from "../types";
+import { DEFAULT_ORGANIZATION } from "../lib/mockData";
+import { getSupabaseClient, isSupabaseConfigured } from "../lib/supabase";
+import { StorageEngine } from "../services/storageEngine";
+import { isTauriEnvironment } from "../services/sqliteEngine";
+import { sqliteRepository } from "../services/sqliteRepository";
+import { setSecurityPrincipal } from "../lib/security";
+import type { User } from "@supabase/supabase-js";
 
 interface AuthContextType {
   user: UserProfile | null;
   organization: Organization;
-  role: UserRole;
+  role: UserProfile["role"] | null;
   isSupabaseReady: boolean;
   isLoading: boolean;
   onboardingCompleted: boolean;
@@ -17,11 +20,10 @@ interface AuthContextType {
     email: string,
     pass: string,
     fullName: string,
-    orgName: string
+    orgName: string,
   ) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   updateOrganization: (org: Partial<Organization>) => void;
-  switchRole: (role: UserRole) => void;
   completeOnboarding: (orgData: Partial<Organization>) => void;
   error: string | null;
   clearError: () => void;
@@ -29,78 +31,74 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function isUserRole(role: unknown): role is UserRole {
-  return role === 'OWNER' || role === 'MANAGER' || role === 'CASHIER';
+function isUserRole(role: unknown): role is UserProfile["role"] {
+  return role === "OWNER" || role === "MANAGER" || role === "CASHIER";
 }
 
-function fallbackProfileFromUser(user: User, organizationId: string): UserProfile {
+function fallbackProfileFromUser(
+  user: User,
+  organizationId: string,
+): UserProfile {
   return {
     id: user.id,
-    email: user.email || 'user@yaqoob.com',
-    full_name: user.email?.split('@')[0] || 'Staff Member',
-    role: 'CASHIER',
+    email: user.email || "user@yaqoob.com",
+    full_name: user.email?.split("@")[0] || "Staff Member",
+    role: "CASHIER",
     organization_id: organizationId,
     is_active: true,
     created_at: user.created_at,
   };
 }
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [organization, setOrganization] = useState<Organization>(() => {
+    if (isTauriEnvironment()) return DEFAULT_ORGANIZATION;
     const org = StorageEngine.getOrganization(DEFAULT_ORGANIZATION.id);
     return org || DEFAULT_ORGANIZATION;
   });
 
-  const [user, setUser] = useState<UserProfile | null>(() => {
-    const profiles = StorageEngine.getProfiles(DEFAULT_ORGANIZATION.id);
-    if (profiles.length > 0) return profiles[0];
-    return {
-      id: 'usr-owner-1',
-      email: 'yaqoobenterprisesofficial@gmail.com',
-      full_name: 'Muhammad Yaqoob',
-      role: 'OWNER',
-      organization_id: DEFAULT_ORGANIZATION.id,
-      is_active: true,
-      created_at: new Date().toISOString(),
-    };
-  });
-
-  const [role, setRole] = useState<UserRole>('OWNER');
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [role, setRole] = useState<UserProfile["role"] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('yaqoob_onboarding_done') === 'true';
-    }
-    return true;
-  });
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean>(
+    () => {
+      if (typeof window !== "undefined") {
+        return localStorage.getItem("yaqoob_onboarding_done") === "true";
+      }
+      return true;
+    },
+  );
 
   const isSupabaseReady = isSupabaseConfigured();
 
   const loadCloudProfile = async (authUser: User): Promise<UserProfile> => {
     const supabase = getSupabaseClient();
     if (!supabase) {
-      return fallbackProfileFromUser(authUser, organization.id);
+      throw new Error("Cloud authentication is unavailable");
     }
 
     const { data, error: profileError } = await supabase
-      .from('profiles')
-      .select('id,email,full_name,role,organization_id,is_active,created_at')
-      .eq('id', authUser.id)
+      .from("profiles")
+      .select("id,email,full_name,role,organization_id,is_active,created_at")
+      .eq("id", authUser.id)
       .single();
 
     if (profileError || !data) {
-      console.warn('Supabase profile lookup error:', profileError);
-      return fallbackProfileFromUser(authUser, organization.id);
+      throw new Error(
+        profileError?.message || "Authenticated profile was not found",
+      );
     }
 
     return {
       id: data.id,
-      email: data.email || authUser.email || 'user@yaqoob.com',
-      full_name: data.full_name || 'Staff Member',
-      role: isUserRole(data.role) ? data.role : 'CASHIER',
+      email: data.email || authUser.email || "user@yaqoob.com",
+      full_name: data.full_name || "Staff Member",
+      role: isUserRole(data.role) ? data.role : "CASHIER",
       organization_id: data.organization_id || organization.id,
-      is_active: data.is_active !== false,
+      is_active: data.is_active === true,
       created_at: data.created_at || authUser.created_at,
     };
   };
@@ -108,39 +106,85 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     async function initAuth() {
       setIsLoading(true);
-      const supabase = getSupabaseClient();
-      if (supabase && isSupabaseReady) {
-        try {
-          const {
-            data: { session },
-          } = await supabase.auth.getSession();
+      try {
+        const supabase = getSupabaseClient();
+        if (supabase && isSupabaseReady) {
+          try {
+            const {
+              data: { session },
+            } = await supabase.auth.getSession();
 
-          if (session?.user) {
-            const profile = await loadCloudProfile(session.user);
-            setUser(profile);
-            setRole(profile.role);
+            if (session?.user) {
+              const profile = await loadCloudProfile(session.user);
+              if (!profile.is_active)
+                throw new Error("This account is inactive");
+              setUser(profile);
+              setRole(profile.role);
+              setSecurityPrincipal(profile);
+            }
+          } catch (err: any) {
+            console.warn("Supabase auth session lookup error:", err);
+            await supabase.auth.signOut();
+            setUser(null);
+            setRole(null);
+            setSecurityPrincipal(null);
+            setError(err?.message || "Authentication failed");
           }
-        } catch (err: any) {
-          console.warn('Supabase auth session lookup error:', err);
+        } else {
+          if (isTauriEnvironment())
+            await sqliteRepository.migrateLegacyLocalStorage();
+          const sessionId =
+            typeof window !== "undefined" ?
+              sessionStorage.getItem("yaqoob_auth_session")
+            : null;
+          const localProfile =
+            isTauriEnvironment() ?
+              sessionId ? await sqliteRepository.getSessionProfile(sessionId)
+              : null
+            : StorageEngine.getSessionProfile();
+          if (localProfile) {
+            if (isTauriEnvironment()) {
+              const localOrganization = await sqliteRepository.getOrganization(
+                localProfile.organization_id,
+              );
+              if (!localOrganization)
+                throw new Error("Authenticated organization was not found");
+              setOrganization(localOrganization);
+            }
+            setUser(localProfile);
+            setRole(localProfile.role);
+            setSecurityPrincipal(localProfile);
+          }
         }
+      } catch (err: any) {
+        setUser(null);
+        setRole(null);
+        setSecurityPrincipal(null);
+        setError(err?.message || "Authentication initialization failed");
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     }
 
     initAuth();
   }, [isSupabaseReady, organization.id]);
 
-  const signIn = async (email: string, pass: string): Promise<{ error?: string }> => {
+  const signIn = async (
+    email: string,
+    pass: string,
+  ): Promise<{ error?: string }> => {
     setError(null);
     setIsLoading(true);
     const supabase = getSupabaseClient();
 
     if (supabase && isSupabaseReady) {
       try {
-        const { data, error: sbError } = await supabase.auth.signInWithPassword({
-          email,
-          password: pass,
-        });
+        const { data, error: sbError } = await supabase.auth.signInWithPassword(
+          {
+            email,
+            password: pass,
+          },
+        );
         if (sbError) {
           setIsLoading(false);
           setError(sbError.message);
@@ -150,26 +194,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const profile = await loadCloudProfile(data.user);
           setUser(profile);
           setRole(profile.role);
+          setSecurityPrincipal(profile);
         }
       } catch (err: any) {
         setIsLoading(false);
-        setError(err.message || 'Authentication failed');
+        setError(err.message || "Authentication failed");
         return { error: err.message };
       }
     } else {
-      // Local workspace session
-      const mockUser: UserProfile = {
-        id: `usr-${Date.now()}`,
-        email,
-        full_name: email.split('@')[0] || 'Muhammad Yaqoob',
-        role: 'OWNER',
-        organization_id: organization.id,
-        is_active: true,
-        created_at: new Date().toISOString(),
-      };
-      StorageEngine.saveProfile(mockUser);
-      setUser(mockUser);
-      setRole('OWNER');
+      const profile =
+        isTauriEnvironment() ?
+          await sqliteRepository.findLocalProfileByEmail(email)
+        : StorageEngine.findLocalProfileByEmail(email);
+      if (!profile || !profile.is_active || !profile.password_hash) {
+        const message =
+          "Invalid local credentials or no trusted local account exists";
+        setIsLoading(false);
+        setError(message);
+        return { error: message };
+      }
+      if (!(await StorageEngine.verifyPassword(pass, profile.password_hash))) {
+        const message = "Invalid local credentials";
+        setIsLoading(false);
+        setError(message);
+        return { error: message };
+      }
+      StorageEngine.saveSession(profile.id);
+      if (isTauriEnvironment())
+        sessionStorage.setItem("yaqoob_auth_session", profile.id);
+      setUser(profile);
+      setRole(profile.role);
+      setSecurityPrincipal(profile);
     }
 
     setIsLoading(false);
@@ -180,7 +235,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     email: string,
     pass: string,
     fullName: string,
-    orgName: string
+    orgName: string,
   ): Promise<{ error?: string }> => {
     setError(null);
     setIsLoading(true);
@@ -210,31 +265,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (err: any) {
         setIsLoading(false);
-        setError(err.message || 'Registration failed');
+        setError(err.message || "Registration failed");
         return { error: err.message };
       }
     } else {
       const newOrg: Organization = {
         ...DEFAULT_ORGANIZATION,
-        id: `org-${Date.now()}`,
+        id: crypto.randomUUID(),
         name: orgName,
         owner_name: fullName,
       };
-      StorageEngine.updateOrganization(newOrg);
-      setOrganization(newOrg);
-
       const profile: UserProfile = {
-        id: `usr-${Date.now()}`,
+        id: crypto.randomUUID(),
         email,
         full_name: fullName,
-        role: 'OWNER',
+        role: "OWNER",
         organization_id: newOrg.id,
         is_active: true,
+        password_hash: await StorageEngine.hashPassword(pass),
         created_at: new Date().toISOString(),
       };
-      StorageEngine.saveProfile(profile);
+      if (isTauriEnvironment())
+        await sqliteRepository.createLocalOwnerAccount(newOrg, profile);
+      else StorageEngine.createLocalOwnerAccount(newOrg, profile);
+      setOrganization(newOrg);
       setUser(profile);
-      setRole('OWNER');
+      setRole("OWNER");
+      StorageEngine.saveSession(profile.id);
+      if (isTauriEnvironment())
+        sessionStorage.setItem("yaqoob_auth_session", profile.id);
+      setSecurityPrincipal(profile);
     }
 
     setIsLoading(false);
@@ -246,7 +306,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (supabase && isSupabaseReady) {
       await supabase.auth.signOut();
     }
+    StorageEngine.clearSession();
+    if (isTauriEnvironment() && typeof window !== "undefined")
+      sessionStorage.removeItem("yaqoob_auth_session");
     setUser(null);
+    setRole(null);
+    setSecurityPrincipal(null);
   };
 
   const updateOrganization = (orgData: Partial<Organization>) => {
@@ -255,15 +320,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...orgData,
       updated_at: new Date().toISOString(),
     };
-    StorageEngine.updateOrganization(updated);
+    if (isTauriEnvironment()) void sqliteRepository.updateOrganization(updated);
+    else StorageEngine.updateOrganization(updated);
     setOrganization(updated);
-  };
-
-  const switchRole = (newRole: UserRole) => {
-    setRole(newRole);
-    if (user) {
-      setUser({ ...user, role: newRole });
-    }
   };
 
   const completeOnboarding = (orgData: Partial<Organization>) => {
@@ -274,8 +333,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
     updateOrganization(updated);
     setOnboardingCompleted(true);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('yaqoob_onboarding_done', 'true');
+    if (typeof window !== "undefined") {
+      localStorage.setItem("yaqoob_onboarding_done", "true");
     }
   };
 
@@ -292,7 +351,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signUp,
         signOut,
         updateOrganization,
-        switchRole,
         completeOnboarding,
         error,
         clearError: () => setError(null),
@@ -306,7 +364,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

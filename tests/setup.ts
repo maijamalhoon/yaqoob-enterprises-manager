@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom';
 import { beforeEach, vi } from 'vitest';
+import { setSecurityPrincipal } from '../src/lib/security';
 
 // In-memory mock localStorage if jsdom doesn't fully retain or needs isolation
 class LocalStorageMock {
@@ -52,4 +53,13 @@ beforeEach(() => {
   if (typeof window !== 'undefined' && window.localStorage) {
     window.localStorage.clear();
   }
+  setSecurityPrincipal({
+    id: 'test-owner',
+    email: 'test-owner@example.com',
+    full_name: 'Test Owner',
+    role: 'OWNER',
+    organization_id: 'org-yaqoob-001',
+    is_active: true,
+    created_at: new Date().toISOString(),
+  });
 });

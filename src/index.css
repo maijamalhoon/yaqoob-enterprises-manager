@@ -2,18 +2,23 @@
 
 @layer base {
   * {
-    border-color: rgba(51, 65, 85, 0.45);
+    border-color: #d9e2ec;
   }
 
   body {
-    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    color-scheme: dark;
-    background-color: #090a0f;
+    font-family: "Aptos Display", "Aptos", "Segoe UI", sans-serif;
+    color-scheme: light;
+    background-color: #f5f7fa;
+    color: #102a43;
   }
 
   .font-mono {
-    font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-    font-feature-settings: 'tnum' on, 'zero' on;
+    font-family:
+      "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo,
+      Monaco, Consolas, monospace;
+    font-feature-settings:
+      "tnum" on,
+      "zero" on;
   }
 
   /* Refined tabular numerals for financials */
@@ -29,16 +34,71 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.5);
+  background: #eef2f6;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(71, 85, 105, 0.5);
+  background: #bcccdc;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.8);
+  background: #829ab1;
+}
+
+/* The existing screens share these utility tokens. Keep the product light and
+   consistent while individual views migrate away from the original dark palette. */
+[class~="bg-slate-950"],
+[class~="bg-slate-950/95"],
+[class~="bg-slate-950/80"],
+[class~="bg-slate-950/70"] {
+  background-color: #f5f7fa !important;
+}
+[class~="bg-slate-900"],
+[class~="bg-slate-900/90"],
+[class~="bg-slate-900/80"],
+[class~="bg-slate-900/70"],
+[class~="bg-slate-900/60"] {
+  background-color: #ffffff !important;
+}
+[class~="bg-slate-800"],
+[class~="bg-slate-800/90"] {
+  background-color: #eef2f6 !important;
+}
+[class~="text-slate-100"],
+[class~="text-slate-200"] {
+  color: #102a43 !important;
+}
+[class~="text-slate-300"] {
+  color: #243b53 !important;
+}
+[class~="text-slate-400"],
+[class~="text-slate-500"] {
+  color: #627d98 !important;
+}
+[class~="text-slate-600"] {
+  color: #486581 !important;
+}
+[class~="border-slate-800"],
+[class~="border-slate-800/80"],
+[class~="border-slate-800/60"] {
+  border-color: #d9e2ec !important;
+}
+[class~="border-slate-700"],
+[class~="border-slate-700/60"] {
+  border-color: #bcccdc !important;
+}
+[class~="bg-indigo-600"] {
+  background-color: #0f766e !important;
+}
+[class~="text-indigo-400"],
+[class~="text-indigo-300"],
+[class~="text-cyan-400"] {
+  color: #0f766e !important;
+}
+[class~="bg-indigo-950/70"],
+[class~="bg-indigo-950/20"] {
+  background-color: #e6fffa !important;
 }
 
 /* Print CSS for standard thermal (80mm) and A4 receipts */
@@ -61,4 +121,3 @@
     size: auto;
   }
 }
-

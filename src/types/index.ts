@@ -28,6 +28,7 @@ export interface UserProfile {
   role: UserRole;
   organization_id: string;
   is_active: boolean;
+  password_hash?: string;
   last_login?: string;
   created_at: string;
 }

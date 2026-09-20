@@ -109,7 +109,7 @@ describe('End-to-End Real-World Shop Verification (Sections 11 to 18)', () => {
       // Grand Total = Rs. 620
       // Payment: Split Rs. 300 Cash + Rs. 320 JazzCash
       const sale = StorageEngine.createSaleTransaction(orgId, {
-        customer_id: 'cust-1',
+        customer_id: 'cust-tariq',
         customer_name: 'Advocate Tariq',
         customer_phone: '0300-9876543',
         cashier_id: 'usr-cashier-1',

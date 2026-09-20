@@ -28,8 +28,10 @@ import {
 } from '../lib/mockData';
 import { roundMoney, calculateWeightedAverageCost } from '../lib/utils';
 import { syncEngine } from './syncEngine';
+import { requireOrganization, requirePermission } from '../lib/security';
 
 const STORAGE_PREFIX = 'yaqoob_ent_';
+const SESSION_KEY = 'yaqoob_auth_session';
 
 interface StorageSchema {
   organizations: Organization[];
@@ -165,6 +167,54 @@ export class StorageEngine {
     saveStorage(data);
   }
 
+  static async hashPassword(password: string): Promise<string> {
+    const bytes = new TextEncoder().encode(password);
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest))
+      .map((byte) => byte.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  static async verifyPassword(password: string, expectedHash: string): Promise<boolean> {
+    return (await this.hashPassword(password)) === expectedHash;
+  }
+
+  static saveSession(profileId: string): void {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(SESSION_KEY, profileId);
+    }
+  }
+
+  static clearSession(): void {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem(SESSION_KEY);
+    }
+  }
+
+  static getSessionProfile(): UserProfile | null {
+    if (typeof window === 'undefined') return null;
+    const profileId = sessionStorage.getItem(SESSION_KEY);
+    if (!profileId) return null;
+    const profile = this.getDB().profiles.find((candidate) => candidate.id === profileId);
+    return profile?.is_active ? profile : null;
+  }
+
+  static findLocalProfileByEmail(email: string): UserProfile | null {
+    return this.getDB().profiles.find(
+      (profile) => profile.email.toLowerCase() === email.trim().toLowerCase()
+    ) || null;
+  }
+
+  static createLocalOwnerAccount(org: Organization, profile: UserProfile): void {
+    const db = this.getDB();
+    if (db.profiles.some((candidate) => candidate.email.toLowerCase() === profile.email.toLowerCase())) {
+      throw new Error('A local account with this email already exists');
+    }
+    db.organizations.push(org);
+    db.profiles.push(profile);
+    this.setDB(db);
+  }
+
   // --- ORGANIZATIONS & PROFILES ---
   static getOrganization(orgId: string): Organization | null {
     const db = this.getDB();
@@ -172,6 +222,7 @@ export class StorageEngine {
   }
 
   static updateOrganization(org: Organization): Organization {
+    requirePermission(org.id, 'MANAGE_BUSINESS_CONFIG');
     const db = this.getDB();
     const idx = db.organizations.findIndex((o) => o.id === org.id);
     if (idx >= 0) {
@@ -184,13 +235,23 @@ export class StorageEngine {
   }
 
   static getProfiles(orgId: string): UserProfile[] {
+    requirePermission(orgId, 'MANAGE_STAFF');
     const db = this.getDB();
     return db.profiles.filter((p) => p.organization_id === orgId);
   }
 
   static saveProfile(profile: UserProfile): UserProfile {
+    const principal = requirePermission(profile.organization_id, 'MANAGE_STAFF');
     const db = this.getDB();
-    const idx = db.profiles.findIndex((p) => p.id === profile.id);
+    const idx = db.profiles.findIndex(
+      (p) => p.organization_id === profile.organization_id && p.id === profile.id
+    );
+    if (idx >= 0 && db.profiles[idx].role !== profile.role && principal.id !== db.profiles[idx].id) {
+      throw new Error('Only the owner may change another member role');
+    }
+    if (idx >= 0 && principal.id === db.profiles[idx].id && db.profiles[idx].role !== profile.role) {
+      throw new Error('Users cannot change their own role');
+    }
     if (idx >= 0) {
       db.profiles[idx] = profile;
     } else {
@@ -206,8 +267,11 @@ export class StorageEngine {
   }
 
   static saveCategory(category: Category): Category {
+    requirePermission(category.organization_id, 'MANAGE_INVENTORY');
     const db = this.getDB();
-    const idx = db.categories.findIndex((c) => c.id === category.id);
+    const idx = db.categories.findIndex(
+      (c) => c.organization_id === category.organization_id && c.id === category.id
+    );
     if (idx >= 0) {
       db.categories[idx] = category;
     } else {
@@ -227,8 +291,11 @@ export class StorageEngine {
   }
 
   static saveProduct(product: Product): Product {
+    requirePermission(product.organization_id, 'MANAGE_INVENTORY');
     const db = this.getDB();
-    const idx = db.products.findIndex((p) => p.id === product.id);
+    const idx = db.products.findIndex(
+      (p) => p.organization_id === product.organization_id && p.id === product.id
+    );
     if (idx >= 0) {
       db.products[idx] = { ...product, updated_at: new Date().toISOString() };
     } else {
@@ -240,6 +307,7 @@ export class StorageEngine {
   }
 
   static deleteProduct(orgId: string, id: string): boolean {
+    requirePermission(orgId, 'MANAGE_INVENTORY');
     const db = this.getDB();
     const idx = db.products.findIndex((p) => p.organization_id === orgId && p.id === id);
     if (idx >= 0) {
@@ -261,8 +329,11 @@ export class StorageEngine {
   }
 
   static saveService(service: Service): Service {
+    requirePermission(service.organization_id, 'MANAGE_INVENTORY');
     const db = this.getDB();
-    const idx = db.services.findIndex((s) => s.id === service.id);
+    const idx = db.services.findIndex(
+      (s) => s.organization_id === service.organization_id && s.id === service.id
+    );
     if (idx >= 0) {
       db.services[idx] = { ...service, updated_at: new Date().toISOString() };
     } else {
@@ -274,6 +345,7 @@ export class StorageEngine {
   }
 
   static deleteService(orgId: string, id: string): boolean {
+    requirePermission(orgId, 'MANAGE_INVENTORY');
     const db = this.getDB();
     const idx = db.services.findIndex((s) => s.organization_id === orgId && s.id === id);
     if (idx >= 0) {
@@ -287,11 +359,22 @@ export class StorageEngine {
 
   // --- STOCK MOVEMENTS ---
   static recordStockMovement(movement: StockMovement): StockMovement {
+    const principal = requirePermission(movement.organization_id, 'MANAGE_INVENTORY');
+    if (!Number.isFinite(movement.quantity) || movement.quantity === 0) {
+      throw new Error('Stock movement quantity must be a non-zero finite number');
+    }
+    if (!Number.isFinite(movement.unit_cost) || movement.unit_cost < 0) {
+      throw new Error('Stock movement cost is invalid');
+    }
+    movement.created_by = principal.fullName;
     const db = this.getDB();
     db.stock_movements.unshift(movement);
 
     // Apply change to product current stock and recalculate value
-    const product = db.products.find((p) => p.id === movement.product_id);
+    const product = db.products.find(
+      (p) => p.organization_id === movement.organization_id && p.id === movement.product_id
+    );
+    if (!product) throw new Error('Stock movement product does not belong to this organization');
     if (product) {
       if (movement.movement_type === 'PURCHASE') {
         // Recalculate Weighted Average Cost
@@ -342,8 +425,11 @@ export class StorageEngine {
   }
 
   static saveCustomer(customer: Customer): Customer {
+    requireOrganization(customer.organization_id);
     const db = this.getDB();
-    const idx = db.customers.findIndex((c) => c.id === customer.id);
+    const idx = db.customers.findIndex(
+      (c) => c.organization_id === customer.organization_id && c.id === customer.id
+    );
     if (idx >= 0) {
       db.customers[idx] = customer;
     } else {
@@ -364,8 +450,11 @@ export class StorageEngine {
   }
 
   static saveAccount(account: PaymentAccount): PaymentAccount {
+    requirePermission(account.organization_id, 'MANAGE_BUSINESS_CONFIG');
     const db = this.getDB();
-    const idx = db.accounts.findIndex((a) => a.id === account.id);
+    const idx = db.accounts.findIndex(
+      (a) => a.organization_id === account.organization_id && a.id === account.id
+    );
     if (idx >= 0) {
       db.accounts[idx] = account;
     } else {
@@ -377,12 +466,26 @@ export class StorageEngine {
   }
 
   static transferFunds(transfer: AccountTransfer): AccountTransfer {
+    const principal = requirePermission(transfer.organization_id, 'ACCOUNT_TRANSFER');
+    if (!Number.isFinite(transfer.amount) || transfer.amount <= 0) {
+      throw new Error('Transfer amount must be greater than zero');
+    }
+    if (transfer.from_account_id === transfer.to_account_id) {
+      throw new Error('Source and destination accounts must be different');
+    }
     const db = this.getDB();
-    const fromAcc = db.accounts.find((a) => a.id === transfer.from_account_id);
-    const toAcc = db.accounts.find((a) => a.id === transfer.to_account_id);
+    const fromAcc = db.accounts.find(
+      (a) => a.organization_id === transfer.organization_id && a.id === transfer.from_account_id
+    );
+    const toAcc = db.accounts.find(
+      (a) => a.organization_id === transfer.organization_id && a.id === transfer.to_account_id
+    );
 
     if (!fromAcc || !toAcc) {
       throw new Error('Invalid from/to account for fund transfer');
+    }
+    if (fromAcc.current_balance < transfer.amount) {
+      throw new Error('Insufficient funds for transfer');
     }
 
     fromAcc.current_balance = roundMoney(fromAcc.current_balance - transfer.amount);
@@ -425,8 +528,8 @@ export class StorageEngine {
     db.audit_logs.unshift({
       id: `log-${Date.now()}`,
       organization_id: transfer.organization_id,
-      user_id: transfer.created_by,
-      user_name: transfer.created_by,
+      user_id: principal.id,
+      user_name: principal.fullName,
       action: 'ACCOUNT_TRANSFER',
       entity: 'PAYMENT_ACCOUNT',
       entity_id: transfer.id,
@@ -482,8 +585,18 @@ export class StorageEngine {
   }
 
   static recordExpense(expense: Expense): Expense {
+    const principal = requirePermission(expense.organization_id, 'RECORD_EXPENSES');
+    if (!Number.isFinite(expense.amount) || expense.amount <= 0) {
+      throw new Error('Expense amount must be greater than zero');
+    }
     const db = this.getDB();
-    const account = db.accounts.find((a) => a.id === expense.account_id);
+    const account = db.accounts.find(
+      (a) => a.organization_id === expense.organization_id && a.id === expense.account_id
+    );
+    const category = db.expense_categories.find(
+      (candidate) => candidate.organization_id === expense.organization_id && candidate.id === expense.category_id
+    );
+    if (!account || !category) throw new Error('Expense references an invalid organization record');
     if (account) {
       account.current_balance = roundMoney(account.current_balance - expense.amount);
 
@@ -510,8 +623,8 @@ export class StorageEngine {
     db.audit_logs.unshift({
       id: `log-exp-${Date.now()}`,
       organization_id: expense.organization_id,
-      user_id: expense.entered_by,
-      user_name: expense.entered_by,
+      user_id: principal.id,
+      user_name: principal.fullName,
       action: 'EXPENSE_RECORDED',
       entity: 'EXPENSE',
       entity_id: expense.id,
@@ -525,6 +638,7 @@ export class StorageEngine {
   }
 
   static voidExpense(orgId: string, expenseId: string, userId: string, userName: string): Expense {
+    const principal = requirePermission(orgId, 'VOID_EXPENSE');
     const db = this.getDB();
     const expense = db.expenses.find((e) => e.organization_id === orgId && e.id === expenseId);
     if (!expense) throw new Error('Expense not found');
@@ -533,7 +647,9 @@ export class StorageEngine {
     expense.status = 'VOIDED';
 
     // Reverse account balance
-    const account = db.accounts.find((a) => a.id === expense.account_id);
+    const account = db.accounts.find(
+      (a) => a.organization_id === orgId && a.id === expense.account_id
+    );
     if (account) {
       account.current_balance = roundMoney(account.current_balance + expense.amount);
       db.transactions.unshift({
@@ -555,8 +671,8 @@ export class StorageEngine {
     db.audit_logs.unshift({
       id: `log-void-exp-${Date.now()}`,
       organization_id: orgId,
-      user_id: userId,
-      user_name: userName,
+      user_id: principal.id,
+      user_name: principal.fullName,
       action: 'EXPENSE_VOIDED',
       entity: 'EXPENSE',
       entity_id: expense.id,
@@ -596,11 +712,43 @@ export class StorageEngine {
       notes?: string;
     }
   ): Sale {
+    const principal = requirePermission(orgId, 'FAST_POS_CHECKOUT');
+    if (!Array.isArray(payload.items) || payload.items.length === 0) {
+      throw new Error('A sale must contain at least one item');
+    }
+    for (const item of payload.items) {
+      if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
+        throw new Error('Sale quantity must be greater than zero');
+      }
+      if (!Number.isFinite(item.unit_price) || item.unit_price < 0) {
+        throw new Error('Sale price is invalid');
+      }
+      const itemSubtotal = roundMoney(item.quantity * item.unit_price);
+      const itemDiscount = roundMoney(item.discount || 0);
+      if (!Number.isFinite(itemDiscount) || itemDiscount < 0 || itemDiscount > itemSubtotal) {
+        throw new Error('Sale item discount is invalid');
+      }
+    }
+    if (!Number.isFinite(payload.discount) || payload.discount < 0) {
+      throw new Error('Sale discount is invalid');
+    }
+    if (!Number.isFinite(payload.tax_amount) || payload.tax_amount < 0) {
+      throw new Error('Sale tax is invalid');
+    }
+    if (!Number.isFinite(payload.amount_paid) || payload.amount_paid < 0) {
+      throw new Error('Payment amount is invalid');
+    }
     const db = this.getDB();
-    const org = db.organizations.find((o) => o.id === orgId) || DEFAULT_ORGANIZATION;
+    const org = db.organizations.find((o) => o.id === orgId);
+    if (!org) throw new Error('Organization not found');
 
-    const invoiceNumber = `${org.invoice_prefix || 'YE-'}${org.next_invoice_number || 1001}`;
-    org.next_invoice_number = (org.next_invoice_number || 1001) + 1;
+    let nextInvoiceNumber = org.next_invoice_number || 1001;
+    let invoiceNumber = `${org.invoice_prefix || 'YE-'}${nextInvoiceNumber}`;
+    while (db.sales.some((sale) => sale.organization_id === orgId && sale.invoice_number === invoiceNumber)) {
+      nextInvoiceNumber += 1;
+      invoiceNumber = `${org.invoice_prefix || 'YE-'}${nextInvoiceNumber}`;
+    }
+    org.next_invoice_number = nextInvoiceNumber + 1;
 
     const saleId = `sale-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const nowIso = new Date().toISOString();
@@ -621,7 +769,8 @@ export class StorageEngine {
       let unitCost = 0;
 
       if (item.type === 'PRODUCT') {
-        const product = db.products.find((p) => p.id === item.item_id);
+        const product = db.products.find((p) => p.organization_id === orgId && p.id === item.item_id);
+        if (!product) throw new Error('Sale product does not belong to this organization');
         if (product) {
           unitCost = product.average_cost;
           if (product.track_stock) {
@@ -642,19 +791,22 @@ export class StorageEngine {
               reference_id: saleId,
               reference_type: 'SALE',
               notes: `Sold on invoice #${invoiceNumber}`,
-              created_by: payload.cashier_name,
+              created_by: principal.fullName,
               created_at: nowIso,
             });
           }
         }
       } else if (item.type === 'SERVICE') {
-        const service = db.services.find((s) => s.id === item.item_id);
+        const service = db.services.find((s) => s.organization_id === orgId && s.id === item.item_id);
+        if (!service) throw new Error('Sale service does not belong to this organization');
         if (service) {
           // Check recipes / components consumed
           let serviceRecipeCost = 0;
           if (service.components && service.components.length > 0) {
             for (const comp of service.components) {
-              const consumedProduct = db.products.find((p) => p.id === comp.product_id);
+              const consumedProduct = db.products.find(
+                (p) => p.organization_id === orgId && p.id === comp.product_id
+              );
               if (consumedProduct) {
                 const totalConsumedQty = roundMoney(comp.quantity_consumed * item.quantity);
                 if (consumedProduct.track_stock) {
@@ -678,7 +830,7 @@ export class StorageEngine {
                     reference_id: saleId,
                     reference_type: 'SERVICE_CONSUMPTION',
                     notes: `Consumed for ${item.name} on #${invoiceNumber}`,
-                    created_by: payload.cashier_name,
+                    created_by: principal.fullName,
                     created_at: nowIso,
                   });
                 }
@@ -720,6 +872,18 @@ export class StorageEngine {
     const grandTotal = roundMoney(
       Math.max(0, subtotal - totalDiscount + (payload.tax_amount || 0))
     );
+    if (payload.discount > subtotal || totalDiscount > subtotal) {
+      throw new Error('Sale discount exceeds subtotal');
+    }
+    if (payload.split_payments?.length) {
+      const splitTotal = roundMoney(payload.split_payments.reduce((sum, split) => sum + split.amount, 0));
+      if (payload.split_payments.some((split) => !Number.isFinite(split.amount) || split.amount <= 0)) {
+        throw new Error('Split payments must contain positive amounts');
+      }
+      if (splitTotal !== roundMoney(Math.min(payload.amount_paid, grandTotal))) {
+        throw new Error('Split payments do not match the received sale payment');
+      }
+    }
     const grossProfit = roundMoney(grandTotal - (payload.tax_amount || 0) - totalCogs);
     const changeDue = roundMoney(Math.max(0, payload.amount_paid - grandTotal));
 
@@ -727,7 +891,10 @@ export class StorageEngine {
     if (payload.split_payments && payload.split_payments.length > 0) {
       for (const split of payload.split_payments) {
         if (split.amount > 0) {
-          const acc = db.accounts.find((a) => a.id === split.account_id);
+          const acc = db.accounts.find(
+            (a) => a.organization_id === orgId && a.id === split.account_id
+          );
+          if (!acc) throw new Error('Split payment account does not belong to this organization');
           if (acc) {
             acc.current_balance = roundMoney(acc.current_balance + split.amount);
             db.transactions.unshift({
@@ -750,9 +917,11 @@ export class StorageEngine {
     } else {
       // Default to primary cash account or selected account
       const primaryAcc =
-        db.accounts.find((a) => a.name.toLowerCase().includes(payload.payment_method.toLowerCase())) ||
-        db.accounts.find((a) => a.type === 'CASH') ||
-        db.accounts[0];
+        db.accounts.find(
+          (a) => a.organization_id === orgId && a.name.toLowerCase().includes(payload.payment_method.toLowerCase())
+        ) ||
+        db.accounts.find((a) => a.organization_id === orgId && a.type === 'CASH') ||
+        db.accounts.find((a) => a.organization_id === orgId);
 
       if (primaryAcc) {
         const netReceived = roundMoney(payload.amount_paid - changeDue);
@@ -776,7 +945,10 @@ export class StorageEngine {
 
     // 3. Customer update if customer selected
     if (payload.customer_id) {
-      const customer = db.customers.find((c) => c.id === payload.customer_id);
+      const customer = db.customers.find(
+        (c) => c.organization_id === orgId && c.id === payload.customer_id
+      );
+      if (!customer) throw new Error('Sale customer does not belong to this organization');
       if (customer) {
         customer.total_purchases = roundMoney(customer.total_purchases + grandTotal);
         customer.last_purchase_date = nowIso;
@@ -796,8 +968,8 @@ export class StorageEngine {
       customer_id: payload.customer_id,
       customer_name: payload.customer_name || 'Walk-in Customer',
       customer_phone: payload.customer_phone,
-      cashier_id: payload.cashier_id,
-      cashier_name: payload.cashier_name,
+      cashier_id: principal.id,
+      cashier_name: principal.fullName,
       items: saleItems,
       subtotal,
       discount: totalDiscount,
@@ -820,8 +992,8 @@ export class StorageEngine {
     db.audit_logs.unshift({
       id: `log-sale-${Date.now()}`,
       organization_id: orgId,
-      user_id: payload.cashier_id,
-      user_name: payload.cashier_name,
+      user_id: principal.id,
+      user_name: principal.fullName,
       action: 'SALE_CREATED',
       entity: 'SALE',
       entity_id: saleId,
@@ -842,6 +1014,7 @@ export class StorageEngine {
     cashierName: string,
     reason: string
   ): Sale {
+    const principal = requirePermission(orgId, 'VOID_SALE');
     const db = this.getDB();
     const sale = db.sales.find((s) => s.organization_id === orgId && s.id === saleId);
     if (!sale) throw new Error('Sale not found');
@@ -849,13 +1022,15 @@ export class StorageEngine {
 
     sale.status = 'VOIDED';
     sale.void_reason = reason;
-    sale.voided_by = cashierName;
+    sale.voided_by = principal.fullName;
     sale.voided_at = new Date().toISOString();
 
     // 1. Revert product stocks and recipe consumptions
     for (const item of sale.items) {
       if (item.item_type === 'PRODUCT') {
-        const product = db.products.find((p) => p.id === item.item_id);
+        const product = db.products.find(
+          (p) => p.organization_id === orgId && p.id === item.item_id
+        );
         if (product && product.track_stock) {
           product.current_stock = roundMoney(product.current_stock + item.quantity);
           product.stock_value = roundMoney(product.current_stock * product.average_cost);
@@ -872,15 +1047,19 @@ export class StorageEngine {
             reference_id: sale.id,
             reference_type: 'SALE_VOID',
             notes: `Stock restocked from voided invoice #${sale.invoice_number} (${reason})`,
-            created_by: cashierName,
+            created_by: principal.fullName,
             created_at: new Date().toISOString(),
           });
         }
       } else if (item.item_type === 'SERVICE') {
-        const service = db.services.find((s) => s.id === item.item_id);
+        const service = db.services.find(
+          (s) => s.organization_id === orgId && s.id === item.item_id
+        );
         if (service && service.components && service.components.length > 0) {
           for (const comp of service.components) {
-            const consumedProduct = db.products.find((p) => p.id === comp.product_id);
+            const consumedProduct = db.products.find(
+              (p) => p.organization_id === orgId && p.id === comp.product_id
+            );
             if (consumedProduct && consumedProduct.track_stock) {
               const totalConsumedQty = roundMoney(comp.quantity_consumed * item.quantity);
               consumedProduct.current_stock = roundMoney(consumedProduct.current_stock + totalConsumedQty);
@@ -898,7 +1077,7 @@ export class StorageEngine {
                 reference_id: sale.id,
                 reference_type: 'SALE_VOID',
                 notes: `Material restocked from voided service on #${sale.invoice_number} (${reason})`,
-                created_by: cashierName,
+                created_by: principal.fullName,
                 created_at: new Date().toISOString(),
               });
             }
@@ -910,7 +1089,9 @@ export class StorageEngine {
     // 2. Revert account balances
     if (sale.split_payments && sale.split_payments.length > 0) {
       for (const split of sale.split_payments) {
-        const acc = db.accounts.find((a) => a.id === split.account_id);
+        const acc = db.accounts.find(
+          (a) => a.organization_id === orgId && a.id === split.account_id
+        );
         if (acc) {
           acc.current_balance = roundMoney(acc.current_balance - split.amount);
           db.transactions.unshift({
@@ -931,8 +1112,10 @@ export class StorageEngine {
       }
     } else {
       const primaryAcc =
-        db.accounts.find((a) => a.name.toLowerCase().includes(sale.payment_method.toLowerCase())) ||
-        db.accounts[0];
+        db.accounts.find(
+          (a) => a.organization_id === orgId && a.name.toLowerCase().includes(sale.payment_method.toLowerCase())
+        ) ||
+        db.accounts.find((a) => a.organization_id === orgId);
       if (primaryAcc) {
         const refundAmt = roundMoney(sale.amount_paid - sale.change_due);
         primaryAcc.current_balance = roundMoney(primaryAcc.current_balance - refundAmt);
@@ -955,7 +1138,9 @@ export class StorageEngine {
 
     // 3. Customer total purchase reduction
     if (sale.customer_id) {
-      const customer = db.customers.find((c) => c.id === sale.customer_id);
+      const customer = db.customers.find(
+        (c) => c.organization_id === orgId && c.id === sale.customer_id
+      );
       if (customer) {
         customer.total_purchases = roundMoney(
           Math.max(0, customer.total_purchases - sale.grand_total)
@@ -967,8 +1152,8 @@ export class StorageEngine {
     db.audit_logs.unshift({
       id: `log-void-${Date.now()}`,
       organization_id: orgId,
-      user_id: cashierId,
-      user_name: cashierName,
+      user_id: principal.id,
+      user_name: principal.fullName,
       action: 'SALE_VOIDED',
       entity: 'SALE',
       entity_id: sale.id,
@@ -1089,6 +1274,14 @@ export class StorageEngine {
       closed_by: string;
     }
   ): DailyClosing {
+    const principal = requirePermission(orgId, 'SUBMIT_DAILY_CLOSING');
+    if (!Number.isFinite(payload.actual_cash) || payload.actual_cash < 0) {
+      throw new Error('Actual cash must be a non-negative finite number');
+    }
+    const existingClosing = this.getDB().daily_closings.find(
+      (closing) => closing.organization_id === orgId && closing.closing_date === payload.closing_date
+    );
+    if (existingClosing) throw new Error('Daily closing already exists for this date');
     const summary = this.getDailyClosingSummary(orgId, payload.closing_date);
     const difference = roundMoney(payload.actual_cash - summary.expectedCash);
 
@@ -1105,7 +1298,7 @@ export class StorageEngine {
       actual_cash: payload.actual_cash,
       difference,
       notes: payload.notes,
-      closed_by: payload.closed_by,
+      closed_by: principal.id,
       closed_at: new Date().toISOString(),
     };
 
@@ -1186,13 +1379,14 @@ export class StorageEngine {
       const parsed = JSON.parse(jsonString);
       // Support both wrapped archive and raw schema
       if (parsed && parsed.format === 'YAQOOB_ENTERPRISES_BACKUP_V1' && parsed.data) {
-        if (!Array.isArray(parsed.data.products) || !Array.isArray(parsed.data.sales)) {
-          return { valid: false, error: 'Backup archive is missing core inventory or sales collections' };
-        }
+        const validationError = this.validateBackupData(parsed.data, parsed.organization_id);
+        if (validationError) return { valid: false, error: validationError };
         return { valid: true, archive: parsed };
       } else if (parsed && Array.isArray(parsed.products) && Array.isArray(parsed.sales)) {
         // Raw schema legacy backup
         const org = parsed.organizations?.[0] || DEFAULT_ORGANIZATION;
+        const validationError = this.validateBackupData(parsed, org.id);
+        if (validationError) return { valid: false, error: validationError };
         return {
           valid: true,
           archive: {
@@ -1219,8 +1413,48 @@ export class StorageEngine {
     }
   }
 
+  private static validateBackupData(data: any, archiveOrganizationId?: string): string | null {
+    const collections = [
+      'organizations', 'profiles', 'categories', 'products', 'services', 'customers',
+      'accounts', 'transfers', 'transactions', 'sales', 'expenses', 'expense_categories',
+      'daily_closings', 'audit_logs', 'stock_movements',
+    ];
+    if (!collections.every((collection) => Array.isArray(data?.[collection]))) {
+      return 'Backup is missing one or more required collections';
+    }
+    if (data.organizations.length !== 1) return 'Backup must contain exactly one organization';
+    const organizationId = data.organizations[0]?.id;
+    if (!organizationId || (archiveOrganizationId && archiveOrganizationId !== organizationId)) {
+      return 'Backup organization identity is invalid';
+    }
+    const allRecords = collections.slice(1).flatMap((collection) => data[collection]);
+    if (allRecords.some((record: any) => record.organization_id && record.organization_id !== organizationId)) {
+      return 'Backup contains cross-organization records';
+    }
+    const ids = new Set<string>();
+    for (const record of allRecords) {
+      if (!record.id || ids.has(`${record.organization_id || organizationId}:${record.id}`)) {
+        return 'Backup contains missing or duplicate record IDs';
+      }
+      ids.add(`${record.organization_id || organizationId}:${record.id}`);
+      for (const key of ['amount', 'current_balance', 'grand_total', 'actual_cash', 'quantity']) {
+        if (key in record && (!Number.isFinite(record[key]) || record[key] < 0)) {
+          return `Backup contains invalid numeric value: ${key}`;
+        }
+      }
+    }
+    const accountIds = new Set(data.accounts.map((account: PaymentAccount) => account.id));
+    if (data.expenses.some((expense: Expense) => !accountIds.has(expense.account_id))) {
+      return 'Backup contains an expense with an invalid account reference';
+    }
+    return null;
+  }
+
   static importData(archiveOrJson: string | Record<string, any>): boolean {
     try {
+      const currentOrganization = this.getDB().organizations[0];
+      if (!currentOrganization) throw new Error('Current organization not found');
+      requirePermission(currentOrganization.id, 'RESTORE_DATABASE');
       let dataToRestore: StorageSchema;
       if (typeof archiveOrJson === 'string') {
         const validation = this.validateBackup(archiveOrJson);
@@ -1232,6 +1466,9 @@ export class StorageEngine {
         dataToRestore = archiveOrJson as StorageSchema;
       }
 
+      const validationError = this.validateBackupData(dataToRestore, currentOrganization.id);
+      if (validationError) throw new Error(validationError);
+
       this.setDB(dataToRestore);
 
       // Audit log restore
@@ -1239,8 +1476,8 @@ export class StorageEngine {
       this.logAction({
         id: `log-restore-${Date.now()}`,
         organization_id: org.id,
-        user_id: 'usr-admin',
-        user_name: 'Administrator',
+        user_id: requirePermission(currentOrganization.id, 'RESTORE_DATABASE').id,
+        user_name: requirePermission(currentOrganization.id, 'RESTORE_DATABASE').fullName,
         action: 'BACKUP_RESTORED',
         entity: 'DATABASE',
         details: 'Business database restored successfully from verified archive',

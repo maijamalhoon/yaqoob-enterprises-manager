@@ -25,6 +25,7 @@ export function isTauriEnvironment(): boolean {
 class InMemorySqliteDatabase implements SqlDatabase {
   private storageKey = 'yaqoob_sqlite_tables_v1';
   private tables: Record<string, any[]> = {};
+  private transactionSnapshot: Record<string, any[]> | null = null;
 
   constructor() {
     this.load();
@@ -53,6 +54,22 @@ class InMemorySqliteDatabase implements SqlDatabase {
 
   async execute(query: string, bindValues: unknown[] = []): Promise<{ rowsAffected: number; lastInsertId: number }> {
     const q = query.trim().toUpperCase();
+
+    if (q.startsWith('BEGIN')) {
+      this.transactionSnapshot = JSON.parse(JSON.stringify(this.tables));
+      return { rowsAffected: 0, lastInsertId: 0 };
+    }
+    if (q.startsWith('COMMIT')) {
+      this.transactionSnapshot = null;
+      this.persist();
+      return { rowsAffected: 0, lastInsertId: 0 };
+    }
+    if (q.startsWith('ROLLBACK')) {
+      if (this.transactionSnapshot) this.tables = this.transactionSnapshot;
+      this.transactionSnapshot = null;
+      this.persist();
+      return { rowsAffected: 0, lastInsertId: 0 };
+    }
 
     // Table creation
     if (q.startsWith('CREATE TABLE')) {
@@ -180,15 +197,14 @@ class InMemorySqliteDatabase implements SqlDatabase {
       filtered = filtered.filter((r) => r.status === 'pending');
     }
 
-    // Parameterized conditions (exact field matching)
+    // Parameterized equality conditions in query order.
     if (bindValues.length > 0) {
-      if (/WHERE\s+record_id\s*=\s*\?/i.test(query)) {
-        filtered = filtered.filter((r) => r.record_id === bindValues[0]);
-      } else if (/\bid\s*=\s*\?/i.test(query)) {
-        filtered = filtered.filter((r) => r.id === bindValues[0]);
-      } else if (/organization_id\s*=\s*\?/i.test(query)) {
-        filtered = filtered.filter((r) => r.organization_id === bindValues[0]);
-      }
+      const conditions = [...query.matchAll(/\b(record_id|organization_id|id|table_name|status)\s*=\s*\?/gi)];
+      conditions.forEach((condition, index) => {
+        const field = condition[1].toLowerCase();
+        const value = bindValues[index];
+        filtered = filtered.filter((row) => row[field] === value);
+      });
     }
 
     // Sort if ORDER BY created_at DESC
@@ -215,10 +231,11 @@ export async function getSqliteDatabase(): Promise<SqlDatabase> {
       const DatabaseModule = await import('@tauri-apps/plugin-sql');
       const tauriDb = await DatabaseModule.default.load('sqlite:yaqoob_manager.db');
       dbInstance = tauriDb;
+      await dbInstance.execute('PRAGMA foreign_keys = ON;');
       await runSqliteMigrations(dbInstance);
       return dbInstance;
     } catch (err) {
-      console.warn('Tauri SQL plugin load failed, falling back to local DB:', err);
+      throw new Error(`Tauri SQLite database could not be opened: ${String(err)}`);
     }
   }
 
@@ -592,10 +609,95 @@ export async function runSqliteMigrations(db: SqlDatabase): Promise<void> {
       );
     `);
 
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS sync_cursors (
+        table_name TEXT PRIMARY KEY,
+        cursor TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+
+    await db.execute(`
+      CREATE UNIQUE INDEX IF NOT EXISTS ux_daily_closings_org_date
+      ON daily_closings(organization_id, closing_date);
+    `);
+
+    await db.execute(`
+      CREATE UNIQUE INDEX IF NOT EXISTS ux_sales_org_invoice
+      ON sales(organization_id, invoice_number);
+    `);
+
     // Record migration 1
     await db.execute(
       `INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?);`,
       [1, 'initial_schema_v1', new Date().toISOString()]
+    );
+  }
+
+  if (!appliedSet.has(2)) {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS sync_cursors (
+        table_name TEXT PRIMARY KEY,
+        cursor TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+    await db.execute(`
+      CREATE UNIQUE INDEX IF NOT EXISTS ux_daily_closings_org_date
+      ON daily_closings(organization_id, closing_date);
+    `);
+    await db.execute(`
+      CREATE UNIQUE INDEX IF NOT EXISTS ux_sales_org_invoice
+      ON sales(organization_id, invoice_number);
+    `);
+    await db.execute(
+      `INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?);`,
+      [2, 'integrity_indexes_and_sync_cursors', new Date().toISOString()]
+    );
+  }
+
+  if (!appliedSet.has(3)) {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS organization_members (
+        id TEXT PRIMARY KEY,
+        organization_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        role TEXT NOT NULL CHECK (role IN ('OWNER', 'MANAGER', 'CASHIER')),
+        is_active INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE (organization_id, user_id),
+        FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE
+      );
+    `);
+    await db.execute(`CREATE INDEX IF NOT EXISTS idx_members_org_user ON organization_members(organization_id, user_id);`);
+    await db.execute(`CREATE INDEX IF NOT EXISTS idx_sales_org_created ON sales(organization_id, created_at);`);
+    await db.execute(`CREATE INDEX IF NOT EXISTS idx_expenses_org_date ON expenses(organization_id, date);`);
+    await db.execute(`CREATE INDEX IF NOT EXISTS idx_movements_org_product ON stock_movements(organization_id, product_id);`);
+    await db.execute(
+      `INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?);`,
+      [3, 'organization_members_and_business_indexes', new Date().toISOString()]
+    );
+  }
+
+  if (!appliedSet.has(4)) {
+    await db.execute(`ALTER TABLE profiles ADD COLUMN password_hash TEXT;`);
+    await db.execute(`ALTER TABLE sync_queue ADD COLUMN organization_id TEXT;`);
+    await db.execute(`ALTER TABLE sync_queue ADD COLUMN conflict_state TEXT;`);
+    await db.execute(`ALTER TABLE sync_queue ADD COLUMN deleted_at TEXT;`);
+    await db.execute(
+      `INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?);`,
+      [4, 'session_and_sync_integrity_metadata', new Date().toISOString()]
+    );
+  }
+
+  if (!appliedSet.has(5)) {
+    await db.execute(`ALTER TABLE sync_cursors ADD COLUMN organization_id TEXT;`);
+    await db.execute(`CREATE INDEX IF NOT EXISTS idx_sync_cursors_org_table ON sync_cursors(organization_id, table_name);`);
+    await db.execute(
+      `INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?);`,
+      [5, 'organization_scoped_sync_cursors', new Date().toISOString()]
     );
   }
 }
