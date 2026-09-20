@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useApp } from "../../context/AppContext";
+import { syncEngine, SyncStatus } from "../../services/syncEngine";
 import {
   Search,
   Receipt,
@@ -8,6 +9,8 @@ import {
   Database,
   Cloud,
   Wallet,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
 
 export const Header: React.FC = () => {
@@ -18,6 +21,15 @@ export const Header: React.FC = () => {
     setIsShortcutsHelpOpen,
     setIsSupabaseConfigOpen,
   } = useApp();
+
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(syncEngine.getStatus());
+
+  useEffect(() => {
+    const unsubscribe = syncEngine.subscribe((status) => {
+      setSyncStatus(status);
+    });
+    return () => unsubscribe();
+  }, []);
 
   return (
     <header className="h-16 border-b border-[#e6e8ec] bg-white/95 backdrop-blur-md px-6 flex items-center justify-between z-30 select-none shrink-0">
@@ -55,23 +67,52 @@ export const Header: React.FC = () => {
           <span className="hidden sm:inline">Expense</span>
         </button>
 
-        {/* Supabase Status Toggle */}
+        {/* Supabase / Offline Sync Status Badge */}
         <button
           onClick={() => setIsSupabaseConfigOpen(true)}
           title={
-            isSupabaseReady
-              ? "Supabase Cloud Database Connected & Active"
+            syncStatus.lastError
+              ? `Sync Error: ${syncStatus.lastError} (Click to open Sync Center)`
+              : syncStatus.isSyncing
+              ? "Cloud synchronization in progress..."
+              : syncStatus.pendingCount > 0
+              ? `${syncStatus.pendingCount} mutation(s) pending offline queue drain`
+              : isSupabaseReady
+              ? `Cloud Synchronized. Last: ${syncStatus.lastSyncTime ? new Date(syncStatus.lastSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Ready'}`
               : "Running in Local SQLite Store. Click to configure cloud sync."
           }
-          className="h-9 px-2.5 rounded-lg border border-[#e6e8ec] bg-white hover:bg-[#f2f4f6] text-xs text-[#555f73] flex items-center gap-1.5 transition-colors cursor-pointer"
+          className={`h-9 px-2.5 rounded-lg border text-xs flex items-center gap-1.5 transition-colors cursor-pointer ${
+            syncStatus.lastError
+              ? "bg-[#fef2f2] border-[#fee2e2] text-[#dc2626] hover:bg-[#fee2e2]"
+              : syncStatus.isSyncing
+              ? "bg-[#e2dfff]/40 border-[#c7d2fe] text-[#3525cd]"
+              : syncStatus.pendingCount > 0
+              ? "bg-[#fffbeb] border-[#fef3c7] text-[#d97706] hover:bg-[#fef3c7]"
+              : "bg-white hover:bg-[#f2f4f6] border-[#e6e8ec] text-[#555f73]"
+          }`}
         >
-          {isSupabaseReady ? (
+          {syncStatus.isSyncing ? (
+            <RefreshCw className="h-3.5 w-3.5 text-[#3525cd] animate-spin" />
+          ) : syncStatus.lastError ? (
+            <AlertTriangle className="h-3.5 w-3.5 text-[#dc2626]" />
+          ) : syncStatus.pendingCount > 0 ? (
+            <Cloud className="h-3.5 w-3.5 text-[#d97706]" />
+          ) : isSupabaseReady ? (
             <Cloud className="h-3.5 w-3.5 text-[#16a34a]" />
           ) : (
             <Database className="h-3.5 w-3.5 text-[#4f46e5]" />
           )}
+
           <span className="hidden lg:inline text-[11px] font-medium">
-            {isSupabaseReady ? "Cloud Sync" : "Local DB"}
+            {syncStatus.isSyncing
+              ? "Syncing..."
+              : syncStatus.lastError
+              ? "Sync Failed"
+              : syncStatus.pendingCount > 0
+              ? `${syncStatus.pendingCount} Pending`
+              : isSupabaseReady
+              ? "Synced"
+              : "Local DB"}
           </span>
         </button>
 

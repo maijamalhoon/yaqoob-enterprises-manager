@@ -20,6 +20,96 @@ export interface SyncLogEntry {
   created_at: string;
 }
 
+export const TABLE_ALLOWED_COLUMNS: Record<string, string[]> = {
+  organizations: [
+    'id', 'name', 'owner_name', 'currency', 'currency_symbol', 'country', 'timezone',
+    'business_category', 'phone', 'email', 'address', 'tax_rate', 'tax_enabled',
+    'receipt_footer', 'invoice_prefix', 'next_invoice_number', 'created_at', 'updated_at'
+  ],
+  profiles: [
+    'id', 'email', 'full_name', 'role', 'organization_id', 'is_active', 'created_at', 'updated_at'
+  ],
+  categories: [
+    'id', 'organization_id', 'name', 'type', 'color', 'created_at', 'updated_at'
+  ],
+  products: [
+    'id', 'organization_id', 'category_id', 'name', 'sku', 'unit', 'purchase_price',
+    'selling_price', 'opening_stock', 'current_stock', 'min_stock_threshold', 'track_stock',
+    'is_active', 'supplier', 'notes', 'average_cost', 'stock_value', 'created_at', 'updated_at'
+  ],
+  services: [
+    'id', 'organization_id', 'category_id', 'name', 'sku', 'selling_price',
+    'estimated_cost', 'is_active', 'notes', 'created_at', 'updated_at'
+  ],
+  service_components: [
+    'id', 'organization_id', 'service_id', 'product_id', 'quantity_consumed', 'created_at'
+  ],
+  stock_movements: [
+    'id', 'organization_id', 'product_id', 'movement_type', 'quantity', 'unit_cost',
+    'total_cost', 'reference_id', 'reference_type', 'notes', 'created_by', 'created_at'
+  ],
+  customers: [
+    'id', 'organization_id', 'name', 'phone', 'email', 'address', 'notes',
+    'total_purchases', 'last_purchase_date', 'outstanding_balance', 'created_at', 'updated_at'
+  ],
+  payment_accounts: [
+    'id', 'organization_id', 'name', 'type', 'account_number', 'current_balance',
+    'opening_balance', 'is_active', 'is_default', 'created_at', 'updated_at'
+  ],
+  account_transfers: [
+    'id', 'organization_id', 'from_account_id', 'to_account_id', 'amount', 'date',
+    'notes', 'created_by', 'created_at'
+  ],
+  account_transactions: [
+    'id', 'organization_id', 'account_id', 'type', 'amount', 'balance_after',
+    'reference_type', 'reference_id', 'description', 'date', 'created_at'
+  ],
+  expense_categories: [
+    'id', 'organization_id', 'name', 'description', 'is_active', 'created_at'
+  ],
+  expenses: [
+    'id', 'organization_id', 'category_id', 'account_id', 'amount', 'description',
+    'reference_number', 'date', 'notes', 'entered_by', 'status', 'created_at'
+  ],
+  sales: [
+    'id', 'organization_id', 'invoice_number', 'customer_id', 'customer_name',
+    'customer_phone', 'cashier_id', 'cashier_name', 'subtotal', 'discount',
+    'tax_amount', 'grand_total', 'amount_paid', 'change_due', 'payment_method',
+    'split_payments', 'total_cogs', 'gross_profit', 'status', 'notes',
+    'void_reason', 'voided_by', 'voided_at', 'created_at'
+  ],
+  sale_items: [
+    'id', 'organization_id', 'sale_id', 'item_type', 'item_id', 'item_name',
+    'sku', 'unit', 'quantity', 'unit_price', 'unit_cost', 'discount',
+    'subtotal', 'total', 'cogs', 'gross_profit', 'created_at'
+  ],
+  daily_closings: [
+    'id', 'organization_id', 'closing_date', 'opening_cash', 'cash_sales',
+    'cash_expenses', 'cash_transfers_in', 'cash_transfers_out', 'expected_cash',
+    'actual_cash', 'difference', 'notes', 'closed_by', 'closed_at', 'created_at'
+  ],
+  audit_logs: [
+    'id', 'organization_id', 'user_id', 'user_name', 'action', 'entity',
+    'entity_id', 'details', 'metadata', 'created_at'
+  ],
+};
+
+export function sanitizePayloadForCloud(tableName: string, payload: Record<string, unknown>): Record<string, unknown> {
+  const allowed = TABLE_ALLOWED_COLUMNS[tableName];
+  if (!allowed) {
+    const clean = { ...payload };
+    delete clean.sync_status;
+    return clean;
+  }
+  const result: Record<string, unknown> = {};
+  for (const col of allowed) {
+    if (payload[col] !== undefined) {
+      result[col] = payload[col];
+    }
+  }
+  return result;
+}
+
 class SyncEngineService {
   private isSyncing = false;
   private lastSyncTime: string | null = null;
@@ -33,6 +123,7 @@ class SyncEngineService {
       window.addEventListener('online', () => this.handleNetworkChange(true));
       window.addEventListener('offline', () => this.handleNetworkChange(false));
       this.lastSyncTime = localStorage.getItem('yaqoob_last_sync_time');
+      this.refreshPendingCount().catch(() => {});
       this.startBackgroundSync();
     }
   }
@@ -58,10 +149,24 @@ class SyncEngineService {
     };
   }
 
+  public async refreshPendingCount(): Promise<number> {
+    try {
+      const db = await getSqliteDatabase();
+      const rows = await db.select<{ count: number }>(
+        `SELECT COUNT(*) as count FROM sync_queue WHERE status = 'pending';`
+      );
+      this.pendingCount = rows[0]?.count ?? 0;
+      this.notify();
+      return this.pendingCount;
+    } catch {
+      return this.pendingCount;
+    }
+  }
+
   private handleNetworkChange(online: boolean) {
     this.notify();
     if (online) {
-      this.syncNow();
+      this.syncNow().catch(() => {});
     }
   }
 
@@ -82,25 +187,30 @@ class SyncEngineService {
     payload: Record<string, unknown>
   ): Promise<void> {
     this.pendingCount += 1;
+    this.notify();
     try {
       const db = await getSqliteDatabase();
       const id = `sq-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
       const nowIso = new Date().toISOString();
+      const orgId =
+        (payload.organization_id as string) ||
+        getSecurityPrincipal()?.organizationId ||
+        'org-yaqoob-001';
 
       await db.execute(
-        `INSERT INTO sync_queue (id, table_name, record_id, operation, payload, attempts, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, tableName, recordId, operation, JSON.stringify(payload), 0, 'pending', nowIso, nowIso]
+        `INSERT INTO sync_queue (id, organization_id, table_name, record_id, operation, payload, attempts, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, orgId, tableName, recordId, operation, JSON.stringify(payload), 0, 'pending', nowIso, nowIso]
       );
 
-      this.notify();
+      await this.refreshPendingCount();
 
       // If online, immediately trigger a background drain
       if (typeof navigator !== 'undefined' && navigator.onLine && !this.isSyncing) {
         this.syncNow().catch(() => {});
       }
     } catch (err) {
-      this.pendingCount = Math.max(0, this.pendingCount - 1);
+      await this.refreshPendingCount();
       console.warn('Could not enqueue sync record:', err);
     }
   }
@@ -122,33 +232,38 @@ class SyncEngineService {
 
     let pushed = 0;
     let pulled = 0;
+    const pushErrors: string[] = [];
 
     try {
       const db = await getSqliteDatabase();
       const principal = getSecurityPrincipal();
       if (!principal) throw new Error('Authentication required before synchronization');
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(principal.organizationId)) {
-        return { pushed: 0, pulled: 0, error: 'Cloud synchronization requires a UUID-backed organization' };
+        this.lastError = 'Cloud synchronization requires a UUID-backed organization';
+        return { pushed: 0, pulled: 0, error: this.lastError };
       }
+
       const queue = await db.select<{
         id: string;
+        organization_id?: string;
         table_name: string;
         record_id: string;
         operation: string;
         payload: string;
         attempts: number;
-      }>(`SELECT * FROM sync_queue WHERE status = 'pending' AND organization_id = ? ORDER BY created_at ASC;`, [principal.organizationId]);
+      }>(`SELECT * FROM sync_queue WHERE status = 'pending' AND (organization_id = ? OR organization_id IS NULL) ORDER BY created_at ASC;`, [principal.organizationId]);
 
       // 1. PUSH QUEUE
       for (const item of queue) {
         try {
           const payload = JSON.parse(item.payload);
-          if (payload.organization_id !== principal.organizationId) {
+          if (payload.organization_id && payload.organization_id !== principal.organizationId) {
             throw new Error('Sync payload organization does not match authenticated session');
           }
-          // Delete sync metadata from payload before pushing to cloud
-          const cleanPayload = { ...payload };
-          delete cleanPayload.sync_status;
+
+          // Strip non-table properties and ensure valid payload
+          const cleanPayload = sanitizePayloadForCloud(item.table_name, payload);
+          cleanPayload.organization_id = principal.organizationId;
 
           if (item.operation === 'INSERT' || item.operation === 'UPDATE') {
             const { error: upsertErr } = await supabase
@@ -168,7 +283,6 @@ class SyncEngineService {
 
           // Mark queue item as synced
           await db.execute(`DELETE FROM sync_queue WHERE id = ?`, [item.id]);
-          this.pendingCount = Math.max(0, this.pendingCount - 1);
 
           // Update local record sync_status = 'synced'
           try {
@@ -183,11 +297,17 @@ class SyncEngineService {
           pushed++;
         } catch (itemErr: any) {
           const errMsg = itemErr?.message || 'Push failed';
+          pushErrors.push(`${item.table_name}/${item.record_id}: ${errMsg}`);
           await db.execute(
             `UPDATE sync_queue SET attempts = attempts + 1, status = ?, last_error = ?, updated_at = ? WHERE id = ?`,
             [item.attempts + 1 >= 8 ? 'failed' : 'pending', errMsg, new Date().toISOString(), item.id]
           );
         }
+      }
+
+      // If any items failed to push, capture the error so it surfaces in header
+      if (pushErrors.length > 0) {
+        this.lastError = `Failed to sync ${pushErrors.length} record(s): ${pushErrors[0]}`;
       }
 
       // 2. PULL REMOTE CHANGES without overwriting local pending records.
@@ -252,21 +372,28 @@ class SyncEngineService {
         }
       }
 
-      this.lastSyncTime = new Date().toISOString();
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('yaqoob_last_sync_time', this.lastSyncTime);
+      const syncTime = new Date().toISOString();
+      const finalStatus = pushErrors.length === 0 ? 'SUCCESS' : pushed > 0 ? 'PARTIAL_ERROR' : 'FAILED';
+
+      // Only stamp lastSyncTime if no complete failure occurred
+      if (pushErrors.length === 0 || pushed > 0) {
+        this.lastSyncTime = syncTime;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('yaqoob_last_sync_time', this.lastSyncTime);
+        }
       }
 
       // Log sync execution
       await db.execute(
-        `INSERT INTO sync_logs (id, sync_type, status, records_pushed, records_pulled, created_at)
-         VALUES (?, 'BIDIRECTIONAL', 'SUCCESS', ?, ?, ?)`,
-        [`slog-${Date.now()}`, pushed, pulled, this.lastSyncTime]
+        `INSERT INTO sync_logs (id, sync_type, status, records_pushed, records_pulled, error_message, created_at)
+         VALUES (?, 'BIDIRECTIONAL', ?, ?, ?, ?, ?)`,
+        [`slog-${Date.now()}`, finalStatus, pushed, pulled, this.lastError || null, syncTime]
       );
     } catch (err: any) {
       this.lastError = err?.message || 'Sync failed';
       console.warn('Sync engine exception:', err);
     } finally {
+      await this.refreshPendingCount();
       this.isSyncing = false;
       this.notify();
     }
@@ -283,7 +410,7 @@ class SyncEngineService {
       const logs = await db.select<SyncLogEntry>(
         `SELECT * FROM sync_logs ORDER BY created_at DESC;`
       );
-      this.pendingCount = Math.max(this.pendingCount, pending[0]?.count || 0);
+      this.pendingCount = pending[0]?.count ?? 0;
       return {
         pendingCount: this.pendingCount,
         logs: logs.slice(0, 20),

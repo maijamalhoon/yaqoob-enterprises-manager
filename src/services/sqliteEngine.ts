@@ -585,6 +585,7 @@ export async function runSqliteMigrations(db: SqlDatabase): Promise<void> {
     await db.execute(`
       CREATE TABLE IF NOT EXISTS sync_queue (
         id TEXT PRIMARY KEY,
+        organization_id TEXT,
         table_name TEXT NOT NULL,
         record_id TEXT NOT NULL,
         operation TEXT NOT NULL,
