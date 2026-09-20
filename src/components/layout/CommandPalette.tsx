@@ -60,8 +60,9 @@ export const CommandPalette: React.FC = () => {
 
   const q = query.trim().toLowerCase();
 
-  const filteredProducts = q
-    ? products
+  const filteredProducts =
+    q ?
+      products
         .filter(
           (p) =>
             p.name.toLowerCase().includes(q) ||
@@ -70,8 +71,9 @@ export const CommandPalette: React.FC = () => {
         .slice(0, 5)
     : [];
 
-  const filteredServices = q
-    ? services
+  const filteredServices =
+    q ?
+      services
         .filter(
           (s) =>
             s.name.toLowerCase().includes(q) ||
@@ -80,8 +82,9 @@ export const CommandPalette: React.FC = () => {
         .slice(0, 5)
     : [];
 
-  const filteredCustomers = q
-    ? customers
+  const filteredCustomers =
+    q ?
+      customers
         .filter(
           (c) =>
             c.name.toLowerCase().includes(q) ||
@@ -90,8 +93,9 @@ export const CommandPalette: React.FC = () => {
         .slice(0, 4)
     : [];
 
-  const filteredInvoices = q
-    ? sales
+  const filteredInvoices =
+    q ?
+      sales
         .filter(
           (s) =>
             s.invoice_number.toLowerCase().includes(q) ||
@@ -101,15 +105,10 @@ export const CommandPalette: React.FC = () => {
     : [];
 
   const quickPages = [
-    { label: "Dashboard", view: "dashboard" as AppView, icon: LayoutDashboard },
-    { label: "POS / Quick Sale", view: "pos" as AppView, icon: ShoppingCart },
+    { label: "Sales", view: "pos" as AppView, icon: ShoppingCart },
     { label: "Inventory", view: "inventory" as AppView, icon: Package },
-    { label: "Accounts", view: "accounts" as AppView, icon: Landmark },
     { label: "Expenses", view: "expenses" as AppView, icon: Receipt },
-    { label: "Customers", view: "customers" as AppView, icon: Users },
     { label: "Reports", view: "reports" as AppView, icon: BarChart3 },
-    { label: "Closings", view: "closings" as AppView, icon: PiggyBank },
-    { label: "Settings", view: "settings" as AppView, icon: Settings },
   ];
 
   return (

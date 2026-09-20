@@ -6,6 +6,7 @@ import { syncEngine } from "../services/syncEngine";
 import { setSecurityPrincipal } from "../lib/security";
 
 const MIN_PIN_LENGTH = 4;
+const ACTIVE_PROFILE_KEY = "yaqoob_active_profile";
 
 const EMPTY_ORGANIZATION: Organization = {
   id: "",
@@ -78,6 +79,24 @@ async function hashPin(pin: string): Promise<{ hash: string; salt: string }> {
   return { hash: await derivePin(pin, salt), salt: encodeBytes(salt) };
 }
 
+async function hashPassword(
+  password: string,
+  salt = encodeBytes(crypto.getRandomValues(new Uint8Array(16))),
+): Promise<string> {
+  return `${salt}:${await derivePin(password, decodeBytes(salt))}`;
+}
+
+async function verifyPassword(
+  password: string,
+  stored: string,
+): Promise<boolean> {
+  const [salt, expected] = stored.split(":");
+  return (
+    Boolean(salt && expected) &&
+    (await derivePin(password, decodeBytes(salt))) === expected
+  );
+}
+
 interface AuthContextType {
   user: UserProfile | null;
   organization: Organization;
@@ -86,6 +105,7 @@ interface AuthContextType {
   isLoading: boolean;
   isLocked: boolean;
   hasLocalAccount: boolean;
+  hasPasswordAccount: boolean;
   unlock: (pin: string) => Promise<boolean>;
   lock: () => void;
   updatePin: (
@@ -98,6 +118,7 @@ interface AuthContextType {
     email: string;
     pin: string;
     confirmPin: string;
+    password?: string;
   }) => Promise<{ success: boolean; error?: string }>;
   onboardingCompleted: boolean;
   signIn: (email: string, pass: string) => Promise<{ error?: string }>;
@@ -107,6 +128,8 @@ interface AuthContextType {
     fullName: string,
     orgName: string,
   ) => Promise<{ error?: string }>;
+  signInWithGoogle: () => Promise<{ error?: string }>;
+  sendPasswordReset: (email: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   updateOrganization: (org: Partial<Organization>) => void;
   completeOnboarding: (orgData: Partial<Organization>) => void;
@@ -126,6 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isLocked, setIsLocked] = useState(true);
   const [hasLocalAccount, setHasLocalAccount] = useState(false);
+  const [hasPasswordAccount, setHasPasswordAccount] = useState(false);
   const [localAccount, setLocalAccount] =
     useState<Awaited<ReturnType<typeof sqliteRepository.getLocalAuthAccount>>>(
       null,
@@ -141,7 +165,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setSecurityPrincipal(null);
       try {
         await sqliteRepository.migrateLegacyLocalStorage();
-        const account = await sqliteRepository.getLocalAuthAccount();
+        const activeProfileId =
+          typeof window !== "undefined" ?
+            localStorage.getItem(ACTIVE_PROFILE_KEY) || undefined
+          : undefined;
+        const account =
+          await sqliteRepository.getLocalAuthAccount(activeProfileId);
         if (cancelled) return;
         setLocalAccount(account);
         setHasLocalAccount(Boolean(account));
@@ -154,14 +183,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           if (profile) {
             setUser(profile);
             setRole(profile.role);
+            setHasPasswordAccount(Boolean(profile.password_hash));
           }
         }
         if (account && (typeof navigator === "undefined" || navigator.onLine))
           syncEngine.syncNow().catch(() => {});
-        if (isSupabaseConfigured())
-          getSupabaseClient()
-            ?.auth.getSession()
-            .catch(() => {});
+        if (isSupabaseConfigured()) {
+          const sessionResult = await getSupabaseClient().auth.getSession();
+          if (!cancelled && sessionResult.data.session?.user.id) {
+            await activateSupabaseSession(sessionResult.data.session.user.id);
+          }
+        }
       } catch (initializationError) {
         console.warn("Auth initialization warning:", initializationError);
       } finally {
@@ -180,6 +212,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setRole(profile.role);
     setSecurityPrincipal(profile);
     setIsLocked(false);
+    if (typeof window !== "undefined")
+      localStorage.setItem(ACTIVE_PROFILE_KEY, profile.id);
+  };
+
+  const activateSupabaseSession = async (
+    profileId: string,
+  ): Promise<boolean> => {
+    const client = getSupabaseClient();
+    const { data: profileData } = await client
+      .from("profiles")
+      .select("*")
+      .eq("id", profileId)
+      .maybeSingle();
+    if (!profileData?.organization_id) return false;
+    const { data: organizationData } = await client
+      .from("organizations")
+      .select("*")
+      .eq("id", profileData.organization_id)
+      .maybeSingle();
+    if (!organizationData) return false;
+    activate(profileData as UserProfile, organizationData as Organization);
+    setHasPasswordAccount(true);
+    return true;
   };
 
   const unlock = async (enteredPin: string): Promise<boolean> => {
@@ -213,6 +268,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     email: string;
     pin: string;
     confirmPin: string;
+    password?: string;
   }) => {
     const shopName = details.shopName.trim();
     const ownerName = details.ownerName.trim();
@@ -226,8 +282,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       return { success: false, error: "PIN must be at least 4 characters." };
     if (details.pin !== details.confirmPin)
       return { success: false, error: "PIN confirmation does not match." };
-    if (hasLocalAccount)
-      return { success: false, error: "A local shop account already exists." };
     const now = new Date().toISOString();
     const org: Organization = {
       ...EMPTY_ORGANIZATION,
@@ -246,6 +300,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       organization_id: org.id,
       is_active: true,
       created_at: now,
+      ...(details.password ?
+        { password_hash: await hashPassword(details.password) }
+      : {}),
     };
     const credential = await hashPin(details.pin);
     try {
@@ -254,10 +311,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         profile,
         credential.hash,
         credential.salt,
+        true,
       );
       const account = await sqliteRepository.getLocalAuthAccount();
       setLocalAccount(account);
       setHasLocalAccount(true);
+      setHasPasswordAccount(false);
       setOnboardingCompleted(true);
       activate(profile, org);
       return { success: true };
@@ -327,14 +386,165 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setOnboardingCompleted(true);
   };
 
-  const signIn = async () => ({
-    error: "Use the local PIN to unlock this shop.",
-  });
-  const signUp = async () => ({
-    error: "Use the shop account setup screen to create a local account.",
-  });
-  const signOut = async () => lock();
+  const signIn = async (email: string, pass: string) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !pass)
+      return { error: "Enter your email and password." };
+    if (isSupabaseReady) {
+      const response = await getSupabaseClient().auth.signInWithPassword({
+        email: normalizedEmail,
+        password: pass,
+      });
+      if (response.error)
+        return { error: "The email or password is incorrect." };
+      if (
+        !response.data.user ||
+        !(await activateSupabaseSession(response.data.user.id))
+      )
+        return { error: "Your account profile could not be loaded." };
+      return {};
+    }
+    const profile =
+      await sqliteRepository.findLocalProfileByEmail(normalizedEmail);
+    const account =
+      profile ? await sqliteRepository.getLocalAuthAccount(profile.id) : null;
+    if (
+      !profile ||
+      !account ||
+      !profile.password_hash ||
+      !(await verifyPassword(pass, profile.password_hash))
+    ) {
+      return { error: "The email or password is incorrect." };
+    }
+    const org = await sqliteRepository.getOrganization(profile.organization_id);
+    if (!org || !profile.is_active)
+      return { error: "This account is no longer active." };
+    setLocalAccount(account);
+    setHasLocalAccount(true);
+    setHasPasswordAccount(true);
+    activate(profile, org);
+    return {};
+  };
 
+  const signUp = async (
+    email: string,
+    pass: string,
+    fullName: string,
+    orgName: string,
+  ) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !pass || !fullName.trim() || !orgName.trim())
+      return { error: "Complete all required fields." };
+    if (pass.length < 8)
+      return { error: "Password must be at least 8 characters." };
+    if (isSupabaseReady) {
+      const response = await getSupabaseClient().auth.signUp({
+        email: normalizedEmail,
+        password: pass,
+        options: {
+          data: {
+            full_name: fullName.trim(),
+            organization_name: orgName.trim(),
+          },
+        },
+      });
+      if (response.error)
+        return {
+          error:
+            response.error.message.toLowerCase().includes("already") ?
+              "An account with this email already exists."
+            : "Could not create your account.",
+        };
+      if (response.data.session && response.data.user)
+        await activateSupabaseSession(response.data.user.id);
+      return {};
+    }
+    if (await sqliteRepository.findLocalProfileByEmail(normalizedEmail))
+      return { error: "An account with this email already exists." };
+    const now = new Date().toISOString();
+    const org: Organization = {
+      ...EMPTY_ORGANIZATION,
+      id: crypto.randomUUID(),
+      name: orgName.trim(),
+      owner_name: fullName.trim(),
+      email: normalizedEmail,
+      created_at: now,
+      updated_at: now,
+    };
+    const profile: UserProfile = {
+      id: crypto.randomUUID(),
+      email: normalizedEmail,
+      full_name: fullName.trim(),
+      role: "OWNER",
+      organization_id: org.id,
+      is_active: true,
+      password_hash: await hashPassword(pass),
+      created_at: now,
+    };
+    const credential = await hashPin(crypto.randomUUID());
+    try {
+      await sqliteRepository.createLocalAuthAccount(
+        org,
+        profile,
+        credential.hash,
+        credential.salt,
+        true,
+      );
+      const account = await sqliteRepository.getLocalAuthAccount(profile.id);
+      setLocalAccount(account);
+      setHasLocalAccount(true);
+      setHasPasswordAccount(true);
+      setOnboardingCompleted(true);
+      activate(profile, org);
+      return {};
+    } catch {
+      return { error: "Could not create the account. Please try again." };
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    if (!isSupabaseReady)
+      return { error: "Google sign-in needs Supabase OAuth configuration." };
+    const response = await getSupabaseClient().auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    return response.error ?
+        { error: "Google sign-in could not be started." }
+      : {};
+  };
+
+  const sendPasswordReset = async (email: string) => {
+    if (!email.trim()) return { error: "Enter your account email first." };
+    if (!isSupabaseReady)
+      return {
+        error: "Password recovery needs Supabase authentication configuration.",
+      };
+    const response = await getSupabaseClient().auth.resetPasswordForEmail(
+      email.trim(),
+      { redirectTo: window.location.origin },
+    );
+    return response.error ?
+        { error: "We could not send a reset email. Please try again." }
+      : {};
+  };
+
+  const signOut = async () => {
+    if (isSupabaseReady)
+      await getSupabaseClient()
+        .auth.signOut()
+        .catch(() => {});
+    setUser(null);
+    setRole(null);
+    setLocalAccount(null);
+    setHasLocalAccount(false);
+    setHasPasswordAccount(false);
+    setOrganization(EMPTY_ORGANIZATION);
+    setSecurityPrincipal(null);
+    setIsLocked(true);
+    if (typeof window !== "undefined")
+      localStorage.removeItem(ACTIVE_PROFILE_KEY);
+  };
   return (
     <AuthContext.Provider
       value={{
@@ -345,6 +555,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         isLoading,
         isLocked,
         hasLocalAccount,
+        hasPasswordAccount,
         unlock,
         lock,
         updatePin,
@@ -352,6 +563,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         onboardingCompleted,
         signIn,
         signUp,
+        signInWithGoogle,
+        sendPasswordReset,
         signOut,
         updateOrganization,
         completeOnboarding,

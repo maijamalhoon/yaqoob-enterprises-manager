@@ -22,13 +22,17 @@ export function isSupabaseConfigured(): boolean {
 }
 
 const { url: supabaseUrl, anonKey: supabaseAnonKey } = getSupabaseConfig();
-const supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
+const supabaseInstance = createClient(
+  supabaseUrl || 'https://offline.invalid',
+  supabaseAnonKey || 'offline-anon-key',
+  {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    },
   },
-});
+);
 
 export function getSupabaseClient(): SupabaseClient {
   return supabaseInstance;

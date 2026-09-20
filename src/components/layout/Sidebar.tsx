@@ -1,18 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useApp, AppView } from "../../context/AppContext";
 import { useAuth } from "../../context/AuthContext";
-import {
-  LayoutDashboard,
-  ShoppingCart,
-  Package,
-  Landmark,
-  Receipt,
-  Users,
-  BarChart3,
-  PiggyBank,
-  Settings,
-  Lock,
-} from "lucide-react";
+import { ShoppingCart, Package, Receipt, BarChart3, Lock } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 export const Sidebar: React.FC = () => {
@@ -39,15 +28,10 @@ export const Sidebar: React.FC = () => {
   }
 
   const navItems: NavItem[] = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "pos", label: "POS", icon: ShoppingCart },
+    { id: "pos", label: "Sales", icon: ShoppingCart },
     { id: "inventory", label: "Inventory", icon: Package },
-    { id: "accounts", label: "Accounts", icon: Landmark },
     { id: "expenses", label: "Expenses", icon: Receipt },
-    { id: "customers", label: "Customers", icon: Users },
     { id: "reports", label: "Reports", icon: BarChart3 },
-    { id: "closings", label: "Closings", icon: PiggyBank },
-    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   return (
@@ -87,9 +71,9 @@ export const Sidebar: React.FC = () => {
                 onClick={() => setCurrentView(item.id)}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 cursor-pointer text-left",
-                  isActive
-                    ? "bg-[#4f46e5] text-white font-medium shadow-xs"
-                    : "text-[#464555] hover:bg-[#f2f4f6] hover:text-[#191c1e]",
+                  isActive ?
+                    "bg-[#4f46e5] text-white font-medium shadow-xs"
+                  : "text-[#464555] hover:bg-[#f2f4f6] hover:text-[#191c1e]",
                 )}
               >
                 <Icon

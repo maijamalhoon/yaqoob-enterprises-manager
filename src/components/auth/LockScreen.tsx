@@ -1,12 +1,20 @@
 import React, { useEffect, useState } from "react";
-import { Eye, EyeOff, KeyRound, LockKeyhole, Store } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  KeyRound,
+  LockKeyhole,
+  Store,
+  Mail,
+  ShieldCheck,
+} from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 const fieldClass =
   "w-full h-11 rounded-lg border border-[#dfe3e8] bg-white px-3 text-sm outline-none focus:border-[#4f46e5] focus:ring-2 focus:ring-[#4f46e5]/15";
 
 export const LockScreen: React.FC = () => {
-  const { unlock, organization } = useAuth();
+  const { unlock, organization, signOut } = useAuth();
   const [pin, setPin] = useState("");
   const [showPin, setShowPin] = useState(false);
   const [error, setError] = useState("");
@@ -76,6 +84,13 @@ export const LockScreen: React.FC = () => {
         >
           <LockKeyhole className="h-4 w-4" />
           {isSubmitting ? "Checking..." : "Unlock workspace"}
+        </button>
+        <button
+          type="button"
+          onClick={() => void signOut()}
+          className="w-full text-xs font-semibold text-[#4f46e5] hover:underline"
+        >
+          Use account sign-in or switch user
         </button>
       </form>
     </AuthFrame>
@@ -189,6 +204,218 @@ export const SignUpScreen: React.FC = () => {
           {isSubmitting ? "Creating account..." : "Create shop account"}
         </button>
       </form>
+    </AuthFrame>
+  );
+};
+
+export const AuthScreen: React.FC = () => {
+  const {
+    signIn,
+    signUp,
+    signInWithGoogle,
+    sendPasswordReset,
+    createAccount,
+    isSupabaseReady,
+  } = useAuth();
+  const [mode, setMode] = useState<"signIn" | "signUp">("signIn");
+  const [showPassword, setShowPassword] = useState(false);
+  const [form, setForm] = useState({
+    email: "",
+    password: "",
+    confirmPassword: "",
+    fullName: "",
+    shopName: "",
+  });
+  const [feedback, setFeedback] = useState("");
+  const [success, setSuccess] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const update = (key: keyof typeof form, value: string) =>
+    setForm((current) => ({ ...current, [key]: value }));
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setFeedback("");
+    setSuccess("");
+    if (mode === "signUp" && form.password !== form.confirmPassword) {
+      setFeedback("Password confirmation does not match.");
+      return;
+    }
+    setIsSubmitting(true);
+    const result =
+      mode === "signIn" ? await signIn(form.email, form.password)
+      : isSupabaseReady ?
+        await signUp(form.email, form.password, form.fullName, form.shopName)
+      : await createAccount({
+          shopName: form.shopName,
+          ownerName: form.fullName,
+          email: form.email,
+          pin: form.password,
+          confirmPin: form.password,
+          password: form.password,
+        });
+    setIsSubmitting(false);
+    if (result.error) setFeedback(result.error);
+    else if (mode === "signUp" && isSupabaseReady)
+      setSuccess("Account created. Check your email to confirm your account.");
+  };
+
+  const resetPassword = async () => {
+    setFeedback("");
+    setSuccess("");
+    const result = await sendPasswordReset(form.email);
+    if (result.error) setFeedback(result.error);
+    else setSuccess("Password reset instructions are on their way.");
+  };
+
+  return (
+    <AuthFrame
+      title={mode === "signIn" ? "Welcome back" : "Create your account"}
+      subtitle={
+        mode === "signIn" ?
+          "Sign in to your shop workspace"
+        : "Set up your shop workspace securely"
+      }
+    >
+      <div className="mb-5 grid grid-cols-2 rounded-lg bg-[#f3f5f8] p-1 text-sm font-semibold">
+        {(["signIn", "signUp"] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => {
+              setMode(tab);
+              setFeedback("");
+              setSuccess("");
+            }}
+            className={`rounded-md px-3 py-2 ${mode === tab ? "bg-white text-[#3525cd] shadow-sm" : "text-[#667085]"}`}
+          >
+            {tab === "signIn" ? "Sign in" : "Create account"}
+          </button>
+        ))}
+      </div>
+      <form onSubmit={submit} className="w-full space-y-3">
+        {mode === "signUp" && (
+          <>
+            <label className="block text-xs font-semibold text-[#555f73]">
+              Your name
+              <input
+                required
+                className={`${fieldClass} mt-1`}
+                value={form.fullName}
+                onChange={(event) => update("fullName", event.target.value)}
+              />
+            </label>
+            <label className="block text-xs font-semibold text-[#555f73]">
+              Shop name
+              <input
+                required
+                className={`${fieldClass} mt-1`}
+                value={form.shopName}
+                onChange={(event) => update("shopName", event.target.value)}
+              />
+            </label>
+          </>
+        )}
+        <label className="block text-xs font-semibold text-[#555f73]">
+          Email
+          <input
+            required
+            type="email"
+            autoComplete="email"
+            className={`${fieldClass} mt-1`}
+            value={form.email}
+            onChange={(event) => update("email", event.target.value)}
+          />
+        </label>
+        <label className="block text-xs font-semibold text-[#555f73]">
+          Password
+          <div className="relative mt-1">
+            <input
+              required
+              minLength={8}
+              type={showPassword ? "text" : "password"}
+              autoComplete={
+                mode === "signIn" ? "current-password" : "new-password"
+              }
+              className={`${fieldClass} pr-11`}
+              value={form.password}
+              onChange={(event) => update("password", event.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((visible) => !visible)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute right-3 top-3 text-[#667085]"
+            >
+              {showPassword ?
+                <EyeOff className="h-5 w-5" />
+              : <Eye className="h-5 w-5" />}
+            </button>
+          </div>
+        </label>
+        {mode === "signUp" && (
+          <label className="block text-xs font-semibold text-[#555f73]">
+            Confirm password
+            <input
+              required
+              minLength={8}
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              className={`${fieldClass} mt-1`}
+              value={form.confirmPassword}
+              onChange={(event) =>
+                update("confirmPassword", event.target.value)
+              }
+            />
+          </label>
+        )}
+        {feedback && (
+          <p role="alert" className="text-sm text-[#c2413b]">
+            {feedback}
+          </p>
+        )}
+        {success && (
+          <p role="status" className="text-sm text-[#15803d]">
+            {success}
+          </p>
+        )}
+        <button
+          disabled={isSubmitting}
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#3525cd] text-sm font-semibold text-white transition hover:bg-[#2d20af] disabled:opacity-50"
+        >
+          <ShieldCheck className="h-4 w-4" />
+          {isSubmitting ?
+            "Please wait..."
+          : mode === "signIn" ?
+            "Sign in"
+          : "Create account"}
+        </button>
+      </form>
+      {mode === "signIn" && (
+        <button
+          type="button"
+          onClick={() => void resetPassword()}
+          className="mt-4 flex w-full items-center justify-center gap-2 text-xs font-semibold text-[#4f46e5]"
+        >
+          <Mail className="h-4 w-4" />
+          Forgot password?
+        </button>
+      )}
+      <button
+        type="button"
+        onClick={async () => {
+          const result = await signInWithGoogle();
+          if (result.error) setFeedback(result.error);
+        }}
+        className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#dfe3e8] bg-white text-sm font-semibold text-[#191c1e] hover:bg-[#f8f9fb]"
+      >
+        <span className="text-base font-bold">G</span>Continue with Google
+      </button>
+      {!isSupabaseReady && (
+        <p className="mt-3 text-center text-[11px] text-[#98a2b3]">
+          Cloud sign-in and password recovery become available when Supabase is
+          configured.
+        </p>
+      )}
     </AuthFrame>
   );
 };

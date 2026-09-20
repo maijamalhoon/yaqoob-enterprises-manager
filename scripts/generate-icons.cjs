@@ -26,7 +26,7 @@ function createPng(width, height) {
   const ihdrChunk = createChunk('IHDR', ihdrData);
 
   // Raw image data: scanlines with filter byte 0
-  // Shop Plus brand mark: emerald circle with a white plus on a navy field.
+  // Yaqoob Enterprises mark: a teal storefront and receipt on a deep navy field.
   const rowBytes = width * 4;
   const rawData = Buffer.alloc((rowBytes + 1) * height);
   
@@ -42,15 +42,29 @@ function createPng(width, height) {
       const dy = y - cy;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
-      if (dist <= radius && (Math.abs(x - cx) <= width * 0.09 || Math.abs(y - cy) <= width * 0.09)) {
+      const left = width * 0.24;
+      const right = width * 0.76;
+      const roofY = width * 0.31;
+      const bodyTop = width * 0.43;
+      const bodyBottom = width * 0.76;
+      const isRoof = y >= roofY && y <= width * 0.39 && x >= width * 0.18 && x <= width * 0.82;
+      const isStorefront = x >= left && x <= right && y >= bodyTop && y <= bodyBottom;
+      const isDoor = x >= width * 0.46 && x <= width * 0.58 && y >= width * 0.57 && y <= bodyBottom;
+      const isWindow = x >= width * 0.30 && x <= width * 0.41 && y >= width * 0.53 && y <= width * 0.64;
+      if (dist <= radius && (isRoof || isStorefront) && !isDoor && !isWindow) {
         rawData[offset++] = 255;
         rawData[offset++] = 255;
         rawData[offset++] = 255;
+        rawData[offset++] = 255;
+      } else if (dist <= radius && (isDoor || isWindow)) {
+        rawData[offset++] = 45;
+        rawData[offset++] = 212;
+        rawData[offset++] = 191;
         rawData[offset++] = 255;
       } else if (dist <= radius) {
-        rawData[offset++] = 16;
-        rawData[offset++] = 185;
-        rawData[offset++] = 129;
+        rawData[offset++] = 15;
+        rawData[offset++] = 118;
+        rawData[offset++] = 110;
         rawData[offset++] = 255;
       } else {
         // Deep Slate/Navy background #020617 (R: 2, G: 6, B: 23, A: 255)

@@ -1,14 +1,20 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { useApp } from '../../context/AppContext';
-import { inventoryRepo } from '../../services';
-import { Product, Service, Category, StockMovement, ServiceRecipeComponent } from '../../types';
-import { Card } from '../common/Card';
-import { Button } from '../common/Button';
-import { Badge } from '../common/Badge';
-import { Input } from '../common/Input';
-import { Modal } from '../common/Modal';
-import { formatCurrency, roundMoney } from '../../lib/utils';
+import React, { useState, useEffect, useMemo } from "react";
+import { useAuth } from "../../context/AuthContext";
+import { useApp } from "../../context/AppContext";
+import { inventoryRepo } from "../../services";
+import {
+  Product,
+  Service,
+  Category,
+  StockMovement,
+  ServiceRecipeComponent,
+} from "../../types";
+import { Card } from "../common/Card";
+import { Button } from "../common/Button";
+import { Badge } from "../common/Badge";
+import { Input } from "../common/Input";
+import { Modal } from "../common/Modal";
+import { formatCurrency, roundMoney } from "../../lib/utils";
 import {
   Boxes,
   Zap,
@@ -26,31 +32,33 @@ import {
   Info,
   X,
   Layers,
-} from 'lucide-react';
+} from "lucide-react";
 
 export const InventoryView: React.FC = () => {
   const { organization } = useAuth();
   const { dataVersion, refreshData, showToast } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'PRODUCTS' | 'SERVICES' | 'MOVEMENTS'>('PRODUCTS');
+  const [activeTab, setActiveTab] = useState<
+    "PRODUCTS" | "SERVICES" | "MOVEMENTS"
+  >("PRODUCTS");
   const [products, setProducts] = useState<Product[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [movements, setMovements] = useState<StockMovement[]>([]);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [showLowStockBanner, setShowLowStockBanner] = useState(true);
 
   // Product Modal State
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [prodForm, setProdForm] = useState({
-    name: '',
-    sku: '',
-    category_id: '',
-    category_name: '',
-    unit: 'Pcs',
+    name: "",
+    sku: "",
+    category_id: "",
+    category_name: "",
+    unit: "Pcs",
     purchase_price: 0,
     selling_price: 0,
     opening_stock: 0,
@@ -62,13 +70,13 @@ export const InventoryView: React.FC = () => {
   const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [servForm, setServForm] = useState({
-    name: '',
-    sku: '',
-    category_id: '',
-    category_name: '',
+    name: "",
+    sku: "",
+    category_id: "",
+    category_name: "",
     selling_price: 0,
     estimated_cost: 0,
-    notes: '',
+    notes: "",
   });
   const [servComponents, setServComponents] = useState<
     Array<{ product_id: string; quantity_consumed: number }>
@@ -78,15 +86,15 @@ export const InventoryView: React.FC = () => {
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
   const [movementProduct, setMovementProduct] = useState<Product | null>(null);
   const [movementForm, setMovementForm] = useState<{
-    movement_type: StockMovement['movement_type'];
+    movement_type: StockMovement["movement_type"];
     quantity: number;
     unit_cost: number;
     notes: string;
   }>({
-    movement_type: 'PURCHASE',
+    movement_type: "PURCHASE",
     quantity: 10,
     unit_cost: 0,
-    notes: '',
+    notes: "",
   });
 
   useEffect(() => {
@@ -109,13 +117,15 @@ export const InventoryView: React.FC = () => {
   const totalSkus = products.length;
   const assetValuation = useMemo(() => {
     return products.reduce(
-      (acc, p) => acc + (p.current_stock * (p.average_cost || p.purchase_price)),
-      0
+      (acc, p) => acc + p.current_stock * (p.average_cost || p.purchase_price),
+      0,
     );
   }, [products]);
 
   const lowStockItems = useMemo(() => {
-    return products.filter((p) => p.track_stock && p.current_stock <= p.min_stock_threshold);
+    return products.filter(
+      (p) => p.track_stock && p.current_stock <= p.min_stock_threshold,
+    );
   }, [products]);
 
   const avgMargin = useMemo(() => {
@@ -134,9 +144,9 @@ export const InventoryView: React.FC = () => {
       setEditingProduct(product);
       setProdForm({
         name: product.name,
-        sku: product.sku || '',
-        category_id: product.category_id || '',
-        category_name: product.category_name || '',
+        sku: product.sku || "",
+        category_id: product.category_id || "",
+        category_name: product.category_name || "",
         unit: product.unit,
         purchase_price: product.purchase_price,
         selling_price: product.selling_price,
@@ -147,11 +157,11 @@ export const InventoryView: React.FC = () => {
     } else {
       setEditingProduct(null);
       setProdForm({
-        name: '',
+        name: "",
         sku: `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
-        category_id: categories[0]?.id || '',
-        category_name: categories[0]?.name || '',
-        unit: 'Pcs',
+        category_id: categories[0]?.id || "",
+        category_name: categories[0]?.name || "",
+        unit: "Pcs",
         purchase_price: 0,
         selling_price: 0,
         opening_stock: 10,
@@ -178,22 +188,23 @@ export const InventoryView: React.FC = () => {
         purchase_price: Number(prodForm.purchase_price) || 0,
         selling_price: Number(prodForm.selling_price) || 0,
         opening_stock: Number(prodForm.opening_stock) || 0,
-        current_stock: editingProduct
-          ? editingProduct.current_stock
+        current_stock:
+          editingProduct ?
+            editingProduct.current_stock
           : Number(prodForm.opening_stock) || 0,
         min_stock_threshold: Number(prodForm.min_stock_threshold) || 5,
         track_stock: prodForm.track_stock,
       });
 
       showToast(
-        'success',
-        editingProduct ? 'Product Updated' : 'Product Added',
-        `${prodForm.name} saved to catalog`
+        "success",
+        editingProduct ? "Product Updated" : "Product Added",
+        `${prodForm.name} saved to catalog`,
       );
       setIsProductModalOpen(false);
       refreshData();
     } catch (err: any) {
-      showToast('error', 'Failed to Save', err.message);
+      showToast("error", "Failed to Save", err.message);
     }
   };
 
@@ -202,26 +213,35 @@ export const InventoryView: React.FC = () => {
     return roundMoney(
       servComponents.reduce((sum, comp) => {
         const prod = products.find((p) => p.id === comp.product_id);
-        return sum + (prod ? prod.average_cost * (comp.quantity_consumed || 0) : 0);
-      }, 0)
+        return (
+          sum + (prod ? prod.average_cost * (comp.quantity_consumed || 0) : 0)
+        );
+      }, 0),
     );
   }, [servComponents, products]);
 
   const handleAddRecipeComponent = () => {
-    const unusedProduct = products.find((p) => !servComponents.some((c) => c.product_id === p.id));
+    const unusedProduct = products.find(
+      (p) => !servComponents.some((c) => c.product_id === p.id),
+    );
     setServComponents((prev) => [
       ...prev,
-      { product_id: unusedProduct ? unusedProduct.id : (products[0]?.id || ''), quantity_consumed: 1 },
+      {
+        product_id: unusedProduct ? unusedProduct.id : products[0]?.id || "",
+        quantity_consumed: 1,
+      },
     ]);
   };
 
   const handleUpdateRecipeComponent = (
     index: number,
-    field: 'product_id' | 'quantity_consumed',
-    value: string | number
+    field: "product_id" | "quantity_consumed",
+    value: string | number,
   ) => {
     setServComponents((prev) =>
-      prev.map((item, idx) => (idx === index ? { ...item, [field]: value } : item))
+      prev.map((item, idx) =>
+        idx === index ? { ...item, [field]: value } : item,
+      ),
     );
   };
 
@@ -235,29 +255,29 @@ export const InventoryView: React.FC = () => {
       setEditingService(service);
       setServForm({
         name: service.name,
-        sku: service.sku || '',
-        category_id: service.category_id || '',
-        category_name: service.category_name || '',
+        sku: service.sku || "",
+        category_id: service.category_id || "",
+        category_name: service.category_name || "",
         selling_price: service.selling_price,
         estimated_cost: service.estimated_cost,
-        notes: service.notes || '',
+        notes: service.notes || "",
       });
       setServComponents(
         (service.components || []).map((c) => ({
           product_id: c.product_id,
           quantity_consumed: c.quantity_consumed,
-        }))
+        })),
       );
     } else {
       setEditingService(null);
       setServForm({
-        name: '',
+        name: "",
         sku: `SRV-${Math.floor(1000 + Math.random() * 9000)}`,
-        category_id: categories[0]?.id || '',
-        category_name: categories[0]?.name || '',
+        category_id: categories[0]?.id || "",
+        category_name: categories[0]?.name || "",
         selling_price: 0,
         estimated_cost: 0,
-        notes: '',
+        notes: "",
       });
       setServComponents([]);
     }
@@ -277,11 +297,11 @@ export const InventoryView: React.FC = () => {
           return {
             id: `comp-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
             organization_id: organization.id,
-            service_id: editingService ? editingService.id : '',
+            service_id: editingService ? editingService.id : "",
             product_id: c.product_id,
-            product_name: prod ? prod.name : '',
+            product_name: prod ? prod.name : "",
             quantity_consumed: Number(c.quantity_consumed),
-            unit: prod ? prod.unit : 'Unit',
+            unit: prod ? prod.unit : "Unit",
           };
         });
 
@@ -292,20 +312,23 @@ export const InventoryView: React.FC = () => {
         category_id: servForm.category_id || undefined,
         category_name: cat ? cat.name : undefined,
         selling_price: Number(servForm.selling_price) || 0,
-        estimated_cost: computedRecipeCost > 0 ? computedRecipeCost : (Number(servForm.estimated_cost) || 0),
+        estimated_cost:
+          computedRecipeCost > 0 ? computedRecipeCost : (
+            Number(servForm.estimated_cost) || 0
+          ),
         notes: servForm.notes.trim() || undefined,
         components: formattedComponents,
       });
 
       showToast(
-        'success',
-        editingService ? 'Service Updated' : 'Service Added',
-        `${servForm.name} saved to catalog with ${formattedComponents.length} recipe component(s)`
+        "success",
+        editingService ? "Service Updated" : "Service Added",
+        `${servForm.name} saved to catalog with ${formattedComponents.length} recipe component(s)`,
       );
       setIsServiceModalOpen(false);
       refreshData();
     } catch (err: any) {
-      showToast('error', 'Failed to Save', err.message);
+      showToast("error", "Failed to Save", err.message);
     }
   };
 
@@ -313,10 +336,10 @@ export const InventoryView: React.FC = () => {
   const handleOpenStockMovement = (product: Product) => {
     setMovementProduct(product);
     setMovementForm({
-      movement_type: 'PURCHASE',
+      movement_type: "PURCHASE",
       quantity: 10,
       unit_cost: product.average_cost || product.purchase_price,
-      notes: '',
+      notes: "",
     });
     setIsMovementModalOpen(true);
   };
@@ -326,7 +349,9 @@ export const InventoryView: React.FC = () => {
     if (!movementProduct || movementForm.quantity <= 0) return;
 
     try {
-      const totalCost = roundMoney(movementForm.quantity * movementForm.unit_cost);
+      const totalCost = roundMoney(
+        movementForm.quantity * movementForm.unit_cost,
+      );
       await inventoryRepo.recordStockMovement(organization.id, {
         organization_id: organization.id,
         product_id: movementProduct.id,
@@ -335,27 +360,36 @@ export const InventoryView: React.FC = () => {
         unit_cost: movementForm.unit_cost,
         total_cost: totalCost,
         notes: movementForm.notes,
-        created_by: 'Inventory Manager',
+        created_by: "Inventory Manager",
       });
 
       showToast(
-        'success',
-        'Stock Movement Recorded',
-        `${movementForm.movement_type}: ${movementForm.quantity} ${movementProduct.unit} for ${movementProduct.name}`
+        "success",
+        "Stock Movement Recorded",
+        `${movementForm.movement_type}: ${movementForm.quantity} ${movementProduct.unit} for ${movementProduct.name}`,
       );
       setIsMovementModalOpen(false);
       refreshData();
     } catch (err: any) {
-      showToast('error', 'Stock Movement Failed', err.message);
+      showToast("error", "Stock Movement Failed", err.message);
     }
   };
 
   const exportCSV = () => {
-    const headers = ['Name', 'SKU', 'Category', 'Unit', 'Purchase Cost', 'Selling Price', 'Current Stock', 'Stock Value'];
+    const headers = [
+      "Name",
+      "SKU",
+      "Category",
+      "Unit",
+      "Purchase Cost",
+      "Selling Price",
+      "Current Stock",
+      "Stock Value",
+    ];
     const rows = products.map((p) => [
       `"${p.name.replace(/"/g, '""')}"`,
-      `"${p.sku || ''}"`,
-      `"${p.category_name || 'General'}"`,
+      `"${p.sku || ""}"`,
+      `"${p.category_name || "General"}"`,
       `"${p.unit}"`,
       p.average_cost || p.purchase_price,
       p.selling_price,
@@ -363,11 +397,16 @@ export const InventoryView: React.FC = () => {
       (p.current_stock * (p.average_cost || p.purchase_price)).toFixed(2),
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `inventory_${new Date().toISOString().slice(0, 10)}.csv`);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute(
+      "download",
+      `inventory_${new Date().toISOString().slice(0, 10)}.csv`,
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -377,8 +416,11 @@ export const InventoryView: React.FC = () => {
     const q = searchQuery.toLowerCase().trim();
     return products.filter((p) => {
       const matchesQuery =
-        !q || p.name.toLowerCase().includes(q) || (p.sku && p.sku.toLowerCase().includes(q));
-      const matchesCat = categoryFilter === 'ALL' || p.category_name === categoryFilter;
+        !q ||
+        p.name.toLowerCase().includes(q) ||
+        (p.sku && p.sku.toLowerCase().includes(q));
+      const matchesCat =
+        categoryFilter === "ALL" || p.category_name === categoryFilter;
       return matchesQuery && matchesCat;
     });
   }, [products, searchQuery, categoryFilter]);
@@ -387,8 +429,11 @@ export const InventoryView: React.FC = () => {
     const q = searchQuery.toLowerCase().trim();
     return services.filter((s) => {
       const matchesQuery =
-        !q || s.name.toLowerCase().includes(q) || (s.sku && s.sku.toLowerCase().includes(q));
-      const matchesCat = categoryFilter === 'ALL' || s.category_name === categoryFilter;
+        !q ||
+        s.name.toLowerCase().includes(q) ||
+        (s.sku && s.sku.toLowerCase().includes(q));
+      const matchesCat =
+        categoryFilter === "ALL" || s.category_name === categoryFilter;
       return matchesQuery && matchesCat;
     });
   }, [services, searchQuery, categoryFilter]);
@@ -402,7 +447,9 @@ export const InventoryView: React.FC = () => {
             <span className="text-[11px] font-semibold text-[#667085] uppercase tracking-wider">
               Total SKUs
             </span>
-            <span className="text-2xl font-bold text-[#14181f] mt-1">{totalSkus}</span>
+            <span className="text-2xl font-bold text-[#14181f] mt-1">
+              {totalSkus}
+            </span>
           </div>
           <div className="w-10 h-10 rounded-lg bg-[#f8f9fb] border border-[#e6e8ec] flex items-center justify-center text-[#4f46e5]">
             <Boxes className="h-5 w-5" />
@@ -429,7 +476,7 @@ export const InventoryView: React.FC = () => {
               Reorder Attention
             </span>
             <span className="text-2xl font-bold text-[#dc2626] mt-1">
-              {lowStockItems.length}{' '}
+              {lowStockItems.length}{" "}
               <span className="text-xs font-normal text-[#667085]">items</span>
             </span>
           </div>
@@ -461,20 +508,28 @@ export const InventoryView: React.FC = () => {
               <Info className="h-4 w-4" />
             </div>
             <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-              <span className="text-sm font-semibold text-[#92400e]">Low Stock Alert:</span>
+              <span className="text-sm font-semibold text-[#92400e]">
+                Low Stock Alert:
+              </span>
               <span className="text-xs text-[#78350f]">
-                {lowStockItems.length} items are below reorder threshold:{' '}
-                {lowStockItems.slice(0, 3).map((i) => i.name).join(', ')}
-                {lowStockItems.length > 3 ? ` +${lowStockItems.length - 3} more` : ''}.
+                {lowStockItems.length} items are below reorder threshold:{" "}
+                {lowStockItems
+                  .slice(0, 3)
+                  .map((i) => i.name)
+                  .join(", ")}
+                {lowStockItems.length > 3 ?
+                  ` +${lowStockItems.length - 3} more`
+                : ""}
+                .
               </span>
             </div>
           </div>
           <div className="flex items-center gap-3 pl-11 md:pl-0">
             <button
               onClick={() => {
-                setCategoryFilter('ALL');
-                setSearchQuery('');
-                setActiveTab('PRODUCTS');
+                setCategoryFilter("ALL");
+                setSearchQuery("");
+                setActiveTab("PRODUCTS");
               }}
               className="text-xs font-semibold text-[#b45309] hover:text-[#78350f] flex items-center gap-1 transition-colors cursor-pointer"
             >
@@ -497,37 +552,23 @@ export const InventoryView: React.FC = () => {
         {/* Navigation Sub-Tabs */}
         <div className="flex border-b border-[#e6e8ec] px-5 pt-3 gap-6 text-xs font-medium">
           <button
-            onClick={() => setActiveTab('PRODUCTS')}
+            onClick={() => setActiveTab("PRODUCTS")}
             className={`pb-3 flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
-              activeTab === 'PRODUCTS'
-                ? 'border-[#4f46e5] text-[#4f46e5] font-semibold'
-                : 'border-transparent text-[#667085] hover:text-[#14181f]'
+              activeTab === "PRODUCTS" ?
+                "border-[#4f46e5] text-[#4f46e5] font-semibold"
+              : "border-transparent text-[#667085] hover:text-[#14181f]"
             }`}
           >
             <Boxes className="h-4 w-4" />
             <span>Physical Inventory ({products.length})</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('SERVICES')}
-            className={`pb-3 flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
-              activeTab === 'SERVICES'
-                ? 'border-[#4f46e5] text-[#4f46e5] font-semibold'
-                : 'border-transparent text-[#667085] hover:text-[#14181f]'
-            }`}
-          >
+          <button onClick={() => setActiveTab("SERVICES")} className="hidden">
             <Zap className="h-4 w-4" />
             <span>Services & Jobs ({services.length})</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('MOVEMENTS')}
-            className={`pb-3 flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
-              activeTab === 'MOVEMENTS'
-                ? 'border-[#4f46e5] text-[#4f46e5] font-semibold'
-                : 'border-transparent text-[#667085] hover:text-[#14181f]'
-            }`}
-          >
+          <button onClick={() => setActiveTab("MOVEMENTS")} className="hidden">
             <ArrowUpDown className="h-4 w-4" />
             <span>Stock Movement Ledger ({movements.length})</span>
           </button>
@@ -538,22 +579,22 @@ export const InventoryView: React.FC = () => {
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex items-baseline gap-2">
               <h1 className="text-lg font-bold text-[#14181f] tracking-tight">
-                {activeTab === 'PRODUCTS'
-                  ? 'Inventory Items'
-                  : activeTab === 'SERVICES'
-                  ? 'Service Offerings'
-                  : 'Stock Movements'}
+                {activeTab === "PRODUCTS" ?
+                  "Inventory Items"
+                : activeTab === "SERVICES" ?
+                  "Service Offerings"
+                : "Stock Movements"}
               </h1>
               <span className="px-2 py-0.5 rounded-full text-[11px] bg-[#f8f9fb] border border-[#e6e8ec] text-[#667085] font-medium">
-                {activeTab === 'PRODUCTS'
-                  ? `${filteredProducts.length} items`
-                  : activeTab === 'SERVICES'
-                  ? `${filteredServices.length} services`
-                  : `${movements.length} logs`}
+                {activeTab === "PRODUCTS" ?
+                  `${filteredProducts.length} items`
+                : activeTab === "SERVICES" ?
+                  `${filteredServices.length} services`
+                : `${movements.length} logs`}
               </span>
             </div>
 
-            {activeTab !== 'MOVEMENTS' && (
+            {activeTab !== "MOVEMENTS" && (
               <div className="flex items-center gap-2 w-full sm:w-auto">
                 <div className="relative flex-1 sm:w-64">
                   <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#667085]" />
@@ -585,21 +626,29 @@ export const InventoryView: React.FC = () => {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 self-end lg:self-auto">
-            {activeTab === 'PRODUCTS' && (
+            {activeTab === "PRODUCTS" && (
               <>
                 <Button variant="secondary" size="sm" onClick={exportCSV}>
                   <Download className="h-4 w-4 text-[#667085]" />
                   <span>Export CSV</span>
                 </Button>
-                <Button variant="primary" size="sm" onClick={() => handleOpenProductModal()}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => handleOpenProductModal()}
+                >
                   <Plus className="h-4 w-4" />
                   <span>Add New Item</span>
                 </Button>
               </>
             )}
 
-            {activeTab === 'SERVICES' && (
-              <Button variant="primary" size="sm" onClick={() => handleOpenServiceModal()}>
+            {activeTab === "SERVICES" && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => handleOpenServiceModal()}
+              >
                 <Plus className="h-4 w-4" />
                 <span>Add New Service</span>
               </Button>
@@ -609,7 +658,7 @@ export const InventoryView: React.FC = () => {
 
         {/* Data Table */}
         <div className="overflow-x-auto w-full">
-          {activeTab === 'PRODUCTS' && (
+          {activeTab === "PRODUCTS" && (
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-[#f8f9fb] text-[#667085] text-[11px] uppercase tracking-wider font-semibold border-b border-[#e6e8ec]">
@@ -624,27 +673,31 @@ export const InventoryView: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e6e8ec] text-xs">
-                {filteredProducts.length === 0 ? (
+                {filteredProducts.length === 0 ?
                   <tr>
                     <td colSpan={8} className="py-8 text-center text-[#667085]">
                       No products matching your search criteria.
                     </td>
                   </tr>
-                ) : (
-                  filteredProducts.map((p) => {
+                : filteredProducts.map((p) => {
                     const cost = p.average_cost || p.purchase_price;
                     const margin =
-                      p.selling_price > 0
-                        ? Math.round(((p.selling_price - cost) / p.selling_price) * 100)
-                        : 0;
-                    const isLow = p.track_stock && p.current_stock <= p.min_stock_threshold;
+                      p.selling_price > 0 ?
+                        Math.round(
+                          ((p.selling_price - cost) / p.selling_price) * 100,
+                        )
+                      : 0;
+                    const isLow =
+                      p.track_stock && p.current_stock <= p.min_stock_threshold;
                     const isOut = p.track_stock && p.current_stock <= 0;
 
                     return (
                       <tr
                         key={p.id}
                         className={`hover:bg-[#f8f9fb] transition-colors group ${
-                          isOut ? 'bg-[#fef2f2]/30' : isLow ? 'bg-[#fffbeb]/40' : ''
+                          isOut ? "bg-[#fef2f2]/30"
+                          : isLow ? "bg-[#fffbeb]/40"
+                          : ""
                         }`}
                       >
                         <td className="py-3 px-4">
@@ -653,36 +706,61 @@ export const InventoryView: React.FC = () => {
                               {p.name}
                             </span>
                             <span className="font-mono text-[11px] text-[#667085] mt-0.5">
-                              {p.sku || 'NO-SKU'}
+                              {p.sku || "NO-SKU"}
                             </span>
                           </div>
                         </td>
                         <td className="py-3 px-3 text-[#667085]">
-                          {p.category_name || 'General'}
+                          {p.category_name || "General"}
                         </td>
                         <td className="py-3 px-3 text-right font-mono font-medium text-[#14181f]">
-                          <span className={isOut ? 'text-[#dc2626] font-bold' : isLow ? 'text-[#d97706] font-bold' : ''}>
+                          <span
+                            className={
+                              isOut ? "text-[#dc2626] font-bold"
+                              : isLow ?
+                                "text-[#d97706] font-bold"
+                              : ""
+                            }
+                          >
                             {p.current_stock}
                           </span>
-                          <span className="text-[#667085] text-[11px] ml-1">{p.unit}</span>
+                          <span className="text-[#667085] text-[11px] ml-1">
+                            {p.unit}
+                          </span>
                         </td>
                         <td className="py-3 px-3 text-right font-mono text-[#667085]">
                           {formatCurrency(cost, organization.currency_symbol)}
                         </td>
                         <td className="py-3 px-3 text-right font-mono font-semibold text-[#14181f]">
-                          {formatCurrency(p.selling_price, organization.currency_symbol)}
+                          {formatCurrency(
+                            p.selling_price,
+                            organization.currency_symbol,
+                          )}
                         </td>
                         <td className="py-3 px-3 text-right font-mono font-medium">
-                          <span className={margin >= 30 ? 'text-[#16a34a]' : 'text-[#d97706]'}>
+                          <span
+                            className={
+                              margin >= 30 ? "text-[#16a34a]" : "text-[#d97706]"
+                            }
+                          >
                             {margin}%
                           </span>
                         </td>
                         <td className="py-3 px-3">
                           <Badge
-                            variant={isOut ? 'rose' : isLow ? 'amber' : 'emerald'}
+                            variant={
+                              isOut ? "rose"
+                              : isLow ?
+                                "amber"
+                              : "emerald"
+                            }
                             size="sm"
                           >
-                            {isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'Normal'}
+                            {isOut ?
+                              "Out of Stock"
+                            : isLow ?
+                              "Low Stock"
+                            : "Normal"}
                           </Badge>
                         </td>
                         <td className="py-3 px-4 text-right">
@@ -706,54 +784,69 @@ export const InventoryView: React.FC = () => {
                       </tr>
                     );
                   })
-                )}
+                }
               </tbody>
             </table>
           )}
 
-          {activeTab === 'SERVICES' && (
+          {activeTab === "SERVICES" && (
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-[#f8f9fb] text-[#667085] text-[11px] uppercase tracking-wider font-semibold border-b border-[#e6e8ec]">
                   <th className="py-3 px-4">Service Name & SKU</th>
                   <th className="py-3 px-3">Category</th>
                   <th className="py-3 px-3 text-right">Rate / Selling Price</th>
-                  <th className="py-3 px-3 text-right">Est. Labor / Consumable Cost</th>
+                  <th className="py-3 px-3 text-right">
+                    Est. Labor / Consumable Cost
+                  </th>
                   <th className="py-3 px-3">Recipe / Components</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e6e8ec] text-xs">
-                {filteredServices.length === 0 ? (
+                {filteredServices.length === 0 ?
                   <tr>
                     <td colSpan={6} className="py-8 text-center text-[#667085]">
                       No services found in this catalog.
                     </td>
                   </tr>
-                ) : (
-                  filteredServices.map((s) => (
-                    <tr key={s.id} className="hover:bg-[#f8f9fb] transition-colors group">
+                : filteredServices.map((s) => (
+                    <tr
+                      key={s.id}
+                      className="hover:bg-[#f8f9fb] transition-colors group"
+                    >
                       <td className="py-3 px-4">
                         <p className="font-semibold text-[#14181f] group-hover:text-[#4f46e5] transition-colors">
                           {s.name}
                         </p>
-                        <p className="text-[11px] font-mono text-[#667085]">{s.sku || 'SRV'}</p>
-                      </td>
-                      <td className="py-3 px-3 text-[#667085]">{s.category_name || 'Service'}</td>
-                      <td className="py-3 px-3 text-right font-mono font-semibold text-[#14181f]">
-                        {formatCurrency(s.selling_price, organization.currency_symbol)}
-                      </td>
-                      <td className="py-3 px-3 text-right font-mono text-[#667085]">
-                        {formatCurrency(s.estimated_cost, organization.currency_symbol)}
+                        <p className="text-[11px] font-mono text-[#667085]">
+                          {s.sku || "SRV"}
+                        </p>
                       </td>
                       <td className="py-3 px-3 text-[#667085]">
-                        {s.components && s.components.length > 0 ? (
+                        {s.category_name || "Service"}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono font-semibold text-[#14181f]">
+                        {formatCurrency(
+                          s.selling_price,
+                          organization.currency_symbol,
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-[#667085]">
+                        {formatCurrency(
+                          s.estimated_cost,
+                          organization.currency_symbol,
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-[#667085]">
+                        {s.components && s.components.length > 0 ?
                           <span className="text-[11px] font-mono text-[#4f46e5]">
                             {s.components.length} ingredients linked
                           </span>
-                        ) : (
-                          <span className="text-[11px] text-[#667085]">Pure Service</span>
-                        )}
+                        : <span className="text-[11px] text-[#667085]">
+                            Pure Service
+                          </span>
+                        }
                       </td>
                       <td className="py-3 px-4 text-right">
                         <button
@@ -766,12 +859,12 @@ export const InventoryView: React.FC = () => {
                       </td>
                     </tr>
                   ))
-                )}
+                }
               </tbody>
             </table>
           )}
 
-          {activeTab === 'MOVEMENTS' && (
+          {activeTab === "MOVEMENTS" && (
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-[#f8f9fb] text-[#667085] text-[11px] uppercase tracking-wider font-semibold border-b border-[#e6e8ec]">
@@ -785,40 +878,44 @@ export const InventoryView: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e6e8ec] text-xs">
-                {movements.length === 0 ? (
+                {movements.length === 0 ?
                   <tr>
                     <td colSpan={7} className="py-8 text-center text-[#667085]">
                       No stock movements recorded yet.
                     </td>
                   </tr>
-                ) : (
-                  movements.map((m) => {
+                : movements.map((m) => {
                     const prod = products.find((p) => p.id === m.product_id);
                     const isPositive = [
-                      'PURCHASE',
-                      'ADJUSTMENT_INCREASE',
-                      'CUSTOMER_RETURN',
-                      'OPENING_STOCK',
+                      "PURCHASE",
+                      "ADJUSTMENT_INCREASE",
+                      "CUSTOMER_RETURN",
+                      "OPENING_STOCK",
                     ].includes(m.movement_type);
 
                     return (
-                      <tr key={m.id} className="hover:bg-[#f8f9fb] transition-colors">
+                      <tr
+                        key={m.id}
+                        className="hover:bg-[#f8f9fb] transition-colors"
+                      >
                         <td className="py-3 px-4 font-mono text-[#667085]">
                           {new Date(m.created_at).toLocaleString()}
                         </td>
                         <td className="py-3 px-3 font-semibold text-[#14181f]">
-                          {prod ? prod.name : 'Unknown Product'}
+                          {prod ? prod.name : "Unknown Product"}
                         </td>
                         <td className="py-3 px-3">
                           <Badge
                             variant={
-                              m.movement_type === 'PURCHASE'
-                                ? 'primary'
-                                : m.movement_type === 'SALE'
-                                ? 'neutral'
-                                : m.movement_type.includes('DECREASE') || m.movement_type.includes('DAMAGE')
-                                ? 'rose'
-                                : 'emerald'
+                              m.movement_type === "PURCHASE" ? "primary"
+                              : m.movement_type === "SALE" ?
+                                "neutral"
+                              : (
+                                m.movement_type.includes("DECREASE") ||
+                                m.movement_type.includes("DAMAGE")
+                              ) ?
+                                "rose"
+                              : "emerald"
                             }
                             size="sm"
                           >
@@ -826,23 +923,34 @@ export const InventoryView: React.FC = () => {
                           </Badge>
                         </td>
                         <td className="py-3 px-3 text-right font-mono font-bold">
-                          <span className={isPositive ? 'text-[#16a34a]' : 'text-[#dc2626]'}>
+                          <span
+                            className={
+                              isPositive ? "text-[#16a34a]" : "text-[#dc2626]"
+                            }
+                          >
                             {isPositive ? `+${m.quantity}` : `-${m.quantity}`}
                           </span>
                         </td>
                         <td className="py-3 px-3 text-right font-mono text-[#667085]">
-                          {formatCurrency(m.unit_cost, organization.currency_symbol)}
+                          {formatCurrency(
+                            m.unit_cost,
+                            organization.currency_symbol,
+                          )}
                         </td>
                         <td className="py-3 px-3 text-right font-mono text-[#14181f] font-medium">
-                          {formatCurrency(m.total_cost, organization.currency_symbol)}
+                          {formatCurrency(
+                            m.total_cost,
+                            organization.currency_symbol,
+                          )}
                         </td>
                         <td className="py-3 px-4 text-[#667085] text-[11px]">
-                          {m.notes || 'Automated movement'} • {m.created_by || 'System'}
+                          {m.notes || "Automated movement"} •{" "}
+                          {m.created_by || "System"}
                         </td>
                       </tr>
                     );
                   })
-                )}
+                }
               </tbody>
             </table>
           )}
@@ -853,7 +961,11 @@ export const InventoryView: React.FC = () => {
       <Modal
         isOpen={isProductModalOpen}
         onClose={() => setIsProductModalOpen(false)}
-        title={editingProduct ? 'Edit Inventory Product' : 'Add New Inventory Product'}
+        title={
+          editingProduct ?
+            "Edit Inventory Product"
+          : "Add New Inventory Product"
+        }
         description="Configure pricing, SKU, and stock tracking parameters."
         maxWidth="lg"
       >
@@ -867,80 +979,32 @@ export const InventoryView: React.FC = () => {
             placeholder="e.g. A4 Paper Ream (70gsm AA)"
           />
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Input
-              label="SKU / Barcode"
-              value={prodForm.sku}
-              onChange={(e) => setProdForm({ ...prodForm, sku: e.target.value })}
-            />
-
-            <div>
-              <label className="block text-xs font-semibold text-[#14181f] mb-1.5">
-                Category
-              </label>
-              <select
-                value={prodForm.category_id}
-                onChange={(e) => setProdForm({ ...prodForm, category_id: e.target.value })}
-                className="w-full h-10 rounded-lg bg-white border border-[#e6e8ec] px-3 text-xs text-[#14181f] focus:border-[#4f46e5] focus:ring-2 focus:ring-[#4f46e5]/20 focus:outline-none"
-              >
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <Input
-              label="Stock Unit"
-              value={prodForm.unit}
-              onChange={(e) => setProdForm({ ...prodForm, unit: e.target.value })}
-              placeholder="Pcs, Ream, Pack"
-            />
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
-              label={`Purchase Cost (${organization.currency_symbol})`}
-              type="number"
-              step="any"
-              value={prodForm.purchase_price}
-              onChange={(e) =>
-                setProdForm({ ...prodForm, purchase_price: parseFloat(e.target.value) || 0 })
-              }
-            />
-
-            <Input
-              label={`Selling Price (${organization.currency_symbol})`}
+              label={`Sale Price (${organization.currency_symbol})`}
               type="number"
               step="any"
               required
               value={prodForm.selling_price}
               onChange={(e) =>
-                setProdForm({ ...prodForm, selling_price: parseFloat(e.target.value) || 0 })
+                setProdForm({
+                  ...prodForm,
+                  selling_price: parseFloat(e.target.value) || 0,
+                })
               }
             />
           </div>
 
           {!editingProduct && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               <Input
-                label="Opening Stock Count"
+                label="Starting Quantity (optional)"
                 type="number"
                 value={prodForm.opening_stock}
                 onChange={(e) =>
-                  setProdForm({ ...prodForm, opening_stock: parseFloat(e.target.value) || 0 })
-                }
-              />
-
-              <Input
-                label="Low Stock Warning Level"
-                type="number"
-                value={prodForm.min_stock_threshold}
-                onChange={(e) =>
                   setProdForm({
                     ...prodForm,
-                    min_stock_threshold: parseFloat(e.target.value) || 0,
+                    opening_stock: parseFloat(e.target.value) || 0,
                   })
                 }
               />
@@ -967,7 +1031,7 @@ export const InventoryView: React.FC = () => {
       <Modal
         isOpen={isServiceModalOpen}
         onClose={() => setIsServiceModalOpen(false)}
-        title={editingService ? 'Edit Service' : 'Add New Service Job'}
+        title={editingService ? "Edit Service" : "Add New Service Job"}
         description="Configure printing, photocopy, binding, or typing service offerings."
         maxWidth="md"
       >
@@ -985,7 +1049,9 @@ export const InventoryView: React.FC = () => {
             <Input
               label="Service Code"
               value={servForm.sku}
-              onChange={(e) => setServForm({ ...servForm, sku: e.target.value })}
+              onChange={(e) =>
+                setServForm({ ...servForm, sku: e.target.value })
+              }
             />
 
             <div>
@@ -994,7 +1060,9 @@ export const InventoryView: React.FC = () => {
               </label>
               <select
                 value={servForm.category_id}
-                onChange={(e) => setServForm({ ...servForm, category_id: e.target.value })}
+                onChange={(e) =>
+                  setServForm({ ...servForm, category_id: e.target.value })
+                }
                 className="w-full h-10 rounded-lg bg-white border border-[#e6e8ec] px-3 text-xs text-[#14181f] focus:border-[#4f46e5] focus:outline-none"
               >
                 {categories.map((c) => (
@@ -1014,7 +1082,10 @@ export const InventoryView: React.FC = () => {
               required
               value={servForm.selling_price}
               onChange={(e) =>
-                setServForm({ ...servForm, selling_price: parseFloat(e.target.value) || 0 })
+                setServForm({
+                  ...servForm,
+                  selling_price: parseFloat(e.target.value) || 0,
+                })
               }
             />
 
@@ -1024,7 +1095,10 @@ export const InventoryView: React.FC = () => {
               step="any"
               value={servForm.estimated_cost}
               onChange={(e) =>
-                setServForm({ ...servForm, estimated_cost: parseFloat(e.target.value) || 0 })
+                setServForm({
+                  ...servForm,
+                  estimated_cost: parseFloat(e.target.value) || 0,
+                })
               }
             />
           </div>
@@ -1033,33 +1107,46 @@ export const InventoryView: React.FC = () => {
             label="Internal Notes"
             placeholder="e.g. Standard laser printer drum rate"
             value={servForm.notes}
-            onChange={(e) => setServForm({ ...servForm, notes: e.target.value })}
+            onChange={(e) =>
+              setServForm({ ...servForm, notes: e.target.value })
+            }
           />
 
           {/* Recipe Components Builder */}
           <div className="p-3.5 rounded-xl bg-[#f8f9fb] border border-[#e6e8ec] space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold text-[#14181f]">Raw Material Consumption (Recipe)</p>
+                <p className="text-xs font-bold text-[#14181f]">
+                  Raw Material Consumption (Recipe)
+                </p>
                 <p className="text-[11px] text-[#667085]">
-                  Deduct physical stock items when this service is sold (e.g. 1 A4 Paper per Photocopy).
+                  Deduct physical stock items when this service is sold (e.g. 1
+                  A4 Paper per Photocopy).
                 </p>
               </div>
-              <Button type="button" variant="secondary" size="sm" onClick={handleAddRecipeComponent}>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleAddRecipeComponent}
+              >
                 <Plus className="h-3.5 w-3.5" />
                 <span>Add Material</span>
               </Button>
             </div>
 
-            {servComponents.length === 0 ? (
+            {servComponents.length === 0 ?
               <p className="text-[11px] text-[#667085] italic py-1">
-                No inventory consumption linked. This service will be sold as pure service/labor.
+                No inventory consumption linked. This service will be sold as
+                pure service/labor.
               </p>
-            ) : (
-              <div className="space-y-2">
+            : <div className="space-y-2">
                 {servComponents.map((comp, idx) => {
                   const prod = products.find((p) => p.id === comp.product_id);
-                  const lineCost = prod ? roundMoney(prod.average_cost * comp.quantity_consumed) : 0;
+                  const lineCost =
+                    prod ?
+                      roundMoney(prod.average_cost * comp.quantity_consumed)
+                    : 0;
                   return (
                     <div
                       key={idx}
@@ -1068,12 +1155,23 @@ export const InventoryView: React.FC = () => {
                       <div className="flex-1">
                         <select
                           value={comp.product_id}
-                          onChange={(e) => handleUpdateRecipeComponent(idx, 'product_id', e.target.value)}
+                          onChange={(e) =>
+                            handleUpdateRecipeComponent(
+                              idx,
+                              "product_id",
+                              e.target.value,
+                            )
+                          }
                           className="w-full h-9 rounded-lg bg-white border border-[#e6e8ec] px-2 text-xs text-[#14181f] focus:border-[#4f46e5] focus:outline-none"
                         >
                           {products.map((p) => (
                             <option key={p.id} value={p.id}>
-                              {p.name} (Stock: {p.current_stock} {p.unit}, Avg: {formatCurrency(p.average_cost, organization.currency_symbol)})
+                              {p.name} (Stock: {p.current_stock} {p.unit}, Avg:{" "}
+                              {formatCurrency(
+                                p.average_cost,
+                                organization.currency_symbol,
+                              )}
+                              )
                             </option>
                           ))}
                         </select>
@@ -1086,7 +1184,11 @@ export const InventoryView: React.FC = () => {
                           min="0.01"
                           value={comp.quantity_consumed}
                           onChange={(e) =>
-                            handleUpdateRecipeComponent(idx, 'quantity_consumed', parseFloat(e.target.value) || 0)
+                            handleUpdateRecipeComponent(
+                              idx,
+                              "quantity_consumed",
+                              parseFloat(e.target.value) || 0,
+                            )
                           }
                           placeholder="Qty"
                           className="w-full h-9 rounded-lg bg-white border border-[#e6e8ec] px-2 text-xs text-[#14181f] text-right font-mono focus:border-[#4f46e5] focus:outline-none"
@@ -1110,13 +1212,18 @@ export const InventoryView: React.FC = () => {
                 })}
 
                 <div className="flex justify-between items-center text-xs font-semibold pt-2 border-t border-[#e6e8ec]">
-                  <span className="text-[#667085]">Total Material Cost per Job:</span>
+                  <span className="text-[#667085]">
+                    Total Material Cost per Job:
+                  </span>
                   <span className="font-mono font-bold text-[#14181f]">
-                    {formatCurrency(computedRecipeCost, organization.currency_symbol)}
+                    {formatCurrency(
+                      computedRecipeCost,
+                      organization.currency_symbol,
+                    )}
                   </span>
                 </div>
               </div>
-            )}
+            }
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#e6e8ec]">
@@ -1139,7 +1246,7 @@ export const InventoryView: React.FC = () => {
       <Modal
         isOpen={isMovementModalOpen}
         onClose={() => setIsMovementModalOpen(false)}
-        title={`Stock Adjustment: ${movementProduct?.name || ''}`}
+        title={`Stock Adjustment: ${movementProduct?.name || ""}`}
         description="Record supplier purchase or stock write-off with Weighted Average Cost calculation."
         maxWidth="md"
       >
@@ -1153,22 +1260,31 @@ export const InventoryView: React.FC = () => {
               onChange={(e) =>
                 setMovementForm({
                   ...movementForm,
-                  movement_type: e.target.value as StockMovement['movement_type'],
+                  movement_type: e.target
+                    .value as StockMovement["movement_type"],
                 })
               }
               className="w-full h-10 rounded-lg bg-white border border-[#e6e8ec] px-3 text-xs text-[#14181f] focus:border-[#4f46e5] focus:outline-none"
             >
-              <option value="PURCHASE">Supplier Purchase / Stock In (Updates WAC)</option>
-              <option value="ADJUSTMENT_INCREASE">Stock Audit Increase (+)</option>
-              <option value="ADJUSTMENT_DECREASE">Stock Audit Decrease (-)</option>
-              <option value="DAMAGE_WASTAGE">Damage / Wastage / Spoiled Material (-)</option>
+              <option value="PURCHASE">
+                Supplier Purchase / Stock In (Updates WAC)
+              </option>
+              <option value="ADJUSTMENT_INCREASE">
+                Stock Audit Increase (+)
+              </option>
+              <option value="ADJUSTMENT_DECREASE">
+                Stock Audit Decrease (-)
+              </option>
+              <option value="DAMAGE_WASTAGE">
+                Damage / Wastage / Spoiled Material (-)
+              </option>
               <option value="SUPPLIER_RETURN">Return to Supplier (-)</option>
             </select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <Input
-              label={`Quantity (${movementProduct?.unit || 'Pcs'})`}
+              label={`Quantity (${movementProduct?.unit || "Pcs"})`}
               type="number"
               step="any"
               required
@@ -1201,7 +1317,7 @@ export const InventoryView: React.FC = () => {
             <span className="font-bold text-[#14181f]">
               {formatCurrency(
                 roundMoney(movementForm.quantity * movementForm.unit_cost),
-                organization.currency_symbol
+                organization.currency_symbol,
               )}
             </span>
           </div>
@@ -1210,7 +1326,9 @@ export const InventoryView: React.FC = () => {
             label="Supplier / Bill Ref / Notes"
             placeholder="e.g. Urdu Bazaar Supplier Invoice #5402"
             value={movementForm.notes}
-            onChange={(e) => setMovementForm({ ...movementForm, notes: e.target.value })}
+            onChange={(e) =>
+              setMovementForm({ ...movementForm, notes: e.target.value })
+            }
           />
 
           <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#e6e8ec]">

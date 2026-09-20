@@ -49,10 +49,14 @@ export class SQLiteRepository {
     return row || null;
   }
 
-  async getLocalAuthAccount(): Promise<LocalAuthAccount | null> {
-    const row = (await (await this.database()).select<LocalAuthAccount>(
-      'SELECT * FROM local_auth_accounts ORDER BY created_at LIMIT 1',
-    ))[0];
+  async getLocalAuthAccount(profileId?: string): Promise<LocalAuthAccount | null> {
+    const rows = await (await this.database()).select<LocalAuthAccount>(
+      profileId
+        ? 'SELECT * FROM local_auth_accounts WHERE profile_id = ? ORDER BY created_at LIMIT 1'
+        : 'SELECT * FROM local_auth_accounts ORDER BY created_at LIMIT 1',
+      profileId ? [profileId] : [],
+    );
+    const row = rows[0];
     return row || null;
   }
 
@@ -61,9 +65,9 @@ export class SQLiteRepository {
     profile: UserProfile,
     pinHash: string,
     pinSalt: string,
+    allowMultiple = false,
   ): Promise<void> {
-    const existing = await this.getLocalAuthAccount();
-    if (existing) throw new Error('A local shop account already exists');
+    if (!allowMultiple && await this.getLocalAuthAccount()) throw new Error('A local shop account already exists');
     await this.transaction(async (transactionDb) => {
       await this.insert(transactionDb, 'organizations', {
         ...organization,

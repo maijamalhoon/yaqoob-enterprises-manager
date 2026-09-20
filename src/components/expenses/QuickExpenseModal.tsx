@@ -1,28 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { Modal } from '../common/Modal';
-import { Input } from '../common/Input';
-import { Button } from '../common/Button';
-import { useAuth } from '../../context/AuthContext';
-import { useApp } from '../../context/AppContext';
-import { expenseRepo, accountRepo } from '../../services';
-import { ExpenseCategory, PaymentAccount } from '../../types';
-import { formatCurrency } from '../../lib/utils';
-import { Receipt, Check, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Modal } from "../common/Modal";
+import { Input } from "../common/Input";
+import { Button } from "../common/Button";
+import { useAuth } from "../../context/AuthContext";
+import { useApp } from "../../context/AppContext";
+import { expenseRepo, accountRepo } from "../../services";
+import { ExpenseCategory, PaymentAccount } from "../../types";
+import { formatCurrency } from "../../lib/utils";
+import { Receipt, Check, AlertCircle } from "lucide-react";
 
 export const QuickExpenseModal: React.FC = () => {
   const { organization, user } = useAuth();
-  const { isQuickExpenseOpen, setIsQuickExpenseOpen, refreshData, showToast } = useApp();
+  const { isQuickExpenseOpen, setIsQuickExpenseOpen, refreshData, showToast } =
+    useApp();
 
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [accounts, setAccounts] = useState<PaymentAccount[]>([]);
 
-  const [categoryId, setCategoryId] = useState('');
-  const [accountId, setAccountId] = useState('');
-  const [amount, setAmount] = useState<string>('');
-  const [description, setDescription] = useState('');
-  const [referenceNumber, setReferenceNumber] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [notes, setNotes] = useState('');
+  const [categoryId, setCategoryId] = useState("");
+  const [accountId, setAccountId] = useState("");
+  const [amount, setAmount] = useState<string>("");
+  const [description, setDescription] = useState("");
+  const [referenceNumber, setReferenceNumber] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -41,11 +42,11 @@ export const QuickExpenseModal: React.FC = () => {
         }
       }
       loadMeta();
-      setAmount('');
-      setDescription('');
-      setReferenceNumber('');
-      setNotes('');
-      setDate(new Date().toISOString().split('T')[0]);
+      setAmount("");
+      setDescription("");
+      setReferenceNumber("");
+      setNotes("");
+      setDate(new Date().toISOString().split("T")[0]);
     }
   }, [isQuickExpenseOpen, organization.id]);
 
@@ -55,15 +56,27 @@ export const QuickExpenseModal: React.FC = () => {
     e.preventDefault();
     const numAmount = parseFloat(amount);
     if (!numAmount || numAmount <= 0) {
-      showToast('error', 'Invalid Amount', 'Please enter a positive expense amount.');
+      showToast(
+        "error",
+        "Invalid Amount",
+        "Please enter a positive expense amount.",
+      );
       return;
     }
     if (!description.trim()) {
-      showToast('error', 'Description Required', 'Please explain what this expense was for.');
+      showToast(
+        "error",
+        "Description Required",
+        "Please explain what this expense was for.",
+      );
       return;
     }
     if (!categoryId || !accountId) {
-      showToast('error', 'Missing Selection', 'Please select both a category and payment account.');
+      showToast(
+        "error",
+        "Missing Selection",
+        "Please select both a category and payment account.",
+      );
       return;
     }
 
@@ -77,18 +90,22 @@ export const QuickExpenseModal: React.FC = () => {
         reference_number: referenceNumber.trim() || undefined,
         date,
         notes: notes.trim() || undefined,
-        entered_by: user?.full_name || 'Muhammad Yaqoob',
+        entered_by: user?.full_name || "Muhammad Yaqoob",
       });
 
       showToast(
-        'success',
-        'Expense Recorded',
-        `${formatCurrency(exp.amount, organization.currency_symbol)} paid from ${exp.account_name}`
+        "success",
+        "Expense Recorded",
+        `${formatCurrency(exp.amount, organization.currency_symbol)} paid from ${exp.account_name}`,
       );
       setIsQuickExpenseOpen(false);
       refreshData();
     } catch (err: any) {
-      showToast('error', 'Expense Failed', err.message || 'Could not record expense');
+      showToast(
+        "error",
+        "Expense Failed",
+        err.message || "Could not record expense",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -105,7 +122,7 @@ export const QuickExpenseModal: React.FC = () => {
       maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4 py-1 select-none">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        <div className="hidden">
           {/* Expense Category */}
           <div>
             <label className="block text-xs font-semibold text-[#14181f] mb-1">
@@ -136,7 +153,8 @@ export const QuickExpenseModal: React.FC = () => {
             >
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.name} (Bal: {organization.currency_symbol} {a.current_balance})
+                  {a.name} (Bal: {organization.currency_symbol}{" "}
+                  {a.current_balance})
                 </option>
               ))}
             </select>
@@ -157,14 +175,6 @@ export const QuickExpenseModal: React.FC = () => {
               onChange={(e) => setAmount(e.target.value)}
               className="font-mono text-base font-bold text-[#dc2626]"
             />
-            {selectedAccount && (
-              <p className="text-[11px] text-[#667085] mt-1">
-                Available in {selectedAccount.name}:{' '}
-                <span className="font-mono font-semibold text-[#16a34a]">
-                  {formatCurrency(selectedAccount.current_balance, organization.currency_symbol)}
-                </span>
-              </p>
-            )}
           </div>
 
           <div>
@@ -187,8 +197,8 @@ export const QuickExpenseModal: React.FC = () => {
           onChange={(e) => setDescription(e.target.value)}
         />
 
-        {/* Reference Number & Notes */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+        {/* Optional bookkeeping details remain available in the full expense history. */}
+        <div className="hidden">
           <Input
             label="Bill / Receipt Ref # (Optional)"
             placeholder="e.g. REC-8495 or Bill #12"
@@ -208,10 +218,10 @@ export const QuickExpenseModal: React.FC = () => {
         <div className="p-3 rounded-lg bg-[#f8f9fb] border border-[#e6e8ec] text-xs text-[#667085] flex items-start gap-2">
           <AlertCircle className="h-4 w-4 text-[#4f46e5] shrink-0 mt-0.5" />
           <span>
-            Recording this expense will immediately deduct from{' '}
+            Recording this expense will immediately deduct from{" "}
             <strong className="text-[#14181f]">
-              {selectedAccount ? selectedAccount.name : 'the selected account'}
-            </strong>{' '}
+              {selectedAccount ? selectedAccount.name : "the selected account"}
+            </strong>{" "}
             and update today&rsquo;s cash closing statement.
           </span>
         </div>

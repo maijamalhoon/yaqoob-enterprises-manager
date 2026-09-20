@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { useApp } from '../../context/AppContext';
+import React, { useState, useEffect, useMemo } from "react";
+import { useAuth } from "../../context/AuthContext";
+import { useApp } from "../../context/AppContext";
 import {
   salesRepo,
   expenseRepo,
@@ -8,7 +8,7 @@ import {
   accountRepo,
   customerRepo,
   closingRepo,
-} from '../../services';
+} from "../../services";
 import {
   Sale,
   Expense,
@@ -19,17 +19,17 @@ import {
   AccountTransaction,
   Customer,
   DailyClosing,
-} from '../../types';
-import { Card } from '../common/Card';
-import { Button } from '../common/Button';
-import { Badge } from '../common/Badge';
+} from "../../types";
+import { Card } from "../common/Card";
+import { Button } from "../common/Button";
+import { Badge } from "../common/Badge";
 import {
   formatCurrency,
   formatDate,
   formatDateTime,
   roundMoney,
   exportToCSV,
-} from '../../lib/utils';
+} from "../../lib/utils";
 import {
   BarChart3,
   Calendar,
@@ -48,39 +48,33 @@ import {
   Lightbulb,
   ArrowRight,
   Info,
-} from 'lucide-react';
+} from "lucide-react";
 
 export type ReportTab =
-  | 'ANALYTICS'
-  | 'PL'
-  | 'SALES'
-  | 'EXPENSES'
-  | 'INVENTORY'
-  | 'MOVEMENTS'
-  | 'TOP_ITEMS'
-  | 'PAYMENTS'
-  | 'CUSTOMERS'
-  | 'CLOSINGS';
+  | "ANALYTICS"
+  | "PL"
+  | "SALES"
+  | "EXPENSES"
+  | "INVENTORY"
+  | "MOVEMENTS"
+  | "TOP_ITEMS"
+  | "PAYMENTS"
+  | "CUSTOMERS"
+  | "CLOSINGS";
 
-export type DatePeriod =
-  | 'TODAY'
-  | 'WEEK'
-  | 'MONTH'
-  | 'YEAR'
-  | 'ALL'
-  | 'CUSTOM';
+export type DatePeriod = "TODAY" | "WEEK" | "MONTH" | "YEAR" | "ALL" | "CUSTOM";
 
 export const ReportsView: React.FC = () => {
   const { organization } = useAuth();
   const { dataVersion, showToast, setCurrentView } = useApp();
 
-  const [activeTab, setActiveTab] = useState<ReportTab>('ANALYTICS');
-  const [period, setPeriod] = useState<DatePeriod>('MONTH');
+  const [activeTab, setActiveTab] = useState<ReportTab>("PL");
+  const [period, setPeriod] = useState<DatePeriod>("MONTH");
   const [customStartDate, setCustomStartDate] = useState<string>(
-    new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
+    new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10),
   );
   const [customEndDate, setCustomEndDate] = useState<string>(
-    new Date().toISOString().slice(0, 10)
+    new Date().toISOString().slice(0, 10),
   );
 
   // Datasets
@@ -94,7 +88,7 @@ export const ReportsView: React.FC = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [closings, setClosings] = useState<DailyClosing[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   useEffect(() => {
     async function loadAllData() {
@@ -153,25 +147,32 @@ export const ReportsView: React.FC = () => {
 
     const yearStart = `${now.getFullYear()}-01-01`;
 
-    if (period === 'TODAY') return { start: todayStr, end: todayStr };
-    if (period === 'WEEK') return { start: weekStr, end: todayStr };
-    if (period === 'MONTH') return { start: monthStr, end: todayStr };
-    if (period === 'YEAR') return { start: yearStart, end: todayStr };
-    if (period === 'CUSTOM') return { start: customStartDate, end: customEndDate };
-    return { start: '1970-01-01', end: '2099-12-31' };
+    if (period === "TODAY") return { start: todayStr, end: todayStr };
+    if (period === "WEEK") return { start: weekStr, end: todayStr };
+    if (period === "MONTH") return { start: monthStr, end: todayStr };
+    if (period === "YEAR") return { start: yearStart, end: todayStr };
+    if (period === "CUSTOM")
+      return { start: customStartDate, end: customEndDate };
+    return { start: "1970-01-01", end: "2099-12-31" };
   }, [period, customStartDate, customEndDate]);
 
   // Filtered Core Collections
   const filteredSales = useMemo(() => {
     return sales.filter((s) => {
       const d = s.created_at.slice(0, 10);
-      return s.status === 'COMPLETED' && d >= dateRange.start && d <= dateRange.end;
+      return (
+        s.status === "COMPLETED" && d >= dateRange.start && d <= dateRange.end
+      );
     });
   }, [sales, dateRange]);
 
   const filteredExpenses = useMemo(() => {
     return expenses.filter((e) => {
-      return e.status === 'ACTIVE' && e.date >= dateRange.start && e.date <= dateRange.end;
+      return (
+        e.status === "ACTIVE" &&
+        e.date >= dateRange.start &&
+        e.date <= dateRange.end
+      );
     });
   }, [expenses, dateRange]);
 
@@ -184,34 +185,38 @@ export const ReportsView: React.FC = () => {
 
   const filteredClosings = useMemo(() => {
     return closings.filter((c) => {
-      return c.closing_date >= dateRange.start && c.closing_date <= dateRange.end;
+      return (
+        c.closing_date >= dateRange.start && c.closing_date <= dateRange.end
+      );
     });
   }, [closings, dateRange]);
 
   // Financial Metrics
   const grossRevenue = useMemo(
     () => roundMoney(filteredSales.reduce((sum, s) => sum + s.grand_total, 0)),
-    [filteredSales]
+    [filteredSales],
   );
   const totalCogs = useMemo(
     () => roundMoney(filteredSales.reduce((sum, s) => sum + s.total_cogs, 0)),
-    [filteredSales]
+    [filteredSales],
   );
   const grossProfit = roundMoney(grossRevenue - totalCogs);
-  const grossMargin = grossRevenue > 0 ? Math.round((grossProfit / grossRevenue) * 100) : 0;
+  const grossMargin =
+    grossRevenue > 0 ? Math.round((grossProfit / grossRevenue) * 100) : 0;
 
   const totalExpenses = useMemo(
     () => roundMoney(filteredExpenses.reduce((sum, e) => sum + e.amount, 0)),
-    [filteredExpenses]
+    [filteredExpenses],
   );
   const netProfit = roundMoney(grossProfit - totalExpenses);
-  const netMargin = grossRevenue > 0 ? Math.round((netProfit / grossRevenue) * 100) : 0;
+  const netMargin =
+    grossRevenue > 0 ? Math.round((netProfit / grossRevenue) * 100) : 0;
 
   // Pace & Volume Metrics
   const daysInPeriod = useMemo(() => {
-    if (period === 'TODAY') return 1;
-    if (period === 'WEEK') return 7;
-    if (period === 'MONTH') return 30;
+    if (period === "TODAY") return 1;
+    if (period === "WEEK") return 7;
+    if (period === "MONTH") return 30;
     const start = new Date(dateRange.start).getTime();
     const end = new Date(dateRange.end).getTime();
     return Math.max(1, Math.round((end - start) / 86400000) + 1);
@@ -222,7 +227,9 @@ export const ReportsView: React.FC = () => {
   }, [filteredSales.length, daysInPeriod]);
 
   const avgTicket = useMemo(() => {
-    return filteredSales.length > 0 ? roundMoney(grossRevenue / filteredSales.length) : 0;
+    return filteredSales.length > 0 ?
+        roundMoney(grossRevenue / filteredSales.length)
+      : 0;
   }, [grossRevenue, filteredSales.length]);
 
   const avgDailyRevenue = useMemo(() => {
@@ -237,7 +244,10 @@ export const ReportsView: React.FC = () => {
         // Look up item category if possible
         const prod = products.find((p) => p.id === it.item_id);
         const serv = services.find((srv) => srv.id === it.item_id);
-        const cat = prod?.category_name || serv?.category_name || (it.item_type === 'SERVICE' ? 'Services' : 'Products');
+        const cat =
+          prod?.category_name ||
+          serv?.category_name ||
+          (it.item_type === "SERVICE" ? "Services" : "Products");
         map[cat] = roundMoney((map[cat] || 0) + it.total);
       });
     });
@@ -249,13 +259,10 @@ export const ReportsView: React.FC = () => {
       amount,
       percentage: Math.round((amount / total) * 100),
       color:
-        index === 0
-          ? 'bg-[#4f46e5]'
-          : index === 1
-          ? 'bg-[#818cf8]'
-          : index === 2
-          ? 'bg-[#16a34a]'
-          : 'bg-[#667085]',
+        index === 0 ? "bg-[#4f46e5]"
+        : index === 1 ? "bg-[#818cf8]"
+        : index === 2 ? "bg-[#16a34a]"
+        : "bg-[#667085]",
     }));
   }, [filteredSales, products, services]);
 
@@ -265,20 +272,21 @@ export const ReportsView: React.FC = () => {
     filteredSales.forEach((s) => {
       if (s.split_payments && s.split_payments.length > 0) {
         s.split_payments.forEach((sp) => {
-          const key = sp.account_name || 'Split Tender';
+          const key = sp.account_name || "Split Tender";
           if (!map[key]) map[key] = { count: 0, total: 0 };
           map[key].count += 1;
           map[key].total = roundMoney(map[key].total + sp.amount);
         });
       } else {
-        const key = s.payment_method || 'Cash';
+        const key = s.payment_method || "Cash";
         if (!map[key]) map[key] = { count: 0, total: 0 };
         map[key].count += 1;
         map[key].total = roundMoney(map[key].total + s.grand_total);
       }
     });
 
-    const total = Object.values(map).reduce((acc, curr) => acc + curr.total, 0) || 1;
+    const total =
+      Object.values(map).reduce((acc, curr) => acc + curr.total, 0) || 1;
     return Object.entries(map).map(([name, data]) => ({
       name,
       ...data,
@@ -288,7 +296,12 @@ export const ReportsView: React.FC = () => {
 
   // Daily Sales Trajectory (30-day buckets)
   const trajectoryBars = useMemo(() => {
-    const bars: Array<{ dateStr: string; label: string; amount: number; isWeekend: boolean }> = [];
+    const bars: Array<{
+      dateStr: string;
+      label: string;
+      amount: number;
+      isWeekend: boolean;
+    }> = [];
     const end = new Date(dateRange.end);
     const count = Math.min(30, daysInPeriod);
 
@@ -305,7 +318,10 @@ export const ReportsView: React.FC = () => {
 
       bars.push({
         dateStr,
-        label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        label: d.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        }),
         amount: roundMoney(dayTotal),
         isWeekend,
       });
@@ -321,9 +337,18 @@ export const ReportsView: React.FC = () => {
   // Drawer Reconciliation Health
   const varianceMetrics = useMemo(() => {
     const totalCount = filteredClosings.length;
-    const totalDiff = filteredClosings.reduce((sum, c) => sum + (c.difference || 0), 0);
-    const totalExpected = filteredClosings.reduce((sum, c) => sum + (c.expected_cash || 0), 0);
-    const variancePercent = totalExpected > 0 ? ((Math.abs(totalDiff) / totalExpected) * 100).toFixed(2) : '0.00';
+    const totalDiff = filteredClosings.reduce(
+      (sum, c) => sum + (c.difference || 0),
+      0,
+    );
+    const totalExpected = filteredClosings.reduce(
+      (sum, c) => sum + (c.expected_cash || 0),
+      0,
+    );
+    const variancePercent =
+      totalExpected > 0 ?
+        ((Math.abs(totalDiff) / totalExpected) * 100).toFixed(2)
+      : "0.00";
     return {
       totalCount,
       totalDiff: roundMoney(totalDiff),
@@ -333,16 +358,20 @@ export const ReportsView: React.FC = () => {
 
   // Export to CSV Action
   const handleExportCSV = () => {
-    const headers = ['Category', 'Line Item', `Amount (${organization.currency_symbol})`];
+    const headers = [
+      "Category",
+      "Line Item",
+      `Amount (${organization.currency_symbol})`,
+    ];
     const rows = [
-      ['Revenue', 'Gross Sales Revenue', grossRevenue],
-      ['COGS', 'Cost of Goods Sold (Materials & Stock)', totalCogs],
-      ['Gross Profit', 'Gross Operating Margin', grossProfit],
-      ['Expenses', 'Operating Overhead Expenses', totalExpenses],
-      ['Net Profit', 'Net Income', netProfit],
+      ["Revenue", "Gross Sales Revenue", grossRevenue],
+      ["COGS", "Cost of Goods Sold (Materials & Stock)", totalCogs],
+      ["Gross Profit", "Gross Operating Margin", grossProfit],
+      ["Expenses", "Operating Overhead Expenses", totalExpenses],
+      ["Net Profit", "Net Income", netProfit],
     ];
     exportToCSV(`Financial_Summary_${period}`, headers, rows);
-    showToast('success', 'Report Exported', 'CSV summary downloaded');
+    showToast("success", "Report Exported", "CSV summary downloaded");
   };
 
   const handlePrint = () => {
@@ -360,7 +389,8 @@ export const ReportsView: React.FC = () => {
             </h1>
           </div>
           <p className="text-xs text-[#667085] mt-0.5">
-            Operational overview of revenue, margins, and performance for {organization.name}.
+            Operational overview of revenue, margins, and performance for{" "}
+            {organization.name}.
           </p>
         </div>
 
@@ -368,26 +398,55 @@ export const ReportsView: React.FC = () => {
         <div className="flex flex-wrap items-center gap-2">
           {/* Period Presets */}
           <div className="inline-flex p-1 bg-[#f8f9fb] border border-[#e6e8ec] rounded-lg gap-1 text-xs">
-            {(['TODAY', 'WEEK', 'MONTH', 'YEAR'] as const).map((p) => (
+            {(["TODAY", "WEEK", "MONTH", "YEAR"] as const).map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
                 className={`px-3 py-1 font-medium rounded-md transition-all cursor-pointer ${
-                  period === p
-                    ? 'bg-white text-[#14181f] font-semibold shadow-xs border border-[#e6e8ec]'
-                    : 'text-[#667085] hover:text-[#14181f]'
+                  period === p ?
+                    "bg-white text-[#14181f] font-semibold shadow-xs border border-[#e6e8ec]"
+                  : "text-[#667085] hover:text-[#14181f]"
                 }`}
               >
-                {p === 'TODAY'
-                  ? 'Today'
-                  : p === 'WEEK'
-                  ? 'This Week'
-                  : p === 'MONTH'
-                  ? 'This Month'
-                  : 'Year to Date'}
+                {p === "TODAY" ?
+                  "Today"
+                : p === "WEEK" ?
+                  "This Week"
+                : p === "MONTH" ?
+                  "This Month"
+                : "Year to Date"}
               </button>
             ))}
+            <button
+              onClick={() => setPeriod("CUSTOM")}
+              className={`px-3 py-1 font-medium rounded-md transition-all cursor-pointer ${period === "CUSTOM" ? "bg-white text-[#14181f] font-semibold shadow-xs border border-[#e6e8ec]" : "text-[#667085] hover:text-[#14181f]"}`}
+            >
+              Custom
+            </button>
           </div>
+
+          {period === "CUSTOM" && (
+            <div className="flex items-center gap-2 text-xs">
+              <label className="flex items-center gap-1 text-[#667085]">
+                From
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(event) => setCustomStartDate(event.target.value)}
+                  className="h-8 rounded-md border border-[#e6e8ec] px-2 text-[#14181f]"
+                />
+              </label>
+              <label className="flex items-center gap-1 text-[#667085]">
+                To
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(event) => setCustomEndDate(event.target.value)}
+                  className="h-8 rounded-md border border-[#e6e8ec] px-2 text-[#14181f]"
+                />
+              </label>
+            </div>
+          )}
 
           <Button variant="secondary" size="sm" onClick={handleExportCSV}>
             <Download className="h-4 w-4 text-[#667085]" />
@@ -401,16 +460,28 @@ export const ReportsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Navigation Sub-Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 border-b border-[#e6e8ec] no-print text-xs font-medium">
+      {/* Additional report views remain available to the existing report engine, but the default is the requested P&L view. */}
+      <div className="hidden">
         {[
-          { id: 'ANALYTICS', label: 'Executive Analytics', icon: BarChart3 },
-          { id: 'PL', label: 'P&L Statement', icon: Layers },
-          { id: 'SALES', label: `Sales Invoices (${filteredSales.length})`, icon: TrendingUp },
-          { id: 'EXPENSES', label: `Expenses (${filteredExpenses.length})`, icon: TrendingDown },
-          { id: 'INVENTORY', label: `Valuation (${products.length})`, icon: Boxes },
-          { id: 'PAYMENTS', label: 'Payment Tenders', icon: Wallet },
-          { id: 'CLOSINGS', label: 'Closings', icon: Lock },
+          { id: "ANALYTICS", label: "Executive Analytics", icon: BarChart3 },
+          { id: "PL", label: "P&L Statement", icon: Layers },
+          {
+            id: "SALES",
+            label: `Sales Invoices (${filteredSales.length})`,
+            icon: TrendingUp,
+          },
+          {
+            id: "EXPENSES",
+            label: `Expenses (${filteredExpenses.length})`,
+            icon: TrendingDown,
+          },
+          {
+            id: "INVENTORY",
+            label: `Valuation (${products.length})`,
+            icon: Boxes,
+          },
+          { id: "PAYMENTS", label: "Payment Tenders", icon: Wallet },
+          { id: "CLOSINGS", label: "Closings", icon: Lock },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -419,12 +490,12 @@ export const ReportsView: React.FC = () => {
               key={tab.id}
               onClick={() => {
                 setActiveTab(tab.id as ReportTab);
-                setSearchQuery('');
+                setSearchQuery("");
               }}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg whitespace-nowrap transition-colors cursor-pointer ${
-                isActive
-                  ? 'bg-white text-[#4f46e5] border border-[#e6e8ec] font-semibold shadow-xs'
-                  : 'text-[#667085] hover:text-[#14181f] hover:bg-white/60'
+                isActive ?
+                  "bg-white text-[#4f46e5] border border-[#e6e8ec] font-semibold shadow-xs"
+                : "text-[#667085] hover:text-[#14181f] hover:bg-white/60"
               }`}
             >
               <Icon className="h-3.5 w-3.5" />
@@ -437,7 +508,7 @@ export const ReportsView: React.FC = () => {
       {/* ========================================================================= */}
       {/* EXECUTIVE ANALYTICS DASHBOARD VIEW */}
       {/* ========================================================================= */}
-      {activeTab === 'ANALYTICS' && (
+      {activeTab === "ANALYTICS" && (
         <div className="space-y-5">
           {/* Primary Metric Cards (3 Cards Row) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -461,7 +532,13 @@ export const ReportsView: React.FC = () => {
                 </div>
               </div>
               <div className="mt-4 pt-3 border-t border-[#e6e8ec] flex items-center justify-between text-xs text-[#667085]">
-                <span>Daily Avg: {formatCurrency(avgDailyRevenue, organization.currency_symbol)}</span>
+                <span>
+                  Daily Avg:{" "}
+                  {formatCurrency(
+                    avgDailyRevenue,
+                    organization.currency_symbol,
+                  )}
+                </span>
                 <span className="text-[#16a34a] font-medium">On Target</span>
               </div>
             </div>
@@ -479,21 +556,31 @@ export const ReportsView: React.FC = () => {
               <div className="mt-4">
                 <div
                   className={`text-3xl font-mono font-bold ${
-                    netProfit >= 0 ? 'text-[#4f46e5]' : 'text-[#dc2626]'
+                    netProfit >= 0 ? "text-[#4f46e5]" : "text-[#dc2626]"
                   }`}
                 >
                   {formatCurrency(netProfit, organization.currency_symbol)}
                 </div>
                 <div className="flex items-center gap-1 mt-1 text-xs text-[#667085]">
                   <span>
-                    COGS: {formatCurrency(totalCogs, organization.currency_symbol)} · Overheads:{' '}
-                    {formatCurrency(totalExpenses, organization.currency_symbol)}
+                    COGS:{" "}
+                    {formatCurrency(totalCogs, organization.currency_symbol)} ·
+                    Overheads:{" "}
+                    {formatCurrency(
+                      totalExpenses,
+                      organization.currency_symbol,
+                    )}
                   </span>
                 </div>
               </div>
               <div className="mt-4 pt-3 border-t border-[#e6e8ec] flex items-center justify-between text-xs text-[#667085]">
-                <span>Gross Profit: {formatCurrency(grossProfit, organization.currency_symbol)}</span>
-                <span className="text-[#14181f] font-medium">Healthy Yield</span>
+                <span>
+                  Gross Profit:{" "}
+                  {formatCurrency(grossProfit, organization.currency_symbol)}
+                </span>
+                <span className="text-[#14181f] font-medium">
+                  Healthy Yield
+                </span>
               </div>
             </div>
 
@@ -510,7 +597,10 @@ export const ReportsView: React.FC = () => {
               <div className="mt-4">
                 <div className="text-3xl font-mono font-bold text-[#14181f]">
                   {formatCurrency(avgTicket, organization.currency_symbol)}
-                  <span className="text-sm text-[#667085] font-normal"> /ticket</span>
+                  <span className="text-sm text-[#667085] font-normal">
+                    {" "}
+                    /ticket
+                  </span>
                 </div>
                 <div className="flex items-center gap-1 mt-1 text-xs text-[#667085]">
                   <span>{filteredSales.length} total orders completed</span>
@@ -518,7 +608,9 @@ export const ReportsView: React.FC = () => {
               </div>
               <div className="mt-4 pt-3 border-t border-[#e6e8ec] flex items-center justify-between text-xs text-[#667085]">
                 <span>Peak Hours</span>
-                <span className="text-[#14181f] font-medium">11:00 AM – 3:30 PM</span>
+                <span className="text-[#14181f] font-medium">
+                  11:00 AM – 3:30 PM
+                </span>
               </div>
             </div>
           </div>
@@ -559,15 +651,19 @@ export const ReportsView: React.FC = () => {
                     >
                       <div
                         className={`w-full rounded-t transition-all ${
-                          bar.isWeekend
-                            ? 'bg-[#16a34a] hover:bg-[#15803d]'
-                            : 'bg-[#4f46e5]/30 hover:bg-[#4f46e5]'
+                          bar.isWeekend ?
+                            "bg-[#16a34a] hover:bg-[#15803d]"
+                          : "bg-[#4f46e5]/30 hover:bg-[#4f46e5]"
                         }`}
                         style={{ height: `${bar.heightPercent}%` }}
                       ></div>
                       {/* Tooltip */}
                       <div className="opacity-0 group-hover:opacity-100 absolute -top-8 bg-[#14181f] text-white text-[10px] font-mono px-1.5 py-0.5 rounded pointer-events-none transition-opacity z-20 whitespace-nowrap shadow-md">
-                        {formatCurrency(bar.amount, organization.currency_symbol)} ({bar.label})
+                        {formatCurrency(
+                          bar.amount,
+                          organization.currency_symbol,
+                        )}{" "}
+                        ({bar.label})
                       </div>
                     </div>
                   ))}
@@ -575,11 +671,15 @@ export const ReportsView: React.FC = () => {
 
                 {/* Timeline Scale */}
                 <div className="flex justify-between items-center mt-2 px-1 text-[#667085] font-mono text-[11px]">
-                  <span>{trajectoryBars[0]?.label || 'Start'}</span>
+                  <span>{trajectoryBars[0]?.label || "Start"}</span>
                   <span>
-                    {trajectoryBars[Math.floor(trajectoryBars.length / 2)]?.label || 'Mid'}
+                    {trajectoryBars[Math.floor(trajectoryBars.length / 2)]
+                      ?.label || "Mid"}
                   </span>
-                  <span>{trajectoryBars[trajectoryBars.length - 1]?.label || 'Today'}</span>
+                  <span>
+                    {trajectoryBars[trajectoryBars.length - 1]?.label ||
+                      "Today"}
+                  </span>
                 </div>
               </div>
 
@@ -600,21 +700,27 @@ export const ReportsView: React.FC = () => {
                 </div>
 
                 <div className="space-y-4">
-                  {revenueByCategory.length === 0 ? (
+                  {revenueByCategory.length === 0 ?
                     <p className="text-xs text-[#667085] italic py-4 text-center">
                       No sales recorded in this period yet.
                     </p>
-                  ) : (
-                    revenueByCategory.map((cat, idx) => (
+                  : revenueByCategory.map((cat, idx) => (
                       <div key={idx} className="space-y-1.5">
                         <div className="flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2">
-                            <span className={`w-2.5 h-2.5 rounded-full ${cat.color}`}></span>
-                            <span className="font-semibold text-[#14181f]">{cat.name}</span>
+                            <span
+                              className={`w-2.5 h-2.5 rounded-full ${cat.color}`}
+                            ></span>
+                            <span className="font-semibold text-[#14181f]">
+                              {cat.name}
+                            </span>
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="font-mono font-semibold text-[#14181f]">
-                              {formatCurrency(cat.amount, organization.currency_symbol)}
+                              {formatCurrency(
+                                cat.amount,
+                                organization.currency_symbol,
+                              )}
                             </span>
                             <span className="font-mono text-[#667085] w-8 text-right">
                               {cat.percentage}%
@@ -629,7 +735,7 @@ export const ReportsView: React.FC = () => {
                         </div>
                       </div>
                     ))
-                  )}
+                  }
                 </div>
               </div>
             </div>
@@ -639,33 +745,40 @@ export const ReportsView: React.FC = () => {
               {/* Payment Methods Breakdown Card */}
               <div className="bg-white p-5 rounded-xl border border-[#e6e8ec] shadow-sm flex flex-col">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-base font-bold text-[#14181f]">Payment Channels</h2>
+                  <h2 className="text-base font-bold text-[#14181f]">
+                    Payment Channels
+                  </h2>
                   <Wallet className="h-4 w-4 text-[#667085]" />
                 </div>
 
                 <div className="space-y-3 divide-y divide-[#e6e8ec]">
-                  {paymentMethodsBreakdown.length === 0 ? (
+                  {paymentMethodsBreakdown.length === 0 ?
                     <p className="text-xs text-[#667085] italic py-4 text-center">
                       No transactions recorded.
                     </p>
-                  ) : (
-                    paymentMethodsBreakdown.map((pm, idx) => (
-                      <div key={idx} className="pt-2.5 flex items-center justify-between text-xs">
+                  : paymentMethodsBreakdown.map((pm, idx) => (
+                      <div
+                        key={idx}
+                        className="pt-2.5 flex items-center justify-between text-xs"
+                      >
                         <div className="flex items-center gap-2">
                           <span
                             className={`w-2.5 h-2.5 rounded-full ${
-                              idx === 0
-                                ? 'bg-[#16a34a]'
-                                : idx === 1
-                                ? 'bg-[#4f46e5]'
-                                : 'bg-[#667085]'
+                              idx === 0 ? "bg-[#16a34a]"
+                              : idx === 1 ? "bg-[#4f46e5]"
+                              : "bg-[#667085]"
                             }`}
                           ></span>
-                          <span className="font-medium text-[#14181f]">{pm.name}</span>
+                          <span className="font-medium text-[#14181f]">
+                            {pm.name}
+                          </span>
                         </div>
                         <div className="text-right">
                           <span className="font-mono font-semibold text-[#14181f] block">
-                            {formatCurrency(pm.total, organization.currency_symbol)}
+                            {formatCurrency(
+                              pm.total,
+                              organization.currency_symbol,
+                            )}
                           </span>
                           <span className="font-mono text-[11px] text-[#667085]">
                             {pm.percentage}% total ({pm.count} txns)
@@ -673,7 +786,7 @@ export const ReportsView: React.FC = () => {
                         </div>
                       </div>
                     ))
-                  )}
+                  }
                 </div>
               </div>
 
@@ -681,7 +794,9 @@ export const ReportsView: React.FC = () => {
               <div className="bg-white p-5 rounded-xl border border-[#e6e8ec] shadow-sm flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-base font-bold text-[#14181f]">Till Reconciliation Health</h2>
+                    <h2 className="text-base font-bold text-[#14181f]">
+                      Till Reconciliation Health
+                    </h2>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#f0fdf4] text-[#16a34a] text-[11px] font-semibold">
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Audit Ready
@@ -711,16 +826,24 @@ export const ReportsView: React.FC = () => {
                       <span>Net Drawer Discrepancy:</span>
                       <span
                         className={`font-mono font-semibold ${
-                          varianceMetrics.totalDiff >= 0 ? 'text-[#16a34a]' : 'text-[#dc2626]'
+                          varianceMetrics.totalDiff >= 0 ?
+                            "text-[#16a34a]"
+                          : "text-[#dc2626]"
                         }`}
                       >
-                        {formatCurrency(varianceMetrics.totalDiff, organization.currency_symbol)}
+                        {formatCurrency(
+                          varianceMetrics.totalDiff,
+                          organization.currency_symbol,
+                        )}
                       </span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-[#e6e8ec]">
                       <span>Average Ticket Size:</span>
                       <span className="font-mono font-semibold text-[#14181f]">
-                        {formatCurrency(avgTicket, organization.currency_symbol)}
+                        {formatCurrency(
+                          avgTicket,
+                          organization.currency_symbol,
+                        )}
                       </span>
                     </div>
                   </div>
@@ -728,7 +851,7 @@ export const ReportsView: React.FC = () => {
 
                 <div className="mt-4 pt-3 border-t border-[#e6e8ec]">
                   <button
-                    onClick={() => setCurrentView('closings')}
+                    onClick={() => setCurrentView("closings")}
                     className="flex items-center justify-between w-full text-xs font-semibold text-[#4f46e5] hover:text-[#3730a3] transition-colors cursor-pointer"
                   >
                     <span>Review Drawer Closing Logs</span>
@@ -746,15 +869,22 @@ export const ReportsView: React.FC = () => {
                 <Lightbulb className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-[#14181f]">Operational Observation</h4>
+                <h4 className="text-sm font-bold text-[#14181f]">
+                  Operational Observation
+                </h4>
                 <p className="text-xs text-[#667085]">
-                  Weekend high-volume print runs generate higher gross profit margins. Consider keeping
-                  sufficient paper stock ready on Friday evenings.
+                  Weekend high-volume print runs generate higher gross profit
+                  margins. Consider keeping sufficient paper stock ready on
+                  Friday evenings.
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <Button variant="secondary" size="sm" onClick={() => setActiveTab('PL')}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setActiveTab("PL")}
+              >
                 <span>View P&L Statement</span>
               </Button>
             </div>
@@ -765,15 +895,18 @@ export const ReportsView: React.FC = () => {
       {/* ========================================================================= */}
       {/* TAB 1: PROFIT & LOSS STATEMENT */}
       {/* ========================================================================= */}
-      {activeTab === 'PL' && (
+      {activeTab === "PL" && (
         <Card className="p-6 max-w-4xl mx-auto space-y-6">
           <div className="text-center pb-4 border-b border-[#e6e8ec]">
             <h2 className="text-lg font-bold text-[#14181f] uppercase tracking-wide">
               {organization.name}
             </h2>
-            <p className="text-xs text-[#667085]">Formal Statement of Profit and Loss</p>
+            <p className="text-xs text-[#667085]">
+              Formal Statement of Profit and Loss
+            </p>
             <p className="text-[11px] font-mono text-[#4f46e5] mt-1">
-              Period: {dateRange.start} to {dateRange.end} • Currency: {organization.currency}
+              Period: {dateRange.start} to {dateRange.end} • Currency:{" "}
+              {organization.currency}
             </p>
           </div>
 
@@ -787,7 +920,10 @@ export const ReportsView: React.FC = () => {
             </div>
             <div className="pl-4 space-y-1 text-xs text-[#667085]">
               <div className="flex justify-between">
-                <span>Completed Sales & Counter Billings ({filteredSales.length} orders)</span>
+                <span>
+                  Completed Sales & Counter Billings ({filteredSales.length}{" "}
+                  orders)
+                </span>
                 <span className="font-mono text-[#14181f]">
                   {formatCurrency(grossRevenue, organization.currency_symbol)}
                 </span>
@@ -817,7 +953,8 @@ export const ReportsView: React.FC = () => {
           <div className="flex items-center justify-between font-bold text-sm p-3 rounded-lg bg-[#f8f9fb] border border-[#e6e8ec]">
             <span className="text-[#14181f]">GROSS PROFIT:</span>
             <span className="font-mono text-[#16a34a]">
-              {formatCurrency(grossProfit, organization.currency_symbol)} ({grossMargin}%)
+              {formatCurrency(grossProfit, organization.currency_symbol)} (
+              {grossMargin}%)
             </span>
           </div>
 
@@ -830,20 +967,21 @@ export const ReportsView: React.FC = () => {
               </span>
             </div>
             <div className="pl-4 space-y-1 text-xs text-[#667085]">
-              {filteredExpenses.length === 0 ? (
+              {filteredExpenses.length === 0 ?
                 <p className="italic text-[#667085]">
                   No overhead expenses recorded for this period.
                 </p>
-              ) : (
-                filteredExpenses.slice(0, 5).map((e) => (
+              : filteredExpenses.slice(0, 5).map((e) => (
                   <div key={e.id} className="flex justify-between">
-                    <span>{e.category_name} - {e.description}</span>
+                    <span>
+                      {e.category_name} - {e.description}
+                    </span>
                     <span className="font-mono text-[#14181f]">
                       {formatCurrency(e.amount, organization.currency_symbol)}
                     </span>
                   </div>
                 ))
-              )}
+              }
             </div>
           </div>
 
@@ -852,10 +990,11 @@ export const ReportsView: React.FC = () => {
             <span className="text-[#14181f]">NET OPERATING PROFIT:</span>
             <span
               className={`font-mono text-lg font-bold ${
-                netProfit >= 0 ? 'text-[#4f46e5]' : 'text-[#dc2626]'
+                netProfit >= 0 ? "text-[#4f46e5]" : "text-[#dc2626]"
               }`}
             >
-              {formatCurrency(netProfit, organization.currency_symbol)} ({netMargin}%)
+              {formatCurrency(netProfit, organization.currency_symbol)} (
+              {netMargin}%)
             </span>
           </div>
         </Card>
@@ -864,7 +1003,7 @@ export const ReportsView: React.FC = () => {
       {/* ========================================================================= */}
       {/* TAB 2: DETAILED SALES REPORT */}
       {/* ========================================================================= */}
-      {activeTab === 'SALES' && (
+      {activeTab === "SALES" && (
         <Card className="p-0 overflow-hidden">
           <div className="p-3 bg-[#f8f9fb] border-b border-[#e6e8ec] flex items-center justify-between">
             <span className="text-xs font-semibold text-[#14181f]">
@@ -886,15 +1025,17 @@ export const ReportsView: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e6e8ec]">
-                {filteredSales.length === 0 ? (
+                {filteredSales.length === 0 ?
                   <tr>
                     <td colSpan={8} className="py-8 text-center text-[#667085]">
                       No sales found for the selected timeframe.
                     </td>
                   </tr>
-                ) : (
-                  filteredSales.map((s) => (
-                    <tr key={s.id} className="hover:bg-[#f8f9fb] transition-colors">
+                : filteredSales.map((s) => (
+                    <tr
+                      key={s.id}
+                      className="hover:bg-[#f8f9fb] transition-colors"
+                    >
                       <td className="py-2.5 px-3 font-mono font-bold text-[#4f46e5]">
                         {s.invoice_number}
                       </td>
@@ -902,7 +1043,7 @@ export const ReportsView: React.FC = () => {
                         {formatDateTime(s.created_at)}
                       </td>
                       <td className="py-2.5 px-3 text-[#14181f]">
-                        {s.customer_name || 'Walk-in Customer'}
+                        {s.customer_name || "Walk-in Customer"}
                       </td>
                       <td className="py-2.5 px-3">
                         <Badge variant="neutral" size="sm">
@@ -913,17 +1054,26 @@ export const ReportsView: React.FC = () => {
                         {s.items.length}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-bold text-[#14181f]">
-                        {formatCurrency(s.grand_total, organization.currency_symbol)}
+                        {formatCurrency(
+                          s.grand_total,
+                          organization.currency_symbol,
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono text-[#dc2626]">
-                        {formatCurrency(s.total_cogs, organization.currency_symbol)}
+                        {formatCurrency(
+                          s.total_cogs,
+                          organization.currency_symbol,
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono text-[#16a34a] font-semibold">
-                        {formatCurrency(s.gross_profit, organization.currency_symbol)}
+                        {formatCurrency(
+                          s.gross_profit,
+                          organization.currency_symbol,
+                        )}
                       </td>
                     </tr>
                   ))
-                )}
+                }
               </tbody>
             </table>
           </div>
@@ -933,7 +1083,7 @@ export const ReportsView: React.FC = () => {
       {/* ========================================================================= */}
       {/* TAB 3: DETAILED EXPENSES REPORT */}
       {/* ========================================================================= */}
-      {activeTab === 'EXPENSES' && (
+      {activeTab === "EXPENSES" && (
         <Card className="p-0 overflow-hidden">
           <div className="p-3 bg-[#f8f9fb] border-b border-[#e6e8ec] flex items-center justify-between">
             <span className="text-xs font-semibold text-[#14181f]">
@@ -952,27 +1102,35 @@ export const ReportsView: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e6e8ec]">
-                {filteredExpenses.length === 0 ? (
+                {filteredExpenses.length === 0 ?
                   <tr>
                     <td colSpan={5} className="py-8 text-center text-[#667085]">
                       No expenses found for this period.
                     </td>
                   </tr>
-                ) : (
-                  filteredExpenses.map((e) => (
-                    <tr key={e.id} className="hover:bg-[#f8f9fb] transition-colors">
-                      <td className="py-2.5 px-3 font-mono text-[#667085]">{e.date}</td>
+                : filteredExpenses.map((e) => (
+                    <tr
+                      key={e.id}
+                      className="hover:bg-[#f8f9fb] transition-colors"
+                    >
+                      <td className="py-2.5 px-3 font-mono text-[#667085]">
+                        {e.date}
+                      </td>
                       <td className="py-2.5 px-3 font-semibold text-[#14181f]">
                         {e.category_name}
                       </td>
-                      <td className="py-2.5 px-3 text-[#667085]">{e.account_name}</td>
-                      <td className="py-2.5 px-3 text-[#14181f]">{e.description}</td>
+                      <td className="py-2.5 px-3 text-[#667085]">
+                        {e.account_name}
+                      </td>
+                      <td className="py-2.5 px-3 text-[#14181f]">
+                        {e.description}
+                      </td>
                       <td className="py-2.5 px-3 text-right font-mono font-bold text-[#dc2626]">
                         {formatCurrency(e.amount, organization.currency_symbol)}
                       </td>
                     </tr>
                   ))
-                )}
+                }
               </tbody>
             </table>
           </div>
@@ -982,7 +1140,7 @@ export const ReportsView: React.FC = () => {
       {/* ========================================================================= */}
       {/* TAB 4: INVENTORY VALUATION */}
       {/* ========================================================================= */}
-      {activeTab === 'INVENTORY' && (
+      {activeTab === "INVENTORY" && (
         <Card className="p-0 overflow-hidden">
           <div className="p-3 bg-[#f8f9fb] border-b border-[#e6e8ec] flex items-center justify-between">
             <span className="text-xs font-semibold text-[#14181f]">
@@ -1003,22 +1161,35 @@ export const ReportsView: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-[#e6e8ec]">
                 {products.map((p) => (
-                  <tr key={p.id} className="hover:bg-[#f8f9fb] transition-colors">
-                    <td className="py-2.5 px-3 font-mono text-[#667085]">{p.sku}</td>
-                    <td className="py-2.5 px-3 font-semibold text-[#14181f]">{p.name}</td>
+                  <tr
+                    key={p.id}
+                    className="hover:bg-[#f8f9fb] transition-colors"
+                  >
+                    <td className="py-2.5 px-3 font-mono text-[#667085]">
+                      {p.sku}
+                    </td>
+                    <td className="py-2.5 px-3 font-semibold text-[#14181f]">
+                      {p.name}
+                    </td>
                     <td className="py-2.5 px-3 text-right font-mono">
                       {p.current_stock} {p.unit}
                     </td>
                     <td className="py-2.5 px-3 text-right font-mono text-[#667085]">
-                      {formatCurrency(p.average_cost, organization.currency_symbol)}
+                      {formatCurrency(
+                        p.average_cost,
+                        organization.currency_symbol,
+                      )}
                     </td>
                     <td className="py-2.5 px-3 text-right font-mono text-[#14181f]">
-                      {formatCurrency(p.selling_price, organization.currency_symbol)}
+                      {formatCurrency(
+                        p.selling_price,
+                        organization.currency_symbol,
+                      )}
                     </td>
                     <td className="py-2.5 px-3 text-right font-mono font-bold text-[#14181f]">
                       {formatCurrency(
                         p.current_stock * (p.average_cost || p.purchase_price),
-                        organization.currency_symbol
+                        organization.currency_symbol,
                       )}
                     </td>
                   </tr>
@@ -1032,7 +1203,7 @@ export const ReportsView: React.FC = () => {
       {/* ========================================================================= */}
       {/* TAB 5: PAYMENT TENDERS */}
       {/* ========================================================================= */}
-      {activeTab === 'PAYMENTS' && (
+      {activeTab === "PAYMENTS" && (
         <Card className="p-0 overflow-hidden">
           <div className="p-3 bg-[#f8f9fb] border-b border-[#e6e8ec] flex items-center justify-between">
             <span className="text-xs font-semibold text-[#14181f]">
@@ -1049,14 +1220,21 @@ export const ReportsView: React.FC = () => {
                   <span className="text-[11px] font-semibold text-[#667085] uppercase tracking-wider">
                     {acc.type}
                   </span>
-                  <p className="text-base font-bold text-[#14181f] mt-0.5">{acc.name}</p>
+                  <p className="text-base font-bold text-[#14181f] mt-0.5">
+                    {acc.name}
+                  </p>
                   {acc.account_number && (
-                    <p className="text-xs font-mono text-[#667085]">{acc.account_number}</p>
+                    <p className="text-xs font-mono text-[#667085]">
+                      {acc.account_number}
+                    </p>
                   )}
                 </div>
                 <div className="mt-4 pt-2 border-t border-[#e6e8ec]">
                   <span className="text-xl font-mono font-bold text-[#14181f]">
-                    {formatCurrency(acc.current_balance, organization.currency_symbol)}
+                    {formatCurrency(
+                      acc.current_balance,
+                      organization.currency_symbol,
+                    )}
                   </span>
                 </div>
               </div>
@@ -1068,7 +1246,7 @@ export const ReportsView: React.FC = () => {
       {/* ========================================================================= */}
       {/* TAB 6: CLOSINGS AUDIT */}
       {/* ========================================================================= */}
-      {activeTab === 'CLOSINGS' && (
+      {activeTab === "CLOSINGS" && (
         <Card className="p-0 overflow-hidden">
           <div className="p-3 bg-[#f8f9fb] border-b border-[#e6e8ec] flex items-center justify-between">
             <span className="text-xs font-semibold text-[#14181f]">
@@ -1089,42 +1267,68 @@ export const ReportsView: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#e6e8ec]">
-                {filteredClosings.length === 0 ? (
+                {filteredClosings.length === 0 ?
                   <tr>
                     <td colSpan={7} className="py-8 text-center text-[#667085]">
                       No drawer closings recorded for this date range.
                     </td>
                   </tr>
-                ) : (
-                  filteredClosings.map((c) => (
-                    <tr key={c.id} className="hover:bg-[#f8f9fb] transition-colors">
+                : filteredClosings.map((c) => (
+                    <tr
+                      key={c.id}
+                      className="hover:bg-[#f8f9fb] transition-colors"
+                    >
                       <td className="py-2.5 px-3 font-mono font-semibold text-[#14181f]">
                         {c.closing_date}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono text-[#667085]">
-                        {formatCurrency(c.opening_cash, organization.currency_symbol)}
+                        {formatCurrency(
+                          c.opening_cash,
+                          organization.currency_symbol,
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono text-[#16a34a]">
-                        {formatCurrency(c.cash_sales, organization.currency_symbol)}
+                        {formatCurrency(
+                          c.cash_sales,
+                          organization.currency_symbol,
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono text-[#dc2626]">
-                        {formatCurrency(c.cash_expenses, organization.currency_symbol)}
+                        {formatCurrency(
+                          c.cash_expenses,
+                          organization.currency_symbol,
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-bold text-[#14181f]">
-                        {formatCurrency(c.expected_cash, organization.currency_symbol)}
+                        {formatCurrency(
+                          c.expected_cash,
+                          organization.currency_symbol,
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-bold text-[#14181f]">
-                        {formatCurrency(c.actual_cash, organization.currency_symbol)}
+                        {formatCurrency(
+                          c.actual_cash,
+                          organization.currency_symbol,
+                        )}
                       </td>
                       <td className="py-2.5 px-3 text-right font-mono font-semibold">
-                        <span className={c.difference >= 0 ? 'text-[#16a34a]' : 'text-[#dc2626]'}>
-                          {c.difference >= 0 ? '+' : ''}
-                          {formatCurrency(c.difference, organization.currency_symbol)}
+                        <span
+                          className={
+                            c.difference >= 0 ?
+                              "text-[#16a34a]"
+                            : "text-[#dc2626]"
+                          }
+                        >
+                          {c.difference >= 0 ? "+" : ""}
+                          {formatCurrency(
+                            c.difference,
+                            organization.currency_symbol,
+                          )}
                         </span>
                       </td>
                     </tr>
                   ))
-                )}
+                }
               </tbody>
             </table>
           </div>

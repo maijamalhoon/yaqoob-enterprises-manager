@@ -8,7 +8,7 @@ import { CommandPalette } from "./components/layout/CommandPalette";
 import { ShortcutsHelpModal } from "./components/layout/ShortcutsHelpModal";
 import { QuickExpenseModal } from "./components/expenses/QuickExpenseModal";
 import { PrintReceiptModal } from "./components/pos/PrintReceiptModal";
-import { LockScreen, SignUpScreen } from "./components/auth/LockScreen";
+import { AuthScreen, LockScreen } from "./components/auth/LockScreen";
 
 // Views
 import { DashboardView } from "./components/dashboard/DashboardView";
@@ -86,9 +86,7 @@ const WorkspaceGate: React.FC = () => {
     );
   }
 
-  if (isLocked) {
-    return hasLocalAccount ? <LockScreen /> : <SignUpScreen />;
-  }
+  if (isLocked) return hasLocalAccount ? <LockScreen /> : <AuthScreen />;
 
   return <MainShell />;
 };
