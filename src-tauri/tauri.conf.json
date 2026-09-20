@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-cli/schema.json",
-  "productName": "Yaqoob Enterprises Manager",
+  "productName": "Shop Plus",
   "version": "1.0.0",
   "identifier": "com.yaqoobenterprises.manager",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Yaqoob Enterprises Manager",
+        "title": "Shop Plus",
         "width": 1366,
         "height": 850,
         "minWidth": 1024,
@@ -35,10 +35,10 @@
       "icons/128x128@2x.png",
       "icons/icon.ico"
     ],
-    "publisher": "Yaqoob Enterprises",
-    "copyright": "Copyright © 2026 Yaqoob Enterprises. All rights reserved.",
-    "shortDescription": "Enterprise POS & Shop Management System",
-    "longDescription": "Offline-first Windows desktop business application for Yaqoob Enterprises. Comprehensive management of printing, photocopying, stationery inventory, expenses, split payments, accounts, daily closing, and P&L reporting.",
+    "publisher": "Shop Plus",
+    "copyright": "Copyright © 2026 Shop Plus. All rights reserved.",
+    "shortDescription": "Offline POS and shop management system",
+    "longDescription": "Offline-first Windows desktop business application for shop sales, inventory, expenses, accounts, daily closing, and reporting.",
     "windows": {
       "nsis": {
         "installMode": "perMachine",

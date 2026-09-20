@@ -222,26 +222,34 @@ class InMemorySqliteDatabase implements SqlDatabase {
 }
 
 let dbInstance: SqlDatabase | null = null;
+let dbInitialization: Promise<SqlDatabase> | null = null;
 
 export async function getSqliteDatabase(): Promise<SqlDatabase> {
   if (dbInstance) return dbInstance;
+  if (dbInitialization) return dbInitialization;
 
-  if (isTauriEnvironment()) {
-    try {
+  dbInitialization = (async () => {
+    if (isTauriEnvironment()) {
       const DatabaseModule = await import('@tauri-apps/plugin-sql');
       const tauriDb = await DatabaseModule.default.load('sqlite:yaqoob_manager.db');
       dbInstance = tauriDb;
+      await dbInstance.execute('PRAGMA busy_timeout = 15000;');
       await dbInstance.execute('PRAGMA foreign_keys = ON;');
       await runSqliteMigrations(dbInstance);
       return dbInstance;
-    } catch (err) {
-      throw new Error(`Tauri SQLite database could not be opened: ${String(err)}`);
     }
-  }
 
-  dbInstance = new InMemorySqliteDatabase();
-  await runSqliteMigrations(dbInstance);
-  return dbInstance;
+    dbInstance = new InMemorySqliteDatabase();
+    await runSqliteMigrations(dbInstance);
+    return dbInstance;
+  })().catch((err) => {
+    dbInstance = null;
+    throw new Error(`SQLite database could not be opened: ${String(err)}`);
+  }).finally(() => {
+    dbInitialization = null;
+  });
+
+  return dbInitialization;
 }
 
 export async function initSqliteDatabase(): Promise<SqlDatabase> {

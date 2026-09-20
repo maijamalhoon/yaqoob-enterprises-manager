@@ -26,7 +26,7 @@ function createPng(width, height) {
   const ihdrChunk = createChunk('IHDR', ihdrData);
 
   // Raw image data: scanlines with filter byte 0
-  // Brand color: Deep navy background (#0f172a) with Cyan circle/letter (#06b6d4)
+  // Shop Plus brand mark: emerald circle with a white plus on a navy field.
   const rowBytes = width * 4;
   const rawData = Buffer.alloc((rowBytes + 1) * height);
   
@@ -42,11 +42,15 @@ function createPng(width, height) {
       const dy = y - cy;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
-      if (dist <= radius) {
-        // Cyan / Teal brand color #06b6d4 (R: 6, G: 182, B: 212, A: 255)
-        rawData[offset++] = 6;
-        rawData[offset++] = 182;
-        rawData[offset++] = 212;
+      if (dist <= radius && (Math.abs(x - cx) <= width * 0.09 || Math.abs(y - cy) <= width * 0.09)) {
+        rawData[offset++] = 255;
+        rawData[offset++] = 255;
+        rawData[offset++] = 255;
+        rawData[offset++] = 255;
+      } else if (dist <= radius) {
+        rawData[offset++] = 16;
+        rawData[offset++] = 185;
+        rawData[offset++] = 129;
         rawData[offset++] = 255;
       } else {
         // Deep Slate/Navy background #020617 (R: 2, G: 6, B: 23, A: 255)
