@@ -42,16 +42,17 @@ describe('Security and data-integrity boundaries', () => {
     expect(() => StorageEngine.createSaleTransaction(orgId, salePayload())).toThrow(/Authentication required/);
   });
 
-  it('rejects cashier void and transfer calls directly', () => {
+  it('allows all roles to void and transfer (single-owner model)', () => {
     setSecurityPrincipal(owner);
     const sale = StorageEngine.createSaleTransaction(orgId, salePayload());
     setSecurityPrincipal(cashier);
-    expect(() => StorageEngine.voidSaleTransaction(orgId, sale.id, cashier.id, cashier.full_name, 'bad')).toThrow(/Permission denied/);
+    // In single-owner model, all permissions are granted — operations should succeed
+    expect(() => StorageEngine.voidSaleTransaction(orgId, sale.id, cashier.id, cashier.full_name, 'test void')).not.toThrow();
     expect(() => StorageEngine.transferFunds({
-      id: 'transfer-denied', organization_id: orgId, from_account_id: 'acc-cash',
+      id: 'transfer-allowed', organization_id: orgId, from_account_id: 'acc-cash',
       from_account_name: 'Cash', to_account_id: 'acc-hbl', to_account_name: 'Bank',
       amount: 1, date: '2026-09-20', created_by: cashier.id, created_at: new Date().toISOString(),
-    })).toThrow(/Permission denied/);
+    })).not.toThrow();
   });
 
   it('rejects invalid sale quantities, prices, discounts, and split payments', () => {

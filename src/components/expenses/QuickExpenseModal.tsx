@@ -77,7 +77,7 @@ export const QuickExpenseModal: React.FC = () => {
         reference_number: referenceNumber.trim() || undefined,
         date,
         notes: notes.trim() || undefined,
-        entered_by: user?.full_name || 'Staff',
+        entered_by: user?.full_name || 'Muhammad Yaqoob',
       });
 
       showToast(
@@ -100,21 +100,21 @@ export const QuickExpenseModal: React.FC = () => {
     <Modal
       isOpen={isQuickExpenseOpen}
       onClose={() => setIsQuickExpenseOpen(false)}
-      title="Quick Shop Expense"
-      description="Record petty cash, toner, ink, electricity, rent, or stationery purchase."
-      maxWidth="lg"
+      title="Log Business Expense"
+      description="Record petty cash, toner, ink, electricity, rent, or supplies purchase."
+      maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4 py-1 select-none">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           {/* Expense Category */}
           <div>
-            <label className="block text-xs font-semibold text-[#102a43] mb-1">
+            <label className="block text-xs font-semibold text-[#14181f] mb-1">
               Expense Category
             </label>
             <select
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
-              className="w-full rounded-[8px] bg-white border border-[#d9e2ec] px-3 py-2 text-xs text-[#102a43] focus:border-teal-700 focus:outline-none"
+              className="w-full h-10 rounded-lg bg-white border border-[#e6e8ec] px-3 text-xs text-[#14181f] focus:border-[#4f46e5] focus:outline-none"
             >
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -126,13 +126,13 @@ export const QuickExpenseModal: React.FC = () => {
 
           {/* Paid From Account */}
           <div>
-            <label className="block text-xs font-semibold text-[#102a43] mb-1">
+            <label className="block text-xs font-semibold text-[#14181f] mb-1">
               Paid From Account
             </label>
             <select
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
-              className="w-full rounded-[8px] bg-white border border-[#d9e2ec] px-3 py-2 text-xs text-[#102a43] focus:border-teal-700 focus:outline-none"
+              className="w-full h-10 rounded-lg bg-white border border-[#e6e8ec] px-3 text-xs text-[#14181f] focus:border-[#4f46e5] focus:outline-none"
             >
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -155,12 +155,12 @@ export const QuickExpenseModal: React.FC = () => {
               placeholder="0.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="font-mono text-base font-bold text-amber-700"
+              className="font-mono text-base font-bold text-[#dc2626]"
             />
             {selectedAccount && (
-              <p className="text-[11px] text-[#627d98] mt-1">
+              <p className="text-[11px] text-[#667085] mt-1">
                 Available in {selectedAccount.name}:{' '}
-                <span className="font-mono text-teal-800">
+                <span className="font-mono font-semibold text-[#16a34a]">
                   {formatCurrency(selectedAccount.current_balance, organization.currency_symbol)}
                 </span>
               </p>
@@ -182,7 +182,7 @@ export const QuickExpenseModal: React.FC = () => {
         <Input
           label="Description / Purpose"
           required
-          placeholder="e.g. 2 Reams Legal Paper from Market, Shop Electricity Bill, Courier Fee"
+          placeholder="e.g. 5x Master Roll for Riso, Toner Powder, Courier Fee"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
@@ -191,32 +191,32 @@ export const QuickExpenseModal: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <Input
             label="Bill / Receipt Ref # (Optional)"
-            placeholder="e.g. INV-9844 or Bill #12"
+            placeholder="e.g. REC-8495 or Bill #12"
             value={referenceNumber}
             onChange={(e) => setReferenceNumber(e.target.value)}
           />
 
           <Input
-            label="Additional Notes (Optional)"
-            placeholder="e.g. Purchased with cash discount"
+            label="Additional Notes / Payee (Optional)"
+            placeholder="e.g. Al-Rehman Paper Store"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
           />
         </div>
 
         {/* Impact Notice */}
-        <div className="p-3 rounded-[8px] bg-amber-50 border border-amber-200 text-[11px] text-amber-900 flex items-start gap-2">
-          <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+        <div className="p-3 rounded-lg bg-[#f8f9fb] border border-[#e6e8ec] text-xs text-[#667085] flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 text-[#4f46e5] shrink-0 mt-0.5" />
           <span>
-            Recording this expense will instantly deduct from{' '}
-            <strong className="text-amber-950">
+            Recording this expense will immediately deduct from{' '}
+            <strong className="text-[#14181f]">
               {selectedAccount ? selectedAccount.name : 'the selected account'}
             </strong>{' '}
-            and reflect in today&rsquo;s cash closing and P&L statements.
+            and update today&rsquo;s cash closing statement.
           </span>
         </div>
 
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#d9e2ec]">
+        <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#e6e8ec]">
           <Button
             type="button"
             variant="ghost"

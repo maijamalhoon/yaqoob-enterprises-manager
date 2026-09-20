@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { Organization, UserProfile } from "../types";
 import { DEFAULT_ORGANIZATION } from "../lib/mockData";
 import {
-  formatSupabaseError,
   getSupabaseClient,
   isSupabaseConfigured,
 } from "../lib/supabase";
@@ -10,7 +9,18 @@ import { StorageEngine } from "../services/storageEngine";
 import { isTauriEnvironment } from "../services/sqliteEngine";
 import { sqliteRepository } from "../services/sqliteRepository";
 import { setSecurityPrincipal } from "../lib/security";
-import type { User } from "@supabase/supabase-js";
+
+const DEFAULT_PIN = "1234";
+const PIN_STORAGE_KEY = "yaqoob_counter_pin_hash";
+
+async function hashPin(pin: string): Promise<string> {
+  const enc = new TextEncoder();
+  const data = enc.encode(pin.trim());
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -18,6 +28,13 @@ interface AuthContextType {
   role: UserProfile["role"] | null;
   isSupabaseReady: boolean;
   isLoading: boolean;
+  isLocked: boolean;
+  unlock: (pin: string) => Promise<boolean>;
+  lock: () => void;
+  updatePin: (
+    currentPin: string,
+    newPin: string,
+  ) => Promise<{ success: boolean; error?: string }>;
   onboardingCompleted: boolean;
   signIn: (email: string, pass: string) => Promise<{ error?: string }>;
   signUp: (
@@ -35,25 +52,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function isUserRole(role: unknown): role is UserProfile["role"] {
-  return role === "OWNER" || role === "MANAGER" || role === "CASHIER";
-}
-
-function fallbackProfileFromUser(
-  user: User,
-  organizationId: string,
-): UserProfile {
-  return {
-    id: user.id,
-    email: user.email || "user@yaqoob.com",
-    full_name: user.email?.split("@")[0] || "Staff Member",
-    role: "CASHIER",
-    organization_id: organizationId,
-    is_active: true,
-    created_at: user.created_at,
-  };
-}
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -63,9 +61,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return org || DEFAULT_ORGANIZATION;
   });
 
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [role, setRole] = useState<UserProfile["role"] | null>(null);
+  const defaultOwner: UserProfile = {
+    id: "usr-owner-1",
+    email: organization.email || "yaqoobenterprisesofficial@gmail.com",
+    full_name: organization.owner_name || "Muhammad Yaqoob",
+    role: "OWNER",
+    organization_id: organization.id,
+    is_active: true,
+    created_at: organization.created_at || new Date().toISOString(),
+  };
+
+  const [user, setUser] = useState<UserProfile | null>(defaultOwner);
+  const [role, setRole] = useState<UserProfile["role"] | null>("OWNER");
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLocked, setIsLocked] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean>(
     () => {
@@ -78,102 +87,89 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const isSupabaseReady = isSupabaseConfigured();
 
-  const loadCloudProfile = async (authUser: User): Promise<UserProfile> => {
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      throw new Error("Cloud authentication is unavailable");
+  const getStoredPinHash = async (): Promise<string> => {
+    if (typeof window === "undefined") return hashPin(DEFAULT_PIN);
+    const stored = localStorage.getItem(PIN_STORAGE_KEY);
+    if (!stored) {
+      const defaultHash = await hashPin(DEFAULT_PIN);
+      localStorage.setItem(PIN_STORAGE_KEY, defaultHash);
+      return defaultHash;
     }
+    return stored;
+  };
 
-    let lastError = "Authenticated profile was not found";
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      const { data, error: profileError } = await supabase
-        .from("profiles")
-        .select("id,email,full_name,role,organization_id,is_active,created_at")
-        .eq("id", authUser.id)
-        .maybeSingle();
-
-      if (profileError) {
-        lastError = profileError.message;
-      } else if (data) {
-        return {
-          id: data.id,
-          email: data.email || authUser.email || "user@yaqoob.com",
-          full_name: data.full_name || "Staff Member",
-          role: isUserRole(data.role) ? data.role : "CASHIER",
-          organization_id: data.organization_id || organization.id,
-          is_active: data.is_active === true,
-          created_at: data.created_at || authUser.created_at,
-        };
+  const unlock = async (enteredPin: string): Promise<boolean> => {
+    try {
+      const targetHash = await getStoredPinHash();
+      const enteredHash = await hashPin(enteredPin);
+      if (enteredHash === targetHash) {
+        setIsLocked(false);
+        return true;
       }
-
-      if (attempt < 4) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, 250 * (attempt + 1)),
-        );
-      }
+      return false;
+    } catch {
+      return false;
     }
+  };
 
-    throw new Error(lastError);
+  const lock = () => {
+    setIsLocked(true);
+  };
+
+  const updatePin = async (
+    currentPin: string,
+    newPin: string,
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!newPin || newPin.length < 4) {
+      return { success: false, error: "New PIN must be at least 4 digits/characters" };
+    }
+    const targetHash = await getStoredPinHash();
+    const currentHash = await hashPin(currentPin);
+    if (currentHash !== targetHash) {
+      return { success: false, error: "Current PIN is incorrect" };
+    }
+    const newHash = await hashPin(newPin);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(PIN_STORAGE_KEY, newHash);
+    }
+    return { success: true };
   };
 
   useEffect(() => {
     async function initAuth() {
       setIsLoading(true);
       try {
-        const supabase = getSupabaseClient();
-        if (supabase && isSupabaseReady) {
-          try {
-            const {
-              data: { session },
-            } = await supabase.auth.getSession();
+        // Initialize security principal with owner privileges immediately
+        setSecurityPrincipal(defaultOwner);
+        setUser(defaultOwner);
+        setRole("OWNER");
 
-            if (session?.user) {
-              const profile = await loadCloudProfile(session.user);
-              if (!profile.is_active)
-                throw new Error("This account is inactive");
-              setUser(profile);
-              setRole(profile.role);
-              setSecurityPrincipal(profile);
-            }
-          } catch (err: any) {
-            console.warn("Supabase auth session lookup error:", err);
-            await supabase.auth.signOut();
-            setUser(null);
-            setRole(null);
-            setSecurityPrincipal(null);
-            setError(err?.message || "Authentication failed");
+        if (isTauriEnvironment()) {
+          await sqliteRepository.migrateLegacyLocalStorage();
+          const localOrg = await sqliteRepository.getOrganization(organization.id);
+          if (localOrg) {
+            setOrganization(localOrg);
+            const syncedOwner: UserProfile = {
+              ...defaultOwner,
+              organization_id: localOrg.id,
+              full_name: localOrg.owner_name || defaultOwner.full_name,
+            };
+            setUser(syncedOwner);
+            setSecurityPrincipal(syncedOwner);
           }
-        } else {
-          if (isTauriEnvironment())
-            await sqliteRepository.migrateLegacyLocalStorage();
-          const sessionId =
-            typeof window !== "undefined" ?
-              sessionStorage.getItem("yaqoob_auth_session")
-            : null;
-          const localProfile =
-            isTauriEnvironment() ?
-              sessionId ? await sqliteRepository.getSessionProfile(sessionId)
-              : null
-            : StorageEngine.getSessionProfile();
-          if (localProfile) {
-            if (isTauriEnvironment()) {
-              const localOrganization = await sqliteRepository.getOrganization(
-                localProfile.organization_id,
-              );
-              if (!localOrganization)
-                throw new Error("Authenticated organization was not found");
-              setOrganization(localOrganization);
-            }
-            setUser(localProfile);
-            setRole(localProfile.role);
-            setSecurityPrincipal(localProfile);
+        }
+
+        // Silent background check for cloud Supabase session (used for syncEngine)
+        if (isSupabaseConfigured()) {
+          const supabase = getSupabaseClient();
+          if (supabase) {
+            supabase.auth.getSession().catch((sbErr) => {
+              console.warn("Background Supabase session check:", sbErr);
+            });
           }
         }
       } catch (err: any) {
-        setUser(null);
-        setRole(null);
-        setSecurityPrincipal(null);
-        setError(err?.message || "Authentication initialization failed");
+        console.warn("Auth initialization warning:", err);
       } finally {
         setIsLoading(false);
       }
@@ -183,166 +179,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [isSupabaseReady, organization.id]);
 
   const signIn = async (
-    email: string,
-    pass: string,
+    _email: string,
+    _pass: string,
   ): Promise<{ error?: string }> => {
-    setError(null);
-    setIsLoading(true);
-    const supabase = getSupabaseClient();
-
-    if (supabase && isSupabaseReady) {
-      try {
-        const { data, error: sbError } = await supabase.auth.signInWithPassword(
-          {
-            email,
-            password: pass,
-          },
-        );
-        if (sbError) {
-          setIsLoading(false);
-          setError(sbError.message);
-          return { error: sbError.message };
-        }
-        if (data.user) {
-          const { error: provisioningError } =
-            await supabase.rpc("ensure_my_profile");
-          if (provisioningError) throw provisioningError;
-          const profile = await loadCloudProfile(data.user);
-          if (!profile.is_active) throw new Error("This account is inactive");
-          setUser(profile);
-          setRole(profile.role);
-          setSecurityPrincipal(profile);
-        }
-      } catch (err: any) {
-        setIsLoading(false);
-        const message = formatSupabaseError(err);
-        setError(message);
-        return { error: message };
-      }
-    } else {
-      const profile =
-        isTauriEnvironment() ?
-          await sqliteRepository.findLocalProfileByEmail(email)
-        : StorageEngine.findLocalProfileByEmail(email);
-      if (!profile || !profile.is_active || !profile.password_hash) {
-        const message =
-          "Invalid local credentials or no trusted local account exists";
-        setIsLoading(false);
-        setError(message);
-        return { error: message };
-      }
-      if (!(await StorageEngine.verifyPassword(pass, profile.password_hash))) {
-        const message = "Invalid local credentials";
-        setIsLoading(false);
-        setError(message);
-        return { error: message };
-      }
-      StorageEngine.saveSession(profile.id);
-      if (isTauriEnvironment())
-        sessionStorage.setItem("yaqoob_auth_session", profile.id);
-      setUser(profile);
-      setRole(profile.role);
-      setSecurityPrincipal(profile);
-    }
-
-    setIsLoading(false);
+    setUser(defaultOwner);
+    setRole("OWNER");
+    setSecurityPrincipal(defaultOwner);
+    setIsLocked(false);
     return {};
   };
 
   const signUp = async (
-    email: string,
-    pass: string,
-    fullName: string,
-    orgName: string,
+    _email: string,
+    _pass: string,
+    _fullName: string,
+    _orgName: string,
   ): Promise<{ error?: string }> => {
-    setError(null);
-    setIsLoading(true);
-    const supabase = getSupabaseClient();
-
-    if (supabase && isSupabaseReady) {
-      try {
-        const { data, error: sbError } = await supabase.auth.signUp({
-          email,
-          password: pass,
-          options: {
-            data: {
-              full_name: fullName,
-              organization_name: orgName,
-            },
-          },
-        });
-        if (sbError) {
-          setIsLoading(false);
-          setError(sbError.message);
-          return { error: sbError.message };
-        }
-        if (data.user) {
-          if (!data.session) {
-            const message =
-              "Account created. Check your email to confirm the account, then sign in.";
-            setIsLoading(false);
-            setError(message);
-            return { error: message };
-          }
-          const { error: provisioningError } =
-            await supabase.rpc("ensure_my_profile");
-          if (provisioningError) throw provisioningError;
-          const profile = await loadCloudProfile(data.user);
-          if (!profile.is_active) throw new Error("This account is inactive");
-          setUser(profile);
-          setRole(profile.role);
-          setSecurityPrincipal(profile);
-        }
-      } catch (err: any) {
-        setIsLoading(false);
-        const message = formatSupabaseError(err);
-        setError(message);
-        return { error: message };
-      }
-    } else {
-      const newOrg: Organization = {
-        ...DEFAULT_ORGANIZATION,
-        id: crypto.randomUUID(),
-        name: orgName,
-        owner_name: fullName,
-      };
-      const profile: UserProfile = {
-        id: crypto.randomUUID(),
-        email,
-        full_name: fullName,
-        role: "OWNER",
-        organization_id: newOrg.id,
-        is_active: true,
-        password_hash: await StorageEngine.hashPassword(pass),
-        created_at: new Date().toISOString(),
-      };
-      if (isTauriEnvironment())
-        await sqliteRepository.createLocalOwnerAccount(newOrg, profile);
-      else StorageEngine.createLocalOwnerAccount(newOrg, profile);
-      setOrganization(newOrg);
-      setUser(profile);
-      setRole("OWNER");
-      StorageEngine.saveSession(profile.id);
-      if (isTauriEnvironment())
-        sessionStorage.setItem("yaqoob_auth_session", profile.id);
-      setSecurityPrincipal(profile);
-    }
-
-    setIsLoading(false);
+    setUser(defaultOwner);
+    setRole("OWNER");
+    setSecurityPrincipal(defaultOwner);
+    setIsLocked(false);
     return {};
   };
 
   const signOut = async () => {
-    const supabase = getSupabaseClient();
-    if (supabase && isSupabaseReady) {
-      await supabase.auth.signOut();
-    }
-    StorageEngine.clearSession();
-    if (isTauriEnvironment() && typeof window !== "undefined")
-      sessionStorage.removeItem("yaqoob_auth_session");
-    setUser(null);
-    setRole(null);
-    setSecurityPrincipal(null);
+    // Single-operator model: "Exit Session" acts as a counter lock
+    lock();
   };
 
   const updateOrganization = (orgData: Partial<Organization>) => {
@@ -354,6 +216,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     if (isTauriEnvironment()) void sqliteRepository.updateOrganization(updated);
     else StorageEngine.updateOrganization(updated);
     setOrganization(updated);
+
+    const updatedOwner: UserProfile = {
+      ...defaultOwner,
+      organization_id: updated.id,
+      full_name: updated.owner_name || defaultOwner.full_name,
+      email: updated.email || defaultOwner.email,
+    };
+    setUser(updatedOwner);
+    setSecurityPrincipal(updatedOwner);
   };
 
   const completeOnboarding = (orgData: Partial<Organization>) => {
@@ -377,6 +248,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         role,
         isSupabaseReady,
         isLoading,
+        isLocked,
+        unlock,
+        lock,
+        updatePin,
         onboardingCompleted,
         signIn,
         signUp,

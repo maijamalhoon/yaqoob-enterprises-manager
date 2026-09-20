@@ -36,7 +36,7 @@ export const PrintReceiptModal: React.FC<PrintReceiptModalProps> = ({ sale: prop
     >
       <div className="space-y-4">
         {/* Actions */}
-        <div className="flex items-center justify-between no-print pb-2 border-b border-[#d9e2ec]">
+        <div className="flex items-center justify-between no-print pb-2 border-b border-[#e6e8ec]">
           <div className="flex items-center gap-2">
             <Button variant="primary" size="sm" onClick={handleBrowserPrint}>
               <Printer className="h-4 w-4" />

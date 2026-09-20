@@ -14,8 +14,8 @@ export const Card: React.FC<CardProps> = ({
   return (
     <div
       className={cn(
-        "rounded-[10px] border border-[#d9e2ec] bg-white p-4 text-[#102a43] shadow-[0_1px_2px_rgba(16,42,67,0.06)] transition-colors",
-        hoverable && "hover:border-teal-400 hover:bg-teal-50/20 cursor-pointer",
+        "rounded-xl border border-[#e6e8ec] bg-white p-6 text-[#14181f] shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-150",
+        hoverable && "hover:border-[#c7c4d8] hover:shadow-[0_4px_12px_-2px_rgba(0,0,0,0.06)] cursor-pointer",
         className,
       )}
       {...props}
@@ -33,7 +33,7 @@ export const CardHeader: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
   return (
     <div
       className={cn(
-        "flex items-center justify-between pb-3 border-b border-[#d9e2ec]",
+        "flex items-center justify-between pb-4 border-b border-[#e6e8ec] mb-4",
         className,
       )}
       {...props}
@@ -51,7 +51,7 @@ export const CardTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = ({
   return (
     <h3
       className={cn(
-        "text-sm font-semibold tracking-tight text-[#102a43]",
+        "text-base font-semibold tracking-[-0.005em] text-[#14181f]",
         className,
       )}
       {...props}

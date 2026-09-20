@@ -18,13 +18,13 @@ import {
   Cloud,
   Check,
   AlertTriangle,
-  ShieldAlert,
   ShieldCheck,
+  Lock,
 } from "lucide-react";
 import { formatDateTime } from "../../lib/utils";
 
 export const SettingsView: React.FC = () => {
-  const { organization, updateOrganization, role } = useAuth();
+  const { organization, updateOrganization, updatePin } = useAuth();
   const { showToast, setIsSupabaseConfigOpen, refreshData } = useApp();
 
   const [form, setForm] = useState({
@@ -41,6 +41,12 @@ export const SettingsView: React.FC = () => {
       "Thank you for choosing Yaqoob Enterprises!",
   });
 
+  // Counter Screen Lock PIN state
+  const [currentPin, setCurrentPin] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [isChangingPin, setIsChangingPin] = useState(false);
+
   // Backup restore validation modal state
   const [pendingRestore, setPendingRestore] = useState<{
     rawText: string;
@@ -55,18 +61,8 @@ export const SettingsView: React.FC = () => {
 
   const [isRestoring, setIsRestoring] = useState(false);
 
-  const isOwner = role === "OWNER";
-
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isOwner) {
-      showToast(
-        "error",
-        "Access Denied",
-        "Only OWNER role can modify business configuration",
-      );
-      return;
-    }
     updateOrganization(form);
     showToast(
       "success",
@@ -75,15 +71,26 @@ export const SettingsView: React.FC = () => {
     );
   };
 
-  const handleExportBackup = async () => {
-    if (!isOwner) {
-      showToast(
-        "error",
-        "Access Denied",
-        "Database export requires OWNER privileges",
-      );
+  const handleChangePin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPin !== confirmPin) {
+      showToast("error", "PIN Mismatch", "New PIN and confirmation do not match.");
       return;
     }
+    setIsChangingPin(true);
+    const res = await updatePin(currentPin, newPin);
+    setIsChangingPin(false);
+    if (!res.success) {
+      showToast("error", "Failed to Update PIN", res.error || "Please check your current PIN.");
+    } else {
+      showToast("success", "PIN Updated", "Counter screen lock PIN has been updated successfully.");
+      setCurrentPin("");
+      setNewPin("");
+      setConfirmPin("");
+    }
+  };
+
+  const handleExportBackup = async () => {
     const backupJson =
       isTauriEnvironment() ?
         await sqliteRepository.exportDatabaseBackup(organization.id)
@@ -103,15 +110,6 @@ export const SettingsView: React.FC = () => {
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!isOwner) {
-      showToast(
-        "error",
-        "Access Denied",
-        "Database restore requires OWNER privileges",
-      );
-      return;
-    }
-
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -149,7 +147,6 @@ export const SettingsView: React.FC = () => {
       }
     };
     reader.readAsText(file);
-    // Reset input value so same file can be chosen again
     e.target.value = "";
   };
 
@@ -194,14 +191,6 @@ export const SettingsView: React.FC = () => {
   };
 
   const handleResetDemo = () => {
-    if (!isOwner) {
-      showToast(
-        "error",
-        "Access Denied",
-        "Factory reset requires OWNER privileges",
-      );
-      return;
-    }
     if (
       confirm(
         "Reset entire system back to clean default starter inventory, sales, and accounts?",
@@ -222,14 +211,14 @@ export const SettingsView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-[#f5f7fa] select-none text-[#102a43]">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-[#f8f9fb] select-none text-[#191c1e]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#d9e2ec]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#e6e8ec]">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#102a43]">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#191c1e]">
             System Settings & Enterprise Data
           </h1>
-          <p className="text-xs text-[#627d98] mt-0.5">
+          <p className="text-xs text-[#667085] mt-0.5">
             Configure receipt header, currency symbols, database backups, and
             cloud synchronization.
           </p>
@@ -239,8 +228,8 @@ export const SettingsView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left 7 cols: Business Profile Settings */}
         <div className="lg:col-span-7">
-          <Card className="p-5 bg-white border border-[#d9e2ec]">
-            <CardHeader className="p-0 pb-4 mb-4 border-b border-[#d9e2ec]">
+          <Card className="p-5 bg-white border border-[#e6e8ec]">
+            <CardHeader className="p-0 pb-4 mb-4 border-b border-[#e6e8ec]">
               <CardTitle>Business Profile & Invoicing</CardTitle>
             </CardHeader>
 
@@ -248,7 +237,6 @@ export const SettingsView: React.FC = () => {
               <Input
                 label="Business / Enterprise Name"
                 required
-                disabled={!isOwner}
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
@@ -256,14 +244,12 @@ export const SettingsView: React.FC = () => {
               <div className="grid grid-cols-2 gap-3">
                 <Input
                   label="Phone Number"
-                  disabled={!isOwner}
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
                 />
                 <Input
                   label="Email Address"
                   type="email"
-                  disabled={!isOwner}
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                 />
@@ -271,7 +257,6 @@ export const SettingsView: React.FC = () => {
 
               <Input
                 label="Physical Shop / Office Address"
-                disabled={!isOwner}
                 value={form.address}
                 onChange={(e) => setForm({ ...form, address: e.target.value })}
               />
@@ -279,7 +264,6 @@ export const SettingsView: React.FC = () => {
               <div className="grid grid-cols-3 gap-3">
                 <Input
                   label="Invoice Prefix"
-                  disabled={!isOwner}
                   value={form.invoice_prefix}
                   onChange={(e) =>
                     setForm({ ...form, invoice_prefix: e.target.value })
@@ -287,7 +271,6 @@ export const SettingsView: React.FC = () => {
                 />
                 <Input
                   label="Currency Code"
-                  disabled={!isOwner}
                   value={form.currency}
                   onChange={(e) =>
                     setForm({ ...form, currency: e.target.value })
@@ -295,7 +278,6 @@ export const SettingsView: React.FC = () => {
                 />
                 <Input
                   label="Currency Symbol"
-                  disabled={!isOwner}
                   value={form.currency_symbol}
                   onChange={(e) =>
                     setForm({ ...form, currency_symbol: e.target.value })
@@ -307,7 +289,6 @@ export const SettingsView: React.FC = () => {
                 label="Default Sales Tax / VAT (%)"
                 type="number"
                 step="any"
-                disabled={!isOwner}
                 value={form.tax_rate}
                 onChange={(e) =>
                   setForm({
@@ -319,7 +300,6 @@ export const SettingsView: React.FC = () => {
 
               <Input
                 label="Receipt Thermal Print Footer Note"
-                disabled={!isOwner}
                 value={form.receipt_footer}
                 onChange={(e) =>
                   setForm({ ...form, receipt_footer: e.target.value })
@@ -327,7 +307,7 @@ export const SettingsView: React.FC = () => {
               />
 
               <div className="pt-2 flex justify-end">
-                <Button type="submit" variant="primary" disabled={!isOwner}>
+                <Button type="submit" variant="primary">
                   <Check className="h-4 w-4" />
                   <span>Save Configuration</span>
                 </Button>
@@ -339,12 +319,12 @@ export const SettingsView: React.FC = () => {
         {/* Right 5 cols: Database Backup, Restore, Supabase */}
         <div className="lg:col-span-5 space-y-5">
           {/* Cloud Database Integration */}
-          <Card className="p-5 space-y-3 bg-white border border-[#d9e2ec]">
+          <Card className="p-5 space-y-3 bg-white border border-[#e6e8ec]">
             <div className="flex items-center gap-2">
-              <Cloud className="h-5 w-5 text-teal-700" />
+              <Cloud className="h-5 w-5 text-[#4f46e5]" />
               <CardTitle>Cloud Supabase Connection</CardTitle>
             </div>
-            <p className="text-xs text-[#627d98] leading-relaxed">
+            <p className="text-xs text-[#667085] leading-relaxed">
               Connect a hosted Supabase PostgreSQL backend with Row-Level
               Security for multi-device synchronization.
             </p>
@@ -353,67 +333,101 @@ export const SettingsView: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={() => setIsSupabaseConfigOpen(true)}
-              className="w-full text-[#102a43]"
+              className="w-full text-[#14181f]"
             >
               Configure Supabase Keys
             </Button>
           </Card>
 
-          {/* Local Data Backup / Restore */}
-          <Card className="p-5 space-y-4 bg-white border border-[#d9e2ec]">
+          {/* Counter Screen Lock PIN Security */}
+          <Card className="p-5 space-y-4 bg-white border border-[#e6e8ec]">
             <div className="flex items-center gap-2">
-              <Database className="h-5 w-5 text-teal-700" />
-              <CardTitle>Local Database Backup & Restore</CardTitle>
+              <Lock className="h-5 w-5 text-[#4f46e5]" />
+              <CardTitle>Counter Screen Lock PIN</CardTitle>
             </div>
-            <p className="text-xs text-[#627d98] leading-relaxed">
-              Export an archive of all tables or safely restore from a verified
-              backup. Restricted to OWNER role.
+            <p className="text-xs text-[#667085] leading-relaxed">
+              Set or update your counter terminal PIN. This physical security gate prevents unauthorized counter access when stepping away.
             </p>
 
-            {!isOwner && (
-              <div className="p-2.5 rounded-[8px] bg-amber-50 border border-amber-200 text-[11px] text-amber-900 flex items-center gap-2">
-                <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
-                <span>Backup operations require OWNER role.</span>
-              </div>
-            )}
+            <form onSubmit={handleChangePin} className="space-y-3">
+              <Input
+                label="Current PIN"
+                type="password"
+                required
+                placeholder="Default is 1234"
+                value={currentPin}
+                onChange={(e) => setCurrentPin(e.target.value)}
+              />
+              <Input
+                label="New PIN / Password (min 4 digits)"
+                type="password"
+                required
+                minLength={4}
+                value={newPin}
+                onChange={(e) => setNewPin(e.target.value)}
+              />
+              <Input
+                label="Confirm New PIN"
+                type="password"
+                required
+                minLength={4}
+                value={confirmPin}
+                onChange={(e) => setConfirmPin(e.target.value)}
+              />
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                className="w-full"
+                isLoading={isChangingPin}
+              >
+                <Check className="h-4 w-4 mr-1.5" />
+                <span>Update Counter PIN</span>
+              </Button>
+            </form>
+          </Card>
+
+          {/* Local Data Backup / Restore */}
+          <Card className="p-5 space-y-4 bg-white border border-[#e6e8ec]">
+            <div className="flex items-center gap-2">
+              <Database className="h-5 w-5 text-[#4f46e5]" />
+              <CardTitle>Local Database Backup & Restore</CardTitle>
+            </div>
+            <p className="text-xs text-[#667085] leading-relaxed">
+              Export an archive of all tables or safely restore from a verified
+              backup archive.
+            </p>
 
             <div className="space-y-2">
               <Button
                 variant="secondary"
                 size="sm"
-                disabled={!isOwner}
                 onClick={handleExportBackup}
                 className="w-full"
               >
-                <Download className="h-4 w-4 text-teal-700" />
+                <Download className="h-4 w-4 text-[#4f46e5]" />
                 <span>Export Verified Business Backup</span>
               </Button>
 
               <label
-                className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-[8px] border text-xs transition-colors ${
-                  isOwner ?
-                    "border-[#d9e2ec] bg-white text-[#102a43] hover:bg-[#f5f7fa] cursor-pointer"
-                  : "border-[#d9e2ec] bg-[#f5f7fa] text-[#829ab1] cursor-not-allowed"
-                }`}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs transition-colors border-[#e6e8ec] bg-white text-[#14181f] hover:bg-[#f8f9fb] cursor-pointer"
               >
-                <Upload className="h-4 w-4 text-teal-700" />
+                <Upload className="h-4 w-4 text-[#4f46e5]" />
                 <span>Restore Business Backup...</span>
                 <input
                   type="file"
                   accept=".json"
-                  disabled={!isOwner}
                   onChange={handleFileSelect}
                   className="hidden"
                 />
               </label>
 
-              <div className="pt-2 border-t border-[#d9e2ec]">
+              <div className="pt-2 border-t border-[#e6e8ec]">
                 <Button
                   variant="ghost"
                   size="sm"
-                  disabled={!isOwner}
                   onClick={handleResetDemo}
-                  className="w-full text-rose-600 hover:bg-rose-50"
+                  className="w-full text-[#dc2626] hover:bg-[#fef2f2]"
                 >
                   <RefreshCw className="h-4 w-4" />
                   <span>Reset to Factory Sample Data</span>
@@ -434,22 +448,22 @@ export const SettingsView: React.FC = () => {
       >
         {pendingRestore && (
           <div className="space-y-4 py-2 text-xs">
-            <div className="p-3 rounded-[8px] bg-[#f5f7fa] border border-[#d9e2ec] space-y-1">
+            <div className="p-3 rounded-lg bg-[#f8f9fb] border border-[#e6e8ec] space-y-1">
               <div className="flex justify-between">
-                <span className="text-[#627d98]">Organization:</span>
-                <span className="font-bold text-[#102a43]">
+                <span className="text-[#667085]">Organization:</span>
+                <span className="font-bold text-[#14181f]">
                   {pendingRestore.archive.organization_name}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#627d98]">Archive Version:</span>
-                <span className="font-mono text-teal-800 font-semibold">
+                <span className="text-[#667085]">Archive Version:</span>
+                <span className="font-mono text-[#4f46e5] font-semibold">
                   {pendingRestore.archive.version}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#627d98]">Exported Timestamp:</span>
-                <span className="font-mono text-[#243b53]">
+                <span className="text-[#667085]">Exported Timestamp:</span>
+                <span className="font-mono text-[#14181f]">
                   {formatDateTime(pendingRestore.archive.exported_at)}
                 </span>
               </div>
@@ -457,43 +471,43 @@ export const SettingsView: React.FC = () => {
 
             {/* Counts Summary */}
             <div className="space-y-1.5">
-              <span className="font-semibold text-[#102a43]">
+              <span className="font-semibold text-[#14181f]">
                 Archive Collections Summary:
               </span>
               <div className="grid grid-cols-2 gap-2 font-mono text-[11px]">
-                <div className="p-2 rounded-[6px] bg-white border border-[#d9e2ec] flex justify-between">
-                  <span className="text-[#627d98]">Products:</span>
-                  <span className="text-teal-800 font-bold">
+                <div className="p-2 rounded-md bg-white border border-[#e6e8ec] flex justify-between">
+                  <span className="text-[#667085]">Products:</span>
+                  <span className="text-[#4f46e5] font-bold">
                     {pendingRestore.archive.counts.products || 0}
                   </span>
                 </div>
-                <div className="p-2 rounded-[6px] bg-white border border-[#d9e2ec] flex justify-between">
-                  <span className="text-[#627d98]">Services:</span>
-                  <span className="text-teal-800 font-bold">
+                <div className="p-2 rounded-md bg-white border border-[#e6e8ec] flex justify-between">
+                  <span className="text-[#667085]">Services:</span>
+                  <span className="text-[#4f46e5] font-bold">
                     {pendingRestore.archive.counts.services || 0}
                   </span>
                 </div>
-                <div className="p-2 rounded-[6px] bg-white border border-[#d9e2ec] flex justify-between">
-                  <span className="text-[#627d98]">Sales Invoices:</span>
-                  <span className="text-emerald-700 font-bold">
+                <div className="p-2 rounded-md bg-white border border-[#e6e8ec] flex justify-between">
+                  <span className="text-[#667085]">Sales Invoices:</span>
+                  <span className="text-[#16a34a] font-bold">
                     {pendingRestore.archive.counts.sales || 0}
                   </span>
                 </div>
-                <div className="p-2 rounded-[6px] bg-white border border-[#d9e2ec] flex justify-between">
-                  <span className="text-[#627d98]">Expenses:</span>
-                  <span className="text-rose-700 font-bold">
+                <div className="p-2 rounded-md bg-white border border-[#e6e8ec] flex justify-between">
+                  <span className="text-[#667085]">Expenses:</span>
+                  <span className="text-[#dc2626] font-bold">
                     {pendingRestore.archive.counts.expenses || 0}
                   </span>
                 </div>
-                <div className="p-2 rounded-[6px] bg-white border border-[#d9e2ec] flex justify-between">
-                  <span className="text-[#627d98]">Accounts:</span>
-                  <span className="text-teal-800 font-bold">
+                <div className="p-2 rounded-md bg-white border border-[#e6e8ec] flex justify-between">
+                  <span className="text-[#667085]">Accounts:</span>
+                  <span className="text-[#4f46e5] font-bold">
                     {pendingRestore.archive.counts.accounts || 0}
                   </span>
                 </div>
-                <div className="p-2 rounded-[6px] bg-white border border-[#d9e2ec] flex justify-between">
-                  <span className="text-[#627d98]">Customers:</span>
-                  <span className="text-amber-700 font-bold">
+                <div className="p-2 rounded-md bg-white border border-[#e6e8ec] flex justify-between">
+                  <span className="text-[#667085]">Customers:</span>
+                  <span className="text-[#d97706] font-bold">
                     {pendingRestore.archive.counts.customers || 0}
                   </span>
                 </div>
@@ -501,18 +515,18 @@ export const SettingsView: React.FC = () => {
             </div>
 
             {/* Critical Warning Alert */}
-            <div className="p-3 rounded-[8px] bg-rose-50 border border-rose-200 text-rose-900 flex items-start gap-2.5">
-              <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+            <div className="p-3 rounded-lg bg-[#fef2f2] border border-[#fee2e2] text-[#dc2626] flex items-start gap-2.5">
+              <AlertTriangle className="h-4 w-4 text-[#dc2626] shrink-0 mt-0.5" />
               <div className="space-y-0.5">
-                <p className="font-bold text-rose-950">Irreversible Action</p>
-                <p className="text-[11px] text-rose-800 leading-relaxed">
+                <p className="font-bold text-[#991b1b]">Irreversible Action</p>
+                <p className="text-[11px] text-[#dc2626] leading-relaxed">
                   Restoring will overwrite your current active shop records with
                   the data from this backup file.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#d9e2ec]">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#e6e8ec]">
               <Button variant="ghost" onClick={() => setPendingRestore(null)}>
                 Cancel
               </Button>

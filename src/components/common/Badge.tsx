@@ -11,7 +11,12 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
     | "amber"
     | "emerald"
     | "rose"
-    | "slate";
+    | "slate"
+    | "primary"
+    | "neutral"
+    | "success"
+    | "warning"
+    | "danger";
   size?: "sm" | "md";
 }
 
@@ -23,15 +28,20 @@ export const Badge: React.FC<BadgeProps> = ({
   ...props
 }) => {
   const variants = {
-    indigo: "bg-teal-50 text-teal-800 border-teal-200",
-    blue: "bg-sky-50 text-sky-800 border-sky-200",
-    cyan: "bg-teal-50 text-teal-800 border-teal-200",
-    teal: "bg-teal-50 text-teal-800 border-teal-200",
-    purple: "bg-violet-50 text-violet-800 border-violet-200",
-    amber: "bg-amber-50 text-amber-800 border-amber-200",
-    emerald: "bg-emerald-50 text-emerald-800 border-emerald-200",
-    rose: "bg-rose-50 text-rose-800 border-rose-200",
-    slate: "bg-[#eef2f6] text-[#243b53] border-[#d9e2ec]",
+    indigo: "bg-[#eef2ff] text-[#4f46e5] border-[#c7d2fe]",
+    primary: "bg-[#eef2ff] text-[#4f46e5] border-[#c7d2fe]",
+    blue: "bg-[#eff6ff] text-[#2563eb] border-[#bfdbfe]",
+    cyan: "bg-[#ecfeff] text-[#0891b2] border-[#a5f3fc]",
+    teal: "bg-[#f0fdf4] text-[#16a34a] border-[#dcfce7]",
+    emerald: "bg-[#f0fdf4] text-[#16a34a] border-[#dcfce7]",
+    success: "bg-[#f0fdf4] text-[#16a34a] border-[#dcfce7]",
+    purple: "bg-[#faf5ff] text-[#7c3aed] border-[#e9d5ff]",
+    amber: "bg-[#fffbeb] text-[#d97706] border-[#fef3c7]",
+    warning: "bg-[#fffbeb] text-[#d97706] border-[#fef3c7]",
+    rose: "bg-[#fef2f2] text-[#dc2626] border-[#fee2e2]",
+    danger: "bg-[#fef2f2] text-[#dc2626] border-[#fee2e2]",
+    slate: "bg-[#f2f4f6] text-[#555f73] border-[#e6e8ec]",
+    neutral: "bg-[#f2f4f6] text-[#555f73] border-[#e6e8ec]",
   };
 
   const sizes = {
@@ -42,7 +52,7 @@ export const Badge: React.FC<BadgeProps> = ({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border tracking-wide whitespace-nowrap select-none",
+        "inline-flex items-center gap-1 rounded-full border tracking-normal whitespace-nowrap select-none",
         variants[variant],
         sizes[size],
         className,

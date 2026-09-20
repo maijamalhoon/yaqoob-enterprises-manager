@@ -1,176 +1,141 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useApp, AppView } from "../../context/AppContext";
 import { useAuth } from "../../context/AuthContext";
 import {
-  Zap,
   LayoutDashboard,
-  Boxes,
-  History,
-  ReceiptText,
+  ShoppingCart,
+  Package,
   Landmark,
+  Receipt,
   Users,
-  Lock,
   BarChart3,
-  FileCheck2,
-  UserCheck,
+  PiggyBank,
   Settings,
-  LogOut,
+  Lock,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 export const Sidebar: React.FC = () => {
   const { currentView, setCurrentView } = useApp();
-  const { role, signOut, organization } = useAuth();
+  const { lock } = useAuth();
+  const [currentTime, setCurrentTime] = useState<string>("");
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date();
+      setCurrentTime(
+        now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      );
+    };
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   interface NavItem {
     id: AppView;
     label: string;
     icon: React.ComponentType<{ className?: string }>;
-    requiredRole?: "OWNER" | "MANAGER";
-    badge?: string;
   }
 
-  const sections: Array<{
-    title: string;
-    items: NavItem[];
-  }> = [
-    {
-      title: "Operations",
-      items: [
-        { id: "pos", label: "Quick Sale (POS)", icon: Zap, badge: "Fast" },
-        { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-        { id: "inventory", label: "Products & Services", icon: Boxes },
-        { id: "sales", label: "Sales History", icon: History },
-      ],
-    },
-    {
-      title: "Financials",
-      items: [
-        { id: "expenses", label: "Expense Ledger", icon: ReceiptText },
-        { id: "accounts", label: "Accounts & Cash", icon: Landmark },
-        { id: "closings", label: "Daily Cash Closing", icon: Lock },
-        { id: "reports", label: "Reports & P&L", icon: BarChart3 },
-      ],
-    },
-    {
-      title: "Management",
-      items: [
-        { id: "customers", label: "Customers", icon: Users },
-        { id: "audit", label: "Audit Trail", icon: FileCheck2 },
-        {
-          id: "users",
-          label: "Staff & Roles",
-          icon: UserCheck,
-          requiredRole: "OWNER",
-        },
-        { id: "settings", label: "System Settings", icon: Settings },
-      ],
-    },
+  const navItems: NavItem[] = [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "pos", label: "POS", icon: ShoppingCart },
+    { id: "inventory", label: "Inventory", icon: Package },
+    { id: "accounts", label: "Accounts", icon: Landmark },
+    { id: "expenses", label: "Expenses", icon: Receipt },
+    { id: "customers", label: "Customers", icon: Users },
+    { id: "reports", label: "Reports", icon: BarChart3 },
+    { id: "closings", label: "Closings", icon: PiggyBank },
+    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   return (
-    <aside className="w-[232px] bg-white border-r border-[#d9e2ec] flex flex-col justify-between select-none shrink-0 h-full">
-      {/* Top Header / Brand in Sidebar */}
-      <div className="p-4 border-b border-[#d9e2ec] flex items-center gap-3">
-        <div className="h-9 w-9 rounded-[10px] bg-teal-700 flex items-center justify-center text-white font-bold text-sm shrink-0">
-          YE
-        </div>
-        <div className="truncate">
-          <p className="font-semibold text-xs text-[#102a43] tracking-tight truncate leading-tight">
-            {organization.name}
-          </p>
-          <p className="text-[10px] text-[#627d98] tracking-tight mt-0.5">
-            Business workspace
-          </p>
-        </div>
-      </div>
-
-      {/* Nav List with categorized sections */}
-      <div className="flex-1 py-4 px-3 space-y-5 overflow-y-auto">
-        {sections.map((section) => {
-          const visibleItems = section.items.filter(
-            (item) => !(item.requiredRole === "OWNER" && role !== "OWNER"),
-          );
-          if (visibleItems.length === 0) return null;
-
-          return (
-            <div key={section.title} className="space-y-1">
-              <div className="px-2 pb-1">
-                <p className="text-[10px] font-bold text-[#627d98] uppercase tracking-[0.12em]">
-                  {section.title}
-                </p>
-              </div>
-
-              {visibleItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = currentView === item.id;
-                const isPos = item.id === "pos";
-
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setCurrentView(item.id)}
-                    className={cn(
-                      "w-full flex items-center justify-between px-3 py-2.5 rounded-[10px] text-sm font-medium transition-colors cursor-pointer text-left",
-                      isActive ?
-                        isPos ? "bg-teal-700 text-white font-semibold shadow-xs"
-                        : "bg-[#eef2f6] text-[#102a43] font-semibold"
-                      : "text-[#486581] hover:bg-[#f5f7fa] hover:text-[#102a43]",
-                      isPos && !isActive && "text-teal-700 hover:bg-teal-50",
-                    )}
-                  >
-                    <div className="flex items-center gap-2.5 truncate">
-                      <Icon
-                        className={cn(
-                          "h-4 w-4 shrink-0 transition-colors",
-                          isActive ? "text-current" : "text-[#627d98]",
-                        )}
-                      />
-                      <span className="truncate">{item.label}</span>
-                    </div>
-                    {item.badge && (
-                      <span
-                        className={cn(
-                          "text-[10px] px-1.5 py-0.5 rounded font-mono font-semibold tracking-tight border",
-                          isActive ?
-                            "bg-white/20 text-white border-white/30"
-                          : "bg-teal-50 text-teal-700 border-teal-200",
-                        )}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Bottom Session bar */}
-      <div className="p-3 border-t border-[#d9e2ec] bg-[#f5f7fa]">
-        <div className="rounded-[10px] bg-white p-3 border border-[#d9e2ec] mb-2 shadow-[0_1px_2px_rgba(16,42,67,0.04)]">
-          <div className="flex items-center justify-between text-[11px] text-[#627d98] mb-1">
-            <span className="font-medium">Workstation</span>
-            <div className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-teal-700 text-[10px] font-semibold">
-                ACTIVE
+    <aside className="w-64 bg-white border-r border-[#e6e8ec] flex flex-col justify-between select-none shrink-0 h-full z-40">
+      <div className="flex flex-col flex-1 overflow-y-auto">
+        {/* Top Header / Brand */}
+        <div className="h-16 px-4 border-b border-[#e6e8ec] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <img
+              src="/assets/logo.svg"
+              alt="Yaqoob Enterprises Logo"
+              className="h-8 w-8 object-contain rounded-lg shrink-0"
+              onError={(e) => {
+                // Fallback in case path resolution differs in dev
+                (e.currentTarget as HTMLImageElement).src = "./assets/logo.svg";
+              }}
+            />
+            <div className="flex flex-col leading-tight truncate">
+              <span className="font-semibold text-sm text-[#191c1e] tracking-tight truncate">
+                Yaqoob Ent.
+              </span>
+              <span className="text-[11px] text-[#464555]">
+                Manager POS
               </span>
             </div>
           </div>
-          <p className="text-[10px] text-[#627d98] leading-tight">
-            Desktop workspace • Local & Cloud Sync
-          </p>
+          <span className="text-[11px] font-medium bg-[#f2f4f6] text-[#464555] border border-[#c7c4d8] px-2 py-0.5 rounded-md">
+            Solo
+          </span>
         </div>
 
+        {/* Navigation List */}
+        <nav className="flex-1 px-3 py-4 space-y-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = currentView === item.id;
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => setCurrentView(item.id)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 cursor-pointer text-left",
+                  isActive
+                    ? "bg-[#4f46e5] text-white font-medium shadow-xs"
+                    : "text-[#464555] hover:bg-[#f2f4f6] hover:text-[#191c1e]",
+                )}
+              >
+                <Icon
+                  className={cn(
+                    "h-4.5 w-4.5 shrink-0",
+                    isActive ? "text-white" : "text-[#777587]",
+                  )}
+                />
+                <span className="truncate">{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Bottom Session bar */}
+      <div className="p-3 border-t border-[#e6e8ec] space-y-2 bg-[#f8f9fb]">
+        {/* Status indicator */}
+        <div className="flex items-center justify-between px-3 py-2 bg-white border border-[#e6e8ec] rounded-lg shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#16a34a] animate-pulse" />
+            <span className="text-xs font-medium text-[#191c1e]">
+              Open · Till Active
+            </span>
+          </div>
+          <span className="font-mono text-xs text-[#555f73]">
+            {currentTime || "Active"}
+          </span>
+        </div>
+
+        {/* Lock Terminal Button */}
         <button
-          onClick={signOut}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-[10px] text-xs font-semibold text-[#627d98] hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
+          onClick={lock}
+          className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-[#555f73] hover:text-[#191c1e] hover:bg-white hover:border-[#e6e8ec] border border-transparent rounded-lg transition-all cursor-pointer"
         >
-          <LogOut className="h-3.5 w-3.5" />
-          <span>Exit Session</span>
+          <span className="flex items-center gap-2">
+            <Lock className="h-3.5 w-3.5 text-[#777587]" />
+            <span>Lock Register</span>
+          </span>
+          <span className="font-mono text-[10px] text-[#777587] bg-[#edeef0] px-1.5 py-0.5 rounded">
+            ⌥L
+          </span>
         </button>
       </div>
     </aside>

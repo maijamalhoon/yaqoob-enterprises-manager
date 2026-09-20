@@ -11,9 +11,8 @@ export type AppView =
   | 'customers'
   | 'closings'
   | 'reports'
-  | 'audit'
-  | 'users'
   | 'settings';
+
 
 export interface ToastMessage {
   id: string;

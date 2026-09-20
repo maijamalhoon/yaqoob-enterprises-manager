@@ -1,43 +1,142 @@
 @import "tailwindcss";
 
+@theme {
+  --color-surface: #f8f9fb;
+  --color-surface-dim: #d9dadc;
+  --color-surface-bright: #f8f9fb;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f2f4f6;
+  --color-surface-container: #edeef0;
+  --color-surface-container-high: #e7e8ea;
+  --color-surface-container-highest: #e1e2e4;
+  --color-surface-variant: #e1e2e4;
+  --color-on-surface: #191c1e;
+  --color-on-surface-variant: #464555;
+  --color-inverse-surface: #2e3132;
+  --color-inverse-on-surface: #f0f1f3;
+  --color-outline: #777587;
+  --color-outline-variant: #c7c4d8;
+  --color-surface-tint: #4d44e3;
+
+  --color-primary: #3525cd;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #4f46e5;
+  --color-on-primary-container: #dad7ff;
+  --color-inverse-primary: #c3c0ff;
+  --color-primary-hover: #4338ca;
+
+  --color-secondary: #555f73;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #d6e0f8;
+  --color-on-secondary-container: #596377;
+
+  --color-tertiary: #005522;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #00702f;
+  --color-on-tertiary-container: #78f591;
+
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  --color-border-standard: #e6e8ec;
+  --color-text-primary: #14181f;
+  --color-text-muted: #667085;
+
+  --color-success: #16a34a;
+  --color-success-bg: #f0fdf4;
+  --color-success-border: #dcfce7;
+
+  --color-warning: #d97706;
+  --color-warning-bg: #fffbeb;
+  --color-warning-border: #fef3c7;
+
+  --color-danger: #dc2626;
+  --color-danger-bg: #fef2f2;
+  --color-danger-border: #fee2e2;
+
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --shadow-level-1: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-level-2: 0 4px 12px -2px rgba(0, 0, 0, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-level-3: 0 16px 32px -8px rgba(0, 0, 0, 0.08);
+}
+
 :root {
-  --ink-950: #102a43;
-  --ink-800: #243b53;
-  --ink-600: #486581;
-  --ink-500: #627d98;
-  --line: #d9e2ec;
-  --line-soft: #e6edf3;
-  --surface: #ffffff;
-  --surface-muted: #f5f7fa;
-  --surface-subtle: #eef2f6;
-  --teal: #0f766e;
-  --teal-dark: #115e59;
-  --teal-soft: #e6fffa;
-  --amber: #b45309;
-  --rose: #be123c;
-  --radius: 10px;
+  /* Calm Commerce Studio Design Tokens */
+  --surface: #f8f9fb;
+  --surface-dim: #d9dadc;
+  --surface-bright: #f8f9fb;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f2f4f6;
+  --surface-container: #edeef0;
+  --surface-container-high: #e7e8ea;
+  --surface-container-highest: #e1e2e4;
+  --surface-variant: #e1e2e4;
+  --on-surface: #191c1e;
+  --on-surface-variant: #464555;
+  --inverse-surface: #2e3132;
+  --inverse-on-surface: #f0f1f3;
+  --outline: #777587;
+  --outline-variant: #c7c4d8;
+  --surface-tint: #4d44e3;
+
+  --primary: #3525cd;
+  --on-primary: #ffffff;
+  --primary-container: #4f46e5;
+  --on-primary-container: #dad7ff;
+  --inverse-primary: #c3c0ff;
+  --primary-hover: #4338ca;
+
+  --secondary: #555f73;
+  --on-secondary: #ffffff;
+  --secondary-container: #d6e0f8;
+  --on-secondary-container: #596377;
+
+  --tertiary: #005522;
+  --on-tertiary: #ffffff;
+  --tertiary-container: #00702f;
+  --on-tertiary-container: #78f591;
+
+  --error: #ba1a1a;
+  --on-error: #ffffff;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+
+  --border-standard: #e6e8ec;
+  --text-primary: #14181f;
+  --text-muted: #667085;
+
+  --shadow-1: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-2: 0 4px 12px -2px rgba(0, 0, 0, 0.06), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-3: 0 16px 32px -8px rgba(0, 0, 0, 0.08);
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
 }
 
 @layer base {
   * {
-    border-color: #d9e2ec;
+    border-color: var(--border-standard);
   }
 
   body {
-    font-family: "Aptos Display", "Aptos", "Segoe UI", sans-serif;
+    font-family: var(--font-sans);
     color-scheme: light;
-    background: var(--surface-muted);
-    color: var(--ink-950);
-    letter-spacing: 0;
+    background-color: var(--surface);
+    color: var(--on-surface);
+    letter-spacing: normal;
   }
 
   .font-mono {
-    font-family:
-      "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo,
-      Monaco, Consolas, monospace;
-    font-feature-settings:
-      "tnum" on,
-      "zero" on;
+    font-family: var(--font-mono);
+    font-feature-settings: "tnum" on, "zero" on;
   }
 
   /* Refined tabular numerals for financials */
@@ -46,50 +145,52 @@
   }
 }
 
-/* Custom sleek scrollbar for high-density enterprise POS views */
+/* Custom sleek scrollbar */
 ::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #eef2f6;
+  background: var(--surface-container-low);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #bcccdc;
+  background: var(--outline-variant);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #829ab1;
+  background: var(--outline);
 }
 
 /* Input and interactive element normalization */
 input,
 select,
 textarea {
-  color: var(--ink-950);
+  color: var(--text-primary);
 }
+
 button {
-  letter-spacing: 0;
+  letter-spacing: normal;
 }
 
 .app-shell {
-  background: var(--surface-muted);
+  background: var(--surface);
 }
 
 .data-table th {
-  color: var(--ink-500);
-  background: var(--surface-subtle);
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  background: var(--surface-container-low);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .data-table td {
-  border-color: var(--line-soft);
-  color: var(--ink-800);
+  border-color: var(--border-standard);
+  color: var(--text-primary);
 }
 
 /* Print CSS for standard thermal (80mm) and A4 receipts */

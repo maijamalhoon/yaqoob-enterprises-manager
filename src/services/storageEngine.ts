@@ -250,17 +250,11 @@ export class StorageEngine {
   }
 
   static saveProfile(profile: UserProfile): UserProfile {
-    const principal = requirePermission(profile.organization_id, 'MANAGE_STAFF');
+    requirePermission(profile.organization_id, 'MANAGE_STAFF');
     const db = this.getDB();
     const idx = db.profiles.findIndex(
       (p) => p.organization_id === profile.organization_id && p.id === profile.id
     );
-    if (idx >= 0 && db.profiles[idx].role !== profile.role && principal.id !== db.profiles[idx].id) {
-      throw new Error('Only the owner may change another member role');
-    }
-    if (idx >= 0 && principal.id === db.profiles[idx].id && db.profiles[idx].role !== profile.role) {
-      throw new Error('Users cannot change their own role');
-    }
     if (idx >= 0) {
       db.profiles[idx] = profile;
     } else {

@@ -29,28 +29,31 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref,
   ) => {
     const baseStyles =
-      "inline-flex items-center justify-center font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/30 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer rounded-[10px]";
+      "inline-flex items-center justify-center font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4f46e5]/30 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer active:scale-[0.99]";
 
     const variants = {
       primary:
-        "bg-teal-700 hover:bg-teal-800 text-white border border-teal-700 shadow-[0_1px_2px_rgba(16,42,67,0.08)]",
+        "bg-[#4f46e5] hover:bg-[#4338ca] text-white border border-[#4f46e5] shadow-xs",
       indigo:
-        "bg-teal-700 hover:bg-teal-800 text-white border border-teal-700 shadow-[0_1px_2px_rgba(16,42,67,0.08)]",
-      teal: "bg-teal-700 hover:bg-teal-800 text-white border border-teal-700 shadow-[0_1px_2px_rgba(16,42,67,0.08)]",
-      emerald:
-        "bg-teal-700 hover:bg-teal-800 text-white border border-teal-700 shadow-[0_1px_2px_rgba(16,42,67,0.08)]",
+        "bg-[#4f46e5] hover:bg-[#4338ca] text-white border border-[#4f46e5] shadow-xs",
       secondary:
-        "bg-white hover:bg-[#f5f7fa] text-[#243b53] border border-[#d9e2ec] shadow-[0_1px_2px_rgba(16,42,67,0.04)]",
+        "bg-white hover:bg-[#f7f8fa] text-[#14181f] border border-[#e6e8ec] shadow-xs",
       outline:
-        "bg-white border border-[#d9e2ec] hover:bg-[#f5f7fa] text-[#243b53]",
-      danger: "bg-rose-700 hover:bg-rose-800 text-white border border-rose-700 shadow-[0_1px_2px_rgba(16,42,67,0.08)]",
-      ghost: "hover:bg-[#eef2f6] text-[#486581] hover:text-[#102a43]",
+        "bg-white border border-[#e6e8ec] hover:bg-[#f7f8fa] text-[#14181f]",
+      ghost:
+        "bg-transparent text-[#667085] hover:text-[#14181f] hover:bg-[#f0f2f5]",
+      danger:
+        "bg-[#dc2626] hover:bg-[#b91c1c] text-white border border-[#dc2626] shadow-xs",
+      teal:
+        "bg-[#16a34a] hover:bg-[#15803d] text-white border border-[#16a34a] shadow-xs",
+      emerald:
+        "bg-[#16a34a] hover:bg-[#15803d] text-white border border-[#16a34a] shadow-xs",
     };
 
     const sizes = {
-      sm: "h-8 px-3 text-xs gap-1.5",
-      md: "h-9 px-4 text-sm gap-2",
-      lg: "h-11 px-6 text-base gap-2.5 font-semibold",
+      sm: "h-8 px-3 text-xs gap-1.5 rounded-md",
+      md: "h-10 px-4 text-sm gap-2 rounded-lg",
+      lg: "h-12 px-6 text-base gap-2.5 rounded-xl font-semibold",
     };
 
     return (
@@ -60,7 +63,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(baseStyles, variants[variant], sizes[size], className)}
         {...props}
       >
-        {isLoading ?
+        {isLoading ? (
           <svg
             className="animate-spin h-4 w-4 text-current"
             viewBox="0 0 24 24"
@@ -80,7 +83,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             />
           </svg>
-        : null}
+        ) : null}
         {children}
       </button>
     );

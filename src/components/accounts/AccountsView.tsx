@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useApp } from '../../context/AppContext';
 import { accountRepo } from '../../services';
@@ -16,9 +16,13 @@ import {
   Wallet,
   Building2,
   Smartphone,
-  ArrowDownRight,
-  ArrowUpRight,
+  ArrowDown,
   Check,
+  CheckCircle,
+  TrendingUp,
+  ArrowUpRight,
+  ShieldCheck,
+  Layers,
 } from 'lucide-react';
 
 export const AccountsView: React.FC = () => {
@@ -29,13 +33,13 @@ export const AccountsView: React.FC = () => {
   const [transactions, setTransactions] = useState<AccountTransaction[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('ALL');
 
-  // Transfer Modal
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  // Transfer Form (both inline on right panel and accessible via quick transfer)
   const [fromAccountId, setFromAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState('');
   const [transferAmount, setTransferAmount] = useState<string>('');
   const [transferNotes, setTransferNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const amountInputRef = useRef<HTMLInputElement>(null);
 
   // New Account Modal
   const [isNewAccountModalOpen, setIsNewAccountModalOpen] = useState(false);
@@ -60,18 +64,25 @@ export const AccountsView: React.FC = () => {
       setAccounts(accList);
       setTransactions(txList);
       if (accList.length >= 2) {
-        setFromAccountId(accList[0].id);
-        setToAccountId(accList[1].id);
+        setFromAccountId((prev) => prev || accList[0].id);
+        setToAccountId((prev) => prev || accList[1].id);
+      } else if (accList.length === 1) {
+        setFromAccountId((prev) => prev || accList[0].id);
       }
     }
     loadAccounts();
   }, [organization.id, dataVersion]);
 
+  // Total Liquidity
+  const totalLiquidity = useMemo(() => {
+    return accounts.reduce((acc, a) => acc + (a.current_balance || 0), 0);
+  }, [accounts]);
+
   const handleExecuteTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
     const amt = parseFloat(transferAmount);
     if (!amt || amt <= 0) {
-      showToast('error', 'Invalid Amount', 'Enter positive transfer amount');
+      showToast('error', 'Invalid Amount', 'Enter a positive transfer amount');
       return;
     }
     if (fromAccountId === toAccountId) {
@@ -96,7 +107,7 @@ export const AccountsView: React.FC = () => {
         amount: amt,
         notes: transferNotes.trim() || undefined,
         date: new Date().toISOString().split('T')[0],
-        created_by: user?.full_name || 'Staff Cashier',
+        created_by: user?.full_name || 'Muhammad Yaqoob',
       });
 
       showToast(
@@ -104,7 +115,6 @@ export const AccountsView: React.FC = () => {
         'Funds Transferred',
         `${formatCurrency(amt, organization.currency_symbol)} transferred successfully.`
       );
-      setIsTransferModalOpen(false);
       setTransferAmount('');
       setTransferNotes('');
       refreshData();
@@ -128,11 +138,12 @@ export const AccountsView: React.FC = () => {
         current_balance: Number(accForm.opening_balance) || 0,
       });
 
-      showToast('success', 'Account Added', `${accForm.name} is now available`);
+      showToast('success', 'Account Added', `${accForm.name} is now available in treasury`);
       setIsNewAccountModalOpen(false);
+      setAccForm({ name: '', type: 'BANK', account_number: '', opening_balance: 0 });
       refreshData();
     } catch (err: any) {
-      showToast('error', 'Failed', err.message);
+      showToast('error', 'Failed to Add Account', err.message);
     }
   };
 
@@ -142,33 +153,53 @@ export const AccountsView: React.FC = () => {
       : transactions.filter((t) => t.account_id === selectedAccountId);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-[#f5f7fa] select-none text-[#102a43]">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#d9e2ec]">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#102a43]">
-            Payment Accounts & Cash Drawer
+    <div className="space-y-6 select-none text-[#14181f]">
+      {/* Top Hero Bar / Overview Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 text-[#667085] text-xs uppercase tracking-wider font-semibold">
+            <span>Treasury Management</span>
+            <span>•</span>
+            <span className="text-[#16a34a] font-medium">Active Till Sync</span>
+          </div>
+          <h1 className="text-2xl font-bold text-[#14181f] tracking-tight">
+            Accounts & Wallets
           </h1>
-          <p className="text-xs text-[#627d98] mt-0.5">
-            Liquid balances, cash box auditing, bank deposits, and inter-account transfers.
+          <p className="text-xs text-[#667085] max-w-2xl">
+            Multi-channel balance overview, liquidity status, and internal funds transfer for solo shop owner.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Actions & Aggregate Metric */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3 bg-white px-4 py-2.5 rounded-xl border border-[#e6e8ec] shadow-sm">
+            <div className="w-2.5 h-2.5 rounded-full bg-[#16a34a] animate-pulse"></div>
+            <div className="flex flex-col">
+              <span className="text-[11px] text-[#667085] font-semibold uppercase leading-tight">
+                Total Liquidity
+              </span>
+              <span className="text-lg font-mono font-bold text-[#14181f] tracking-tight">
+                {formatCurrency(totalLiquidity, organization.currency_symbol)}
+              </span>
+            </div>
+          </div>
+
           <Button
             variant="secondary"
-            size="sm"
-            onClick={() => setIsTransferModalOpen(true)}
+            size="md"
+            onClick={() => {
+              amountInputRef.current?.focus();
+              amountInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }}
           >
-            <ArrowRightLeft className="h-4 w-4 text-teal-700" />
-            <span>Transfer Funds</span>
+            <ArrowRightLeft className="h-4 w-4 text-[#4f46e5]" />
+            <span>Quick Transfer</span>
           </Button>
 
           <Button
             variant="primary"
-            size="sm"
+            size="md"
             onClick={() => setIsNewAccountModalOpen(true)}
-            className="font-semibold"
           >
             <Plus className="h-4 w-4" />
             <span>Add Account</span>
@@ -176,209 +207,285 @@ export const AccountsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Accounts Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      {/* 4-Column Accounts Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {accounts.map((acc) => {
           const isCash = acc.type === 'CASH';
           const isBank = acc.type === 'BANK';
+          const isSelected = selectedAccountId === acc.id;
 
           return (
-            <Card
+            <div
               key={acc.id}
-              onClick={() => setSelectedAccountId(acc.id)}
-              className={`p-4 cursor-pointer transition-all border ${
-                selectedAccountId === acc.id
-                  ? 'border-teal-700 bg-teal-50/40 shadow-sm'
-                  : 'border-[#d9e2ec] bg-white hover:border-[#bcccdc]'
+              onClick={() => setSelectedAccountId(isSelected ? 'ALL' : acc.id)}
+              className={`bg-white rounded-xl p-5 border transition-all cursor-pointer shadow-sm flex flex-col justify-between hover:shadow-md ${
+                isSelected
+                  ? 'border-[#4f46e5] ring-2 ring-[#4f46e5]/20'
+                  : 'border-[#e6e8ec] hover:border-[#d0d5dd]'
               }`}
             >
-              <div className="flex items-start justify-between mb-2">
-                <div className="p-2 rounded-[8px] bg-[#f5f7fa] border border-[#d9e2ec] text-teal-800">
-                  {isCash ? (
-                    <Wallet className="h-4 w-4" />
-                  ) : isBank ? (
-                    <Building2 className="h-4 w-4" />
-                  ) : (
-                    <Smartphone className="h-4 w-4 text-teal-700" />
-                  )}
+              <div className="space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="w-10 h-10 rounded-lg bg-[#f8f9fb] border border-[#e6e8ec] flex items-center justify-center text-[#4f46e5]">
+                    {isCash ? (
+                      <Wallet className="h-5 w-5" />
+                    ) : isBank ? (
+                      <Building2 className="h-5 w-5" />
+                    ) : (
+                      <Smartphone className="h-5 w-5 text-[#4f46e5]" />
+                    )}
+                  </div>
+                  <Badge
+                    variant={isCash ? 'primary' : isBank ? 'neutral' : 'emerald'}
+                    size="sm"
+                  >
+                    {isCash ? 'Cash Drawer' : isBank ? 'Main Clearing' : 'Digital QR'}
+                  </Badge>
                 </div>
-                <Badge variant={isCash ? 'teal' : isBank ? 'slate' : 'emerald'} size="sm">
-                  {acc.type}
-                </Badge>
+
+                <div>
+                  <span className="text-xs text-[#667085] font-medium block truncate">
+                    {acc.name}
+                  </span>
+                  <div className="text-2xl font-mono font-bold text-[#14181f] tracking-tight mt-1">
+                    {formatCurrency(acc.current_balance, organization.currency_symbol)}
+                  </div>
+                </div>
               </div>
 
-              <h3 className="text-sm font-semibold text-[#102a43] truncate">{acc.name}</h3>
-              {acc.account_number && (
-                <p className="text-[10px] font-mono text-[#627d98] truncate mt-0.5">
-                  #{acc.account_number}
-                </p>
-              )}
-
-              <div className="mt-3 pt-2 border-t border-[#d9e2ec] flex items-baseline justify-between">
-                <span className="text-[10px] text-[#627d98] font-mono">Current Balance</span>
-                <span className="text-base font-mono font-bold text-[#102a43]">
-                  {formatCurrency(acc.current_balance, organization.currency_symbol)}
+              <div className="pt-3 mt-3 border-t border-[#e6e8ec] flex items-center justify-between text-xs text-[#667085]">
+                <span className="font-mono text-[11px] truncate">
+                  {acc.account_number ? `#${acc.account_number}` : 'Till Register'}
                 </span>
+                <span className="text-[#16a34a] font-medium text-[11px]">Synced</span>
               </div>
-            </Card>
+            </div>
           );
         })}
       </div>
 
-      {/* Transactions Ledger */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-bold text-[#102a43]">Account Movement Ledger</h2>
-            {selectedAccountId !== 'ALL' && (
-              <button
-                onClick={() => setSelectedAccountId('ALL')}
-                className="text-[11px] text-teal-700 hover:underline cursor-pointer"
-              >
-                (View All Accounts)
-              </button>
-            )}
-          </div>
-          <span className="text-xs text-[#627d98] font-mono">
-            {filteredTransactions.length} records
-          </span>
-        </div>
+      {/* Two-Column Workspace (65% / 35%) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+        {/* Main Column: Ledger Table (8 cols / ~66%) */}
+        <div className="lg:col-span-8 bg-white rounded-xl border border-[#e6e8ec] shadow-sm overflow-hidden flex flex-col">
+          <div className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#e6e8ec]">
+            <div>
+              <h2 className="text-base font-bold text-[#14181f]">
+                Recent Account Transactions
+              </h2>
+              <p className="text-xs text-[#667085]">
+                Combined multi-channel movements across registers and merchant wallets
+              </p>
+            </div>
 
-        <Card className="p-0 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
+            <div className="flex items-center gap-1.5 text-xs">
+              <button
+                type="button"
+                onClick={() => setSelectedAccountId('ALL')}
+                className={`px-3 py-1 rounded-lg transition-colors cursor-pointer ${
+                  selectedAccountId === 'ALL'
+                    ? 'bg-[#f8f9fb] border border-[#e6e8ec] text-[#14181f] font-semibold'
+                    : 'text-[#667085] hover:text-[#14181f]'
+                }`}
+              >
+                All Accounts
+              </button>
+              <span className="text-xs text-[#667085] font-mono">
+                ({filteredTransactions.length})
+              </span>
+            </div>
+          </div>
+
+          <div className="w-full overflow-x-auto">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-[#d9e2ec] bg-[#f5f7fa] text-[#627d98] uppercase font-mono text-[10px]">
-                  <th className="py-3 px-4">Date</th>
+                <tr className="bg-[#f8f9fb] text-[#667085] text-[11px] uppercase tracking-wider font-semibold border-b border-[#e6e8ec]">
+                  <th className="py-3 px-4">Date & Time</th>
                   <th className="py-3 px-3">Account</th>
-                  <th className="py-3 px-3">Type</th>
                   <th className="py-3 px-3">Description</th>
+                  <th className="py-3 px-3">Type</th>
                   <th className="py-3 px-3 text-right">Amount</th>
-                  <th className="py-3 px-4 text-right">Balance After</th>
+                  <th className="py-3 px-4 text-center">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#d9e2ec] font-sans">
-                {filteredTransactions.map((tx) => {
-                  const isPositive = ['INCOME', 'TRANSFER_IN', 'ADJUSTMENT'].includes(tx.type);
+              <tbody className="divide-y divide-[#e6e8ec] text-xs">
+                {filteredTransactions.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-[#667085]">
+                      No transactions recorded for this account.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredTransactions.slice(0, 15).map((tx) => {
+                    const isPositive = ['INCOME', 'TRANSFER_IN', 'ADJUSTMENT'].includes(tx.type);
+                    const acc = accounts.find((a) => a.id === tx.account_id);
 
-                  return (
-                    <tr key={tx.id} className="hover:bg-[#f5f7fa] transition-colors">
-                      <td className="py-3 px-4 font-mono text-[#627d98]">{tx.date}</td>
-                      <td className="py-3 px-3 font-semibold text-[#102a43]">
-                        {accounts.find((a) => a.id === tx.account_id)?.name || 'Account'}
-                      </td>
-                      <td className="py-3 px-3">
-                        <Badge
-                          variant={
-                            tx.type === 'INCOME'
-                              ? 'emerald'
-                              : tx.type === 'EXPENSE'
-                              ? 'amber'
-                              : 'teal'
-                          }
-                          size="sm"
-                        >
-                          {tx.type}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-3 text-[#243b53]">{tx.description}</td>
-                      <td className="py-3 px-3 text-right font-mono font-bold">
-                        <span className={isPositive ? 'text-emerald-700' : 'text-amber-700'}>
-                          {isPositive ? `+` : `-`}
-                          {formatCurrency(tx.amount, organization.currency_symbol)}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono text-[#243b53]">
-                        {formatCurrency(tx.balance_after, organization.currency_symbol)}
-                      </td>
-                    </tr>
-                  );
-                })}
+                    return (
+                      <tr key={tx.id} className="hover:bg-[#f8f9fb] transition-colors">
+                        <td className="py-3 px-4 font-mono text-[#667085] whitespace-nowrap">
+                          {tx.date}
+                        </td>
+                        <td className="py-3 px-3 font-semibold text-[#14181f] whitespace-nowrap">
+                          {acc?.name || 'Treasury'}
+                        </td>
+                        <td className="py-3 px-3 text-[#14181f]">
+                          <div className="truncate max-w-[220px]">{tx.description}</div>
+                        </td>
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <span className="text-[11px] text-[#667085] bg-[#f8f9fb] px-2 py-0.5 rounded border border-[#e6e8ec]">
+                            {tx.type}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 font-mono font-bold text-right whitespace-nowrap">
+                          <span className={isPositive ? 'text-[#16a34a]' : 'text-[#dc2626]'}>
+                            {isPositive ? '+' : '-'}
+                            {formatCurrency(tx.amount, organization.currency_symbol)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center whitespace-nowrap">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] bg-[#f0fdf4] text-[#16a34a] font-semibold">
+                            Cleared
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
-        </Card>
+
+          <div className="px-5 py-3 bg-[#f8f9fb] border-t border-[#e6e8ec] flex items-center justify-between text-xs text-[#667085]">
+            <span>Showing recent transaction ledger</span>
+            {selectedAccountId !== 'ALL' && (
+              <button
+                onClick={() => setSelectedAccountId('ALL')}
+                className="text-[#4f46e5] font-semibold hover:underline cursor-pointer"
+              >
+                Reset Account Filter
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Transfer Between Accounts (4 cols / ~34%) */}
+        <div className="lg:col-span-4 bg-white rounded-xl border border-[#e6e8ec] p-5 shadow-sm flex flex-col justify-between">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-[#eef2ff] text-[#4f46e5]">
+                  <ArrowRightLeft className="h-4 w-4" />
+                </div>
+                <h2 className="text-base font-bold text-[#14181f]">
+                  Transfer Between Accounts
+                </h2>
+              </div>
+              <ShieldCheck className="h-4 w-4 text-[#16a34a]" />
+            </div>
+
+            <p className="text-xs text-[#667085]">
+              Move funds instantly between cash drawer, company bank accounts, and merchant wallets.
+            </p>
+
+            <form onSubmit={handleExecuteTransfer} className="space-y-3 pt-1">
+              {/* From Field */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-[#14181f]">
+                  From Account (Debit)
+                </label>
+                <select
+                  value={fromAccountId}
+                  onChange={(e) => setFromAccountId(e.target.value)}
+                  className="w-full h-10 px-3 bg-[#f8f9fb] border border-[#e6e8ec] text-[#14181f] rounded-lg text-xs focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition-all"
+                >
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} ({formatCurrency(a.current_balance, organization.currency_symbol)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Direction Indicator */}
+              <div className="flex justify-center -my-1">
+                <div className="w-7 h-7 rounded-full bg-[#f8f9fb] border border-[#e6e8ec] flex items-center justify-center text-[#667085]">
+                  <ArrowDown className="h-3.5 w-3.5" />
+                </div>
+              </div>
+
+              {/* To Field */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-[#14181f]">
+                  To Account (Credit)
+                </label>
+                <select
+                  value={toAccountId}
+                  onChange={(e) => setToAccountId(e.target.value)}
+                  className="w-full h-10 px-3 bg-[#f8f9fb] border border-[#e6e8ec] text-[#14181f] rounded-lg text-xs focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition-all"
+                >
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} ({formatCurrency(a.current_balance, organization.currency_symbol)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Amount Field */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-[#14181f]">
+                  Amount ({organization.currency_symbol})
+                </label>
+                <input
+                  ref={amountInputRef}
+                  type="number"
+                  step="any"
+                  min="0.01"
+                  required
+                  placeholder="0.00"
+                  value={transferAmount}
+                  onChange={(e) => setTransferAmount(e.target.value)}
+                  className="w-full h-10 px-3 bg-[#f8f9fb] border border-[#e6e8ec] text-[#14181f] rounded-lg text-xs font-mono font-semibold focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition-all"
+                />
+              </div>
+
+              {/* Optional Note */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-[#14181f]">
+                  Optional Reference / Note
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Evening bank deposit"
+                  value={transferNotes}
+                  onChange={(e) => setTransferNotes(e.target.value)}
+                  className="w-full h-10 px-3 bg-[#f8f9fb] border border-[#e6e8ec] text-[#14181f] rounded-lg text-xs placeholder:text-[#667085] focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#4f46e5]/20 focus:border-[#4f46e5] transition-all"
+                />
+              </div>
+
+              {/* Submit Button */}
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                isLoading={isSubmitting}
+                className="w-full mt-2"
+              >
+                <Check className="h-4 w-4" />
+                <span>Transfer Funds</span>
+              </Button>
+            </form>
+          </div>
+
+          {/* Instant Notice Banner */}
+          <div className="mt-5 p-3 bg-[#f8f9fb] border border-[#e6e8ec] rounded-lg flex items-start gap-2 text-[#667085] text-xs">
+            <CheckCircle className="h-4 w-4 text-[#16a34a] shrink-0 mt-0.5" />
+            <span className="leading-relaxed">
+              Internal transfers update real-time liquidity and ledger immediately without settlement delay.
+            </span>
+          </div>
+        </div>
       </div>
-
-      {/* Transfer Funds Modal */}
-      <Modal
-        isOpen={isTransferModalOpen}
-        onClose={() => setIsTransferModalOpen(false)}
-        title="Inter-Account Funds Transfer"
-        description="Transfer liquid money between cash drawer, banks, or digital wallets."
-        maxWidth="md"
-      >
-        <form onSubmit={handleExecuteTransfer} className="space-y-4 py-1">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-[#102a43] mb-1.5">
-                From Account (Debit)
-              </label>
-              <select
-                value={fromAccountId}
-                onChange={(e) => setFromAccountId(e.target.value)}
-                className="w-full rounded-[8px] bg-white border border-[#d9e2ec] px-3 py-2 text-xs text-[#102a43] focus:border-teal-700 focus:outline-none"
-              >
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} ({formatCurrency(a.current_balance, organization.currency_symbol)})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[#102a43] mb-1.5">
-                To Account (Credit)
-              </label>
-              <select
-                value={toAccountId}
-                onChange={(e) => setToAccountId(e.target.value)}
-                className="w-full rounded-[8px] bg-white border border-[#d9e2ec] px-3 py-2 text-xs text-[#102a43] focus:border-teal-700 focus:outline-none"
-              >
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} ({formatCurrency(a.current_balance, organization.currency_symbol)})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <Input
-            label={`Transfer Amount (${organization.currency_symbol})`}
-            type="number"
-            step="any"
-            required
-            autoFocus
-            placeholder="0.00"
-            value={transferAmount}
-            onChange={(e) => setTransferAmount(e.target.value)}
-            className="font-mono text-base font-bold text-teal-800"
-          />
-
-          <Input
-            label="Transfer Reason / Deposit Slip Ref"
-            placeholder="e.g. End of day cash deposit to HBL Main Branch"
-            value={transferNotes}
-            onChange={(e) => setTransferNotes(e.target.value)}
-          />
-
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#d9e2ec]">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setIsTransferModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" isLoading={isSubmitting}>
-              <Check className="h-4 w-4" />
-              <span>Confirm Transfer</span>
-            </Button>
-          </div>
-        </form>
-      </Modal>
 
       {/* Add New Account Modal */}
       <Modal
@@ -400,7 +507,7 @@ export const AccountsView: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-[#102a43] mb-1.5">
+              <label className="block text-xs font-semibold text-[#14181f] mb-1.5">
                 Account Type
               </label>
               <select
@@ -408,7 +515,7 @@ export const AccountsView: React.FC = () => {
                 onChange={(e) =>
                   setAccForm({ ...accForm, type: e.target.value as PaymentAccount['type'] })
                 }
-                className="w-full rounded-[8px] bg-white border border-[#d9e2ec] px-3 py-2 text-xs text-[#102a43] focus:border-teal-700 focus:outline-none"
+                className="w-full h-10 rounded-lg bg-white border border-[#e6e8ec] px-3 text-xs text-[#14181f] focus:border-[#4f46e5] focus:outline-none"
               >
                 <option value="CASH">Cash Drawer</option>
                 <option value="BANK">Commercial Bank</option>
@@ -435,7 +542,7 @@ export const AccountsView: React.FC = () => {
             }
           />
 
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#d9e2ec]">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#e6e8ec]">
             <Button
               type="button"
               variant="ghost"
