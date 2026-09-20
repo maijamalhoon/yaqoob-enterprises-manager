@@ -1,0 +1,6 @@
+{
+  "name": "Yaqoob Enterprises Manager",
+  "description": "Production-oriented multi-tenant business management system for physical service and retail shops, photocopying, printing, documentation centers, stationery, and ticket booking.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

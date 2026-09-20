@@ -1,0 +1,24 @@
+[package]
+name = "yaqoob-enterprises-manager"
+version = "1.0.0"
+description = "Yaqoob Enterprises Manager Desktop Business Application"
+authors = ["Muhammad Yaqoob <yaqoobenterprisesofficial@gmail.com>"]
+edition = "2021"
+
+[lib]
+name = "yaqoob_enterprises_manager_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.2.0", features = [] }
+tauri-plugin-sql = { version = "2.2.0", features = ["sqlite"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
