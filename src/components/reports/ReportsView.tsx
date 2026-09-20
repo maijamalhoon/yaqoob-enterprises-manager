@@ -350,7 +350,7 @@ export const ReportsView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-5 select-none text-[#14181f]">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 select-none text-[#14181f] min-h-0 bg-[#f8f9fb]">
       {/* Header Context & Quick Actions Filter Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-[#e6e8ec] shadow-sm no-print">
         <div className="flex flex-col">
@@ -358,12 +358,9 @@ export const ReportsView: React.FC = () => {
             <h1 className="text-xl font-bold text-[#14181f] tracking-tight">
               Business Intelligence
             </h1>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#f8f9fb] border border-[#e6e8ec] text-[11px] font-semibold text-[#667085]">
-              Solo Mode
-            </span>
           </div>
           <p className="text-xs text-[#667085] mt-0.5">
-            Calm operational overview of revenue, margins, and till integrity for {organization.name}.
+            Operational overview of revenue, margins, and performance for {organization.name}.
           </p>
         </div>
 
@@ -413,7 +410,7 @@ export const ReportsView: React.FC = () => {
           { id: 'EXPENSES', label: `Expenses (${filteredExpenses.length})`, icon: TrendingDown },
           { id: 'INVENTORY', label: `Valuation (${products.length})`, icon: Boxes },
           { id: 'PAYMENTS', label: 'Payment Tenders', icon: Wallet },
-          { id: 'CLOSINGS', label: 'Till Closings', icon: Lock },
+          { id: 'CLOSINGS', label: 'Closings', icon: Lock },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -749,7 +746,7 @@ export const ReportsView: React.FC = () => {
                 <Lightbulb className="h-5 w-5" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-[#14181f]">Solo Owner Observation</h4>
+                <h4 className="text-sm font-bold text-[#14181f]">Operational Observation</h4>
                 <p className="text-xs text-[#667085]">
                   Weekend high-volume print runs generate higher gross profit margins. Consider keeping
                   sufficient paper stock ready on Friday evenings.

@@ -151,22 +151,13 @@ export const CustomersView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-5 select-none text-[#14181f]">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 select-none text-[#14181f] min-h-0 bg-[#f8f9fb]">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[11px] uppercase tracking-wider font-semibold text-[#667085]">
-              Receivables & CRM
-            </span>
-            <span className="text-[#667085]">·</span>
-            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-[#f8f9fb] border border-[#e6e8ec] text-[#14181f]">
-              Khata Active
-            </span>
-          </div>
           <h1 className="text-2xl font-bold text-[#14181f] tracking-tight">Customer Directory</h1>
           <p className="text-xs text-[#667085] mt-0.5">
-            Manage repeat clients, institutional printing accounts, and pending ledger balances (Khata).
+            Manage customer contact details, purchase history, and Khata credit balances.
           </p>
         </div>
 

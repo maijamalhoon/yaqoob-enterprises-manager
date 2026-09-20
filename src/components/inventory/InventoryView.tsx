@@ -394,7 +394,7 @@ export const InventoryView: React.FC = () => {
   }, [services, searchQuery, categoryFilter]);
 
   return (
-    <div className="space-y-5 select-none text-[#14181f]">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 select-none text-[#14181f] min-h-0 bg-[#f8f9fb]">
       {/* Metric & Status Quick Strips */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-4 rounded-xl border border-[#e6e8ec] shadow-sm flex items-center justify-between">

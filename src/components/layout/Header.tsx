@@ -37,11 +37,11 @@ export const Header: React.FC = () => {
 
       {/* Right Utility & Profile Controls */}
       <div className="flex items-center gap-3 sm:gap-4">
-        {/* Quick Drawer Balance indicator */}
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-[#f2f4f6] border border-[#e6e8ec] rounded-lg">
-          <Wallet className="h-4 w-4 text-[#16a34a]" />
-          <span className="font-mono text-xs font-medium text-[#191c1e]">
-            Till #1 · Active
+        {/* Register Status indicator */}
+        <div className="hidden md:flex items-center gap-2 px-2.5 py-1.5 bg-[#f2f4f6] border border-[#e6e8ec] rounded-lg">
+          <span className="w-2 h-2 rounded-full bg-[#16a34a]" />
+          <span className="text-xs font-medium text-[#191c1e]">
+            Register Open
           </span>
         </div>
 

@@ -388,33 +388,37 @@ export const QuickSaleView: React.FC = () => {
           </div>
         </div>
 
-        {/* Category Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 shrink-0">
-          <button
-            type="button"
-            onClick={() => setSelectedCategory("ALL")}
-            className={`px-4 py-2 rounded-full text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
-              selectedCategory === "ALL"
-                ? "bg-[#4f46e5] text-white shadow-xs"
-                : "bg-white border border-[#e6e8ec] text-[#555f73] hover:text-[#191c1e] hover:bg-[#f2f4f6]"
-            }`}
-          >
-            All Categories
-          </button>
-          {categories.map((cat) => (
+        {/* Category Filter Pills with Scroll Affordance */}
+        <div className="relative shrink-0 flex items-center">
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 px-0.5 w-full scroll-smooth">
             <button
-              key={cat.id}
               type="button"
-              onClick={() => setSelectedCategory(cat.name)}
-              className={`px-4 py-2 rounded-full text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
-                selectedCategory === cat.name
+              onClick={() => setSelectedCategory("ALL")}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap shrink-0 cursor-pointer ${
+                selectedCategory === "ALL"
                   ? "bg-[#4f46e5] text-white shadow-xs"
                   : "bg-white border border-[#e6e8ec] text-[#555f73] hover:text-[#191c1e] hover:bg-[#f2f4f6]"
               }`}
             >
-              {cat.name}
+              All Categories
             </button>
-          ))}
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setSelectedCategory(cat.name)}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap shrink-0 cursor-pointer ${
+                  selectedCategory === cat.name
+                    ? "bg-[#4f46e5] text-white shadow-xs"
+                    : "bg-white border border-[#e6e8ec] text-[#555f73] hover:text-[#191c1e] hover:bg-[#f2f4f6]"
+                }`}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
+          {/* Subtle right gradient fade affordance for horizontal scroll */}
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-[#f8f9fb] to-transparent opacity-80" />
         </div>
 
         {/* Item Cards Grid */}
@@ -430,7 +434,7 @@ export const QuickSaleView: React.FC = () => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3.5">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-3.5">
               {filteredItems.map((item) => {
                 const isService = item.itemType === "SERVICE";
                 const hasStock =
@@ -471,13 +475,16 @@ export const QuickSaleView: React.FC = () => {
                       </h4>
                     </div>
 
-                    <div className="pt-2.5 mt-3 border-t border-[#f2f4f6] flex items-end justify-between">
-                      <div>
-                        <span className="text-sm font-mono font-semibold text-[#191c1e] group-hover:text-[#4f46e5]">
+                    <div className="pt-2.5 mt-3 border-t border-[#f2f4f6] flex items-center justify-between gap-1.5 min-w-0">
+                      <div
+                        className="min-w-0 truncate"
+                        title={`${formatCurrency(item.selling_price, organization.currency_symbol)}${"unit" in item ? ` / ${item.unit}` : ""}`}
+                      >
+                        <span className="text-sm font-mono font-semibold text-[#191c1e] group-hover:text-[#4f46e5] truncate">
                           {formatCurrency(item.selling_price, organization.currency_symbol)}
                         </span>
                         {"unit" in item && (
-                          <span className="text-[10px] text-[#777587] ml-1">
+                          <span className="text-[10px] text-[#777587] ml-1 truncate">
                             /{item.unit}
                           </span>
                         )}
@@ -485,7 +492,8 @@ export const QuickSaleView: React.FC = () => {
 
                       {hasStock !== null && (
                         <span
-                          className={`text-[10px] font-mono font-medium px-1.5 py-0.5 rounded border ${
+                          title={`${hasStock} units in stock`}
+                          className={`shrink-0 whitespace-nowrap text-[10px] font-mono font-medium px-1.5 py-0.5 rounded border ${
                             isOut
                               ? "bg-[#fef2f2] text-[#dc2626] border-[#fee2e2]"
                               : isLow

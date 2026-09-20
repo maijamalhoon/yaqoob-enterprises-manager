@@ -55,28 +55,24 @@ export const Sidebar: React.FC = () => {
       <div className="flex flex-col flex-1 overflow-y-auto">
         {/* Top Header / Brand */}
         <div className="h-16 px-4 border-b border-[#e6e8ec] flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
             <img
               src="/assets/logo.svg"
               alt="Yaqoob Enterprises Logo"
               className="h-8 w-8 object-contain rounded-lg shrink-0"
               onError={(e) => {
-                // Fallback in case path resolution differs in dev
                 (e.currentTarget as HTMLImageElement).src = "./assets/logo.svg";
               }}
             />
             <div className="flex flex-col leading-tight truncate">
               <span className="font-semibold text-sm text-[#191c1e] tracking-tight truncate">
-                Yaqoob Ent.
+                Yaqoob Enterprises
               </span>
-              <span className="text-[11px] text-[#464555]">
-                Manager POS
+              <span className="text-[11px] text-[#464555] truncate">
+                Store & Services
               </span>
             </div>
           </div>
-          <span className="text-[11px] font-medium bg-[#f2f4f6] text-[#464555] border border-[#c7c4d8] px-2 py-0.5 rounded-md">
-            Solo
-          </span>
         </div>
 
         {/* Navigation List */}
@@ -116,7 +112,7 @@ export const Sidebar: React.FC = () => {
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#16a34a] animate-pulse" />
             <span className="text-xs font-medium text-[#191c1e]">
-              Open · Till Active
+              Register Open
             </span>
           </div>
           <span className="font-mono text-xs text-[#555f73]">

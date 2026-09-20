@@ -178,9 +178,6 @@ export const DashboardView: React.FC = () => {
             <h1 className="text-2xl font-semibold text-[#191c1e] tracking-tight">
               Good day, {ownerFirstName}
             </h1>
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#edeef0] text-[#464555] font-mono text-xs">
-              POS Node 01
-            </span>
           </div>
           <p className="text-sm text-[#464555] flex items-center gap-1.5">
             <Calendar className="h-4 w-4 text-[#777587]" />
@@ -322,7 +319,7 @@ export const DashboardView: React.FC = () => {
         </div>
 
         {/* Minimalist Vector Chart Canvas */}
-        <div className="relative w-full h-72 sm:h-80 bg-[#f8f9fb] border border-[#e6e8ec] rounded-lg p-4 flex flex-col justify-between">
+        <div className="relative w-full h-64 sm:h-72 bg-[#f8f9fb] border border-[#e6e8ec] rounded-lg p-4 flex flex-col justify-between">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
@@ -406,9 +403,6 @@ export const DashboardView: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
             <h2 className="text-base font-semibold text-[#191c1e]">Recent Sales</h2>
-            <span className="px-2 py-0.5 rounded-full bg-[#edeef0] text-[#464555] font-mono text-xs">
-              Live Stream
-            </span>
           </div>
           <button
             onClick={() => setCurrentView("pos")}
@@ -468,7 +462,6 @@ export const DashboardView: React.FC = () => {
         {/* Quick Footer Status */}
         <div className="flex items-center justify-between pt-2 border-t border-[#e6e8ec] text-[#777587] text-xs">
           <span>Showing latest {Math.min(5, sales.length)} transactions</span>
-          <span className="font-mono">Local Store Active</span>
         </div>
       </div>
     </div>

@@ -135,7 +135,7 @@ export const ExpensesView: React.FC = () => {
   }, [activeExpenses]);
 
   return (
-    <div className="space-y-5 select-none text-[#14181f]">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 select-none text-[#14181f] min-h-0 bg-[#f8f9fb]">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex flex-col gap-0.5">

@@ -153,20 +153,15 @@ export const AccountsView: React.FC = () => {
       : transactions.filter((t) => t.account_id === selectedAccountId);
 
   return (
-    <div className="space-y-6 select-none text-[#14181f]">
+    <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 select-none text-[#14181f] min-h-0 bg-[#f8f9fb]">
       {/* Top Hero Bar / Overview Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-[#667085] text-xs uppercase tracking-wider font-semibold">
-            <span>Treasury Management</span>
-            <span>•</span>
-            <span className="text-[#16a34a] font-medium">Active Till Sync</span>
-          </div>
           <h1 className="text-2xl font-bold text-[#14181f] tracking-tight">
             Accounts & Wallets
           </h1>
           <p className="text-xs text-[#667085] max-w-2xl">
-            Multi-channel balance overview, liquidity status, and internal funds transfer for solo shop owner.
+            Overview of cash in drawer, bank accounts, merchant wallets, and fund transfers.
           </p>
         </div>
 
