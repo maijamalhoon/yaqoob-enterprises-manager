@@ -2,7 +2,7 @@ import React from 'react';
 import { cn } from '../../lib/utils';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost' | 'teal';
+  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost' | 'teal' | 'indigo' | 'emerald';
   size?: 'sm' | 'md' | 'lg';
   isLoading?: boolean;
 }
@@ -10,15 +10,17 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = 'primary', size = 'md', isLoading, children, disabled, ...props }, ref) => {
     const baseStyles =
-      'inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer rounded-lg active:scale-[0.98]';
+      'inline-flex items-center justify-center font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer rounded-lg active:scale-[0.985]';
 
     const variants = {
-      primary: 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-sm shadow-cyan-950',
-      teal: 'bg-teal-600 hover:bg-teal-500 text-white shadow-sm shadow-teal-950',
-      secondary: 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700/80',
-      outline: 'border border-slate-700 hover:bg-slate-800/80 text-slate-200',
-      danger: 'bg-rose-600 hover:bg-rose-500 text-white shadow-sm shadow-rose-950',
-      ghost: 'hover:bg-slate-800 text-slate-300 hover:text-white',
+      primary: 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs shadow-indigo-950/50 border border-indigo-500/30',
+      indigo: 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs shadow-indigo-950/50 border border-indigo-500/30',
+      teal: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs shadow-emerald-950/50 border border-emerald-500/30',
+      emerald: 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs shadow-emerald-950/50 border border-emerald-500/30',
+      secondary: 'bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/70 hover:border-slate-600 shadow-2xs',
+      outline: 'border border-slate-700/80 hover:bg-slate-800/70 text-slate-300 hover:text-white',
+      danger: 'bg-rose-600 hover:bg-rose-500 text-white shadow-xs shadow-rose-950/50 border border-rose-500/30',
+      ghost: 'hover:bg-slate-800/60 text-slate-400 hover:text-slate-100',
     };
 
     const sizes = {

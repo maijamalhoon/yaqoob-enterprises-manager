@@ -35,10 +35,10 @@ export const CartItemRow: React.FC<CartItemRowProps> = ({
         <div className="flex-1 truncate">
           <div className="flex items-center gap-1.5">
             <span
-              className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${
+              className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
                 item.type === 'SERVICE'
-                  ? 'bg-teal-950 text-teal-400 border border-teal-800/60'
-                  : 'bg-cyan-950 text-cyan-400 border border-cyan-800/60'
+                  ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25'
+                  : 'bg-indigo-500/10 text-indigo-300 border-indigo-500/25'
               }`}
             >
               {item.type === 'SERVICE' ? 'SRV' : 'PRD'}
@@ -96,14 +96,14 @@ export const CartItemRow: React.FC<CartItemRowProps> = ({
             step="any"
             value={item.unit_price}
             onChange={(e) => onUpdatePrice(item.id, Math.max(0, parseFloat(e.target.value) || 0))}
-            className="w-14 px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-xs font-mono text-slate-200 text-right focus:border-cyan-500 focus:outline-none"
+            className="w-14 px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-xs font-mono text-slate-200 text-right focus:border-indigo-500 focus:outline-none"
             title="Unit Price / Rate"
           />
         </div>
 
         {/* Line Total */}
         <div className="text-right">
-          <p className="text-xs font-mono font-bold text-cyan-300">
+          <p className="text-xs font-mono font-bold text-slate-100">
             {formatCurrency(lineTotal, currencySymbol)}
           </p>
         </div>

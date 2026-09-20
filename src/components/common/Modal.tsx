@@ -42,7 +42,7 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-150">
       <div
         className="fixed inset-0"
         onClick={onClose}
@@ -52,7 +52,7 @@ export const Modal: React.FC<ModalProps> = ({
         role="dialog"
         aria-modal="true"
         className={cn(
-          'relative w-full rounded-xl border border-slate-700/80 bg-slate-900 shadow-2xl shadow-black/80 flex flex-col max-h-[90vh] z-10 animate-in zoom-in-95 duration-150',
+          'relative w-full rounded-xl border border-slate-800/90 bg-slate-900/95 backdrop-blur-xl shadow-2xl shadow-black/90 flex flex-col max-h-[90vh] z-10 animate-in zoom-in-95 duration-150',
           widthClasses[maxWidth]
         )}
       >

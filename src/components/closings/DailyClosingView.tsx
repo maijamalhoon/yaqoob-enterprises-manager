@@ -110,18 +110,18 @@ export const DailyClosingView: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-cyan-400" />
+          <Calendar className="h-4 w-4 text-indigo-400" />
           <input
             type="date"
             value={closingDate}
             onChange={(e) => setClosingDate(e.target.value)}
-            className="rounded-lg bg-slate-900 border border-slate-700/80 px-2.5 py-1 text-xs text-slate-200 focus:border-cyan-500 focus:outline-none"
+            className="rounded-lg bg-slate-900 border border-slate-700/80 px-2.5 py-1 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none"
           />
         </div>
       </div>
 
       {alreadyClosed && (
-        <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-800/80 text-xs text-amber-300 flex items-start gap-2.5">
+        <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-800/60 text-xs text-amber-300 flex items-start gap-2.5">
           <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
           <div>
             <p className="font-bold">Date Already Closed</p>
@@ -143,43 +143,43 @@ export const DailyClosingView: React.FC = () => {
             </h3>
 
             <div className="space-y-2 text-xs">
-              <div className="flex justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+              <div className="flex justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800/80">
                 <span className="text-slate-400">1. Opening Cash Balance:</span>
                 <span className="font-mono font-semibold text-slate-200">
                   {formatCurrency(summary.opening_cash, organization.currency_symbol)}
                 </span>
               </div>
 
-              <div className="flex justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+              <div className="flex justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800/80">
                 <span className="text-emerald-400 font-medium">(+) Cash Sales Received:</span>
                 <span className="font-mono font-bold text-emerald-400">
                   +{formatCurrency(summary.cash_sales, organization.currency_symbol)}
                 </span>
               </div>
 
-              <div className="flex justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
+              <div className="flex justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800/80">
                 <span className="text-amber-400 font-medium">(-) Cash Expenses Paid Out:</span>
                 <span className="font-mono font-bold text-amber-400">
                   -{formatCurrency(summary.cash_expenses, organization.currency_symbol)}
                 </span>
               </div>
 
-              <div className="flex justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-                <span className="text-cyan-400">(+) Cash Transferred In:</span>
-                <span className="font-mono text-cyan-300">
+              <div className="flex justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800/80">
+                <span className="text-indigo-400 font-medium">(+) Cash Transferred In:</span>
+                <span className="font-mono text-indigo-300">
                   +{formatCurrency(summary.cash_transfers_in, organization.currency_symbol)}
                 </span>
               </div>
 
-              <div className="flex justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800">
-                <span className="text-purple-400">(-) Cash Deposited / Transferred Out:</span>
-                <span className="font-mono text-purple-300">
+              <div className="flex justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800/80">
+                <span className="text-slate-400">(-) Cash Deposited / Transferred Out:</span>
+                <span className="font-mono text-slate-300">
                   -{formatCurrency(summary.cash_transfers_out, organization.currency_symbol)}
                 </span>
               </div>
 
               {/* Expected Total */}
-              <div className="flex items-baseline justify-between p-3.5 rounded-lg bg-slate-900 border border-cyan-800/80 mt-2">
+              <div className="flex items-baseline justify-between p-3.5 rounded-lg bg-slate-900/80 border border-indigo-500/30 mt-2">
                 <div>
                   <span className="text-xs font-bold text-slate-200 uppercase tracking-wide block">
                     Expected Drawer Cash:
@@ -188,7 +188,7 @@ export const DailyClosingView: React.FC = () => {
                     Opening + Sales - Expenses + In - Out
                   </span>
                 </div>
-                <span className="text-xl font-mono font-extrabold text-cyan-300">
+                <span className="text-xl font-mono font-extrabold text-emerald-400">
                   {formatCurrency(summary.expected_cash, organization.currency_symbol)}
                 </span>
               </div>
@@ -198,7 +198,7 @@ export const DailyClosingView: React.FC = () => {
 
         {/* Right 5 Cols: Physical Cash Input & Variance */}
         <div className="lg:col-span-5">
-          <Card className="p-4 space-y-4 bg-slate-900 border-slate-800">
+          <Card className="p-4 space-y-4 bg-slate-900/60 border-slate-800/80">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Physical Count & Verification
             </h3>
@@ -221,7 +221,7 @@ export const DailyClosingView: React.FC = () => {
                   discrepancy === 0
                     ? 'bg-emerald-950/30 border-emerald-800/60 text-emerald-300'
                     : discrepancy > 0
-                    ? 'bg-cyan-950/30 border-cyan-800/60 text-cyan-300'
+                    ? 'bg-indigo-950/30 border-indigo-800/60 text-indigo-300'
                     : 'bg-rose-950/30 border-rose-800/60 text-rose-300'
                 }`}
               >
@@ -256,7 +256,7 @@ export const DailyClosingView: React.FC = () => {
                   variant="primary"
                   size="lg"
                   isLoading={isSubmitting}
-                  className="w-full font-bold shadow-md shadow-cyan-950"
+                  className="w-full font-bold shadow-xs"
                 >
                   <Lock className="h-4 w-4" />
                   <span>Lock & Submit Daily Closing</span>

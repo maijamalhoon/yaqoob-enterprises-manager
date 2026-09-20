@@ -26,26 +26,19 @@ export const Header: React.FC = () => {
   } = useApp();
 
   return (
-    <header className="h-14 border-b border-slate-800 bg-slate-950/90 backdrop-blur-md px-4 flex items-center justify-between z-20 select-none">
-      {/* Left: Organization Branding */}
+    <header className="h-14 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md px-4 flex items-center justify-between z-20 select-none">
+      {/* Left: Organization Branding & Terminal Mode */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-gradient-to-tr from-cyan-600 to-teal-500 flex items-center justify-center text-white font-bold text-base shadow-sm shadow-cyan-950">
-            YE
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-sm text-slate-100 tracking-tight">
-                {organization.name}
-              </span>
-              <Badge variant="cyan" size="sm">
-                Shop Terminal
-              </Badge>
-            </div>
-            <p className="text-[11px] text-slate-400 font-mono leading-none mt-0.5">
-              Multi-Tenant Cloud • {organization.currency}
-            </p>
-          </div>
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-sm text-slate-100 tracking-tight">
+            {organization.name}
+          </span>
+          <Badge variant="indigo" size="sm">
+            POS Terminal
+          </Badge>
+          <span className="hidden sm:inline text-xs text-slate-400 font-mono">
+            • {organization.currency} ({organization.currency_symbol})
+          </span>
         </div>
       </div>
 
@@ -53,13 +46,13 @@ export const Header: React.FC = () => {
       <div className="flex-1 max-w-md mx-6 hidden md:block">
         <button
           onClick={() => setIsCommandPaletteOpen(true)}
-          className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-400 hover:border-slate-700 hover:text-slate-300 transition-colors shadow-inner cursor-pointer"
+          className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs text-slate-400 hover:border-slate-700 hover:text-slate-300 transition-colors shadow-2xs cursor-pointer"
         >
           <div className="flex items-center gap-2">
             <Search className="h-3.5 w-3.5 text-slate-400" />
             <span>Search products, services, invoices, customers...</span>
           </div>
-          <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-slate-800 border border-slate-700 rounded text-slate-400">
+          <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-slate-800 border border-slate-700/80 rounded text-slate-400">
             Ctrl + K
           </kbd>
         </button>
@@ -71,11 +64,11 @@ export const Header: React.FC = () => {
           variant="primary"
           size="sm"
           onClick={() => setCurrentView('pos')}
-          className="font-semibold shadow-xs"
+          className="font-medium shadow-xs"
         >
-          <ShoppingCart className="h-4 w-4" />
+          <ShoppingCart className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">Quick Sale</span>
-          <kbd className="hidden lg:inline text-[10px] opacity-75 font-mono ml-1">Ctrl+N</kbd>
+          <kbd className="hidden lg:inline text-[10px] opacity-75 font-mono ml-1">F1</kbd>
         </Button>
 
         <Button
@@ -84,8 +77,8 @@ export const Header: React.FC = () => {
           onClick={() => setIsQuickExpenseOpen(true)}
           className="text-slate-200"
         >
-          <Receipt className="h-4 w-4 text-amber-400" />
-          <span className="hidden sm:inline">Quick Expense</span>
+          <Receipt className="h-3.5 w-3.5 text-amber-400" />
+          <span className="hidden sm:inline">Expense</span>
         </Button>
 
         {/* Supabase Status Toggle */}
@@ -96,14 +89,14 @@ export const Header: React.FC = () => {
               ? 'Supabase Cloud Database Connected & Active'
               : 'Running in Local Storage Engine. Click to configure Supabase'
           }
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-xs text-slate-300 hover:border-slate-700 transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-800/80 bg-slate-900/60 text-xs text-slate-300 hover:border-slate-700 transition-colors cursor-pointer"
         >
           {isSupabaseReady ? (
             <Cloud className="h-3.5 w-3.5 text-emerald-400" />
           ) : (
-            <Database className="h-3.5 w-3.5 text-cyan-400" />
+            <Database className="h-3.5 w-3.5 text-indigo-400" />
           )}
-          <span className="hidden lg:inline text-[11px]">
+          <span className="hidden lg:inline text-[11px] font-medium">
             {isSupabaseReady ? 'Cloud Synced' : 'Local DB Active'}
           </span>
         </button>
@@ -118,12 +111,15 @@ export const Header: React.FC = () => {
         </button>
 
         {/* Cashier / User Profile badge */}
-        <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
-          <div className="text-right hidden sm:block">
+        <div className="flex items-center gap-2 pl-2 border-l border-slate-800/80">
+          <div className="h-7 w-7 rounded-full bg-indigo-950/70 border border-indigo-700/50 flex items-center justify-center text-[11px] font-semibold text-indigo-200 shrink-0">
+            {(user?.full_name || 'U').slice(0, 2).toUpperCase()}
+          </div>
+          <div className="text-left hidden sm:block">
             <p className="text-xs font-semibold text-slate-200 leading-tight">
               {user?.full_name || 'Staff Cashier'}
             </p>
-            <div className="flex items-center justify-end gap-1 mt-0.5">
+            <div className="flex items-center gap-1 mt-0.5">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
               <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
                 {role}

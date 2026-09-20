@@ -148,12 +148,12 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     >
       <div onKeyDown={handleKeyDown} className="space-y-4 py-1 select-none">
         {/* Top: Grand Total Highlight Card */}
-        <div className="p-4 rounded-xl bg-gradient-to-r from-slate-900 to-slate-950 border border-cyan-800/60 flex items-center justify-between shadow-lg">
+        <div className="p-4 rounded-xl bg-gradient-to-r from-slate-900 to-slate-950 border border-indigo-500/30 flex items-center justify-between shadow-lg">
           <div>
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Total Amount Payable
             </p>
-            <h1 className="text-2xl sm:text-3xl font-mono font-extrabold text-cyan-300 mt-0.5">
+            <h1 className="text-2xl sm:text-3xl font-mono font-extrabold text-emerald-400 mt-0.5">
               {formatCurrency(grandTotal, currencySymbol)}
             </h1>
           </div>
@@ -178,7 +178,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 const found = customers.find((c) => c.id === e.target.value) || null;
                 onSelectCustomer(found);
               }}
-              className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-2 text-xs text-slate-200 focus:border-cyan-500 focus:outline-none"
+              className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-2 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none"
             >
               <option value="">Walk-in Customer (General Public)</option>
               {customers.map((c) => (
@@ -200,7 +200,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 onClick={() => setPaymentMode('single')}
                 className={`flex-1 py-1.5 rounded-md font-medium transition-colors cursor-pointer ${
                   paymentMode === 'single'
-                    ? 'bg-cyan-600 text-white shadow-xs'
+                    ? 'bg-indigo-600 text-white shadow-xs'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -211,7 +211,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 onClick={() => setPaymentMode('split')}
                 className={`flex-1 py-1.5 rounded-md font-medium transition-colors cursor-pointer ${
                   paymentMode === 'split'
-                    ? 'bg-cyan-600 text-white shadow-xs'
+                    ? 'bg-indigo-600 text-white shadow-xs'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -238,13 +238,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                       onClick={() => setSelectedAccountId(acc.id)}
                       className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
                         isSelected
-                          ? 'border-cyan-500 bg-cyan-950/40 text-cyan-200 shadow-sm'
+                          ? 'border-indigo-500 bg-indigo-500/15 text-indigo-200 shadow-sm'
                           : 'border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-semibold truncate">{acc.name}</span>
-                        {isSelected && <Check className="h-3.5 w-3.5 text-cyan-400 shrink-0" />}
+                        {isSelected && <Check className="h-3.5 w-3.5 text-indigo-400 shrink-0" />}
                       </div>
                       <p className="text-[10px] text-slate-400 font-mono">
                         Bal: {currencySymbol} {acc.current_balance}
@@ -264,7 +264,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   step="any"
                   value={amountPaid}
                   onChange={(e) => setAmountPaid(parseFloat(e.target.value) || 0)}
-                  className="font-mono text-base font-bold text-cyan-300"
+                  className="font-mono text-base font-bold text-slate-100"
                 />
                 {/* Quick denomination chips */}
                 <div className="flex flex-wrap gap-1.5 mt-2">
@@ -367,7 +367,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     onChange={(e) =>
                       handleSplitAmountChange(acc.id, parseFloat(e.target.value) || 0)
                     }
-                    className="w-24 px-2 py-1 rounded bg-slate-950 border border-slate-700 text-xs font-mono font-bold text-cyan-300 text-right focus:border-cyan-500 focus:outline-none"
+                    className="w-24 px-2 py-1 rounded bg-slate-950 border border-slate-700 text-xs font-mono font-bold text-slate-100 text-right focus:border-indigo-500 focus:outline-none"
                   />
                 </div>
               ))}
@@ -385,7 +385,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             placeholder="e.g. Urgent passport photo delivery, urgent typing file"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 focus:border-cyan-500 focus:outline-none"
+            className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
           />
         </div>
 
@@ -404,7 +404,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               onClick={() => handleSubmit(true)}
               className="text-slate-200"
             >
-              <Printer className="h-4 w-4 text-cyan-400" />
+              <Printer className="h-4 w-4 text-indigo-400" />
               <span>Save & Print</span>
             </Button>
 

@@ -297,7 +297,7 @@ export const QuickSaleView: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              className="w-full pl-9 pr-14 py-2 rounded-lg bg-slate-950 border border-slate-700/80 text-xs sm:text-sm text-slate-100 placeholder:text-slate-500 focus:border-cyan-500 focus:outline-none"
+              className="w-full pl-9 pr-14 py-2 rounded-lg bg-slate-950 border border-slate-700/80 text-xs sm:text-sm text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
             />
             <div className="absolute right-2.5 top-2 flex items-center gap-1 pointer-events-none">
               <Barcode className="h-3.5 w-3.5 text-slate-500" />
@@ -312,7 +312,7 @@ export const QuickSaleView: React.FC = () => {
             <button
               onClick={() => setActiveTab('ALL')}
               className={`px-3 py-1 rounded-md font-medium transition-colors cursor-pointer ${
-                activeTab === 'ALL' ? 'bg-cyan-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                activeTab === 'ALL' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
               All Items
@@ -321,7 +321,7 @@ export const QuickSaleView: React.FC = () => {
               onClick={() => setActiveTab('SERVICES')}
               className={`px-3 py-1 rounded-md font-medium transition-colors cursor-pointer ${
                 activeTab === 'SERVICES'
-                  ? 'bg-teal-600 text-white'
+                  ? 'bg-emerald-600 text-white shadow-xs'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -331,7 +331,7 @@ export const QuickSaleView: React.FC = () => {
               onClick={() => setActiveTab('PRODUCTS')}
               className={`px-3 py-1 rounded-md font-medium transition-colors cursor-pointer ${
                 activeTab === 'PRODUCTS'
-                  ? 'bg-cyan-600 text-white'
+                  ? 'bg-indigo-600 text-white shadow-xs'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -346,7 +346,7 @@ export const QuickSaleView: React.FC = () => {
             onClick={() => setSelectedCategory('ALL')}
             className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
               selectedCategory === 'ALL'
-                ? 'bg-slate-800 text-cyan-300 border border-cyan-800/80'
+                ? 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30'
                 : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
             }`}
           >
@@ -358,7 +358,7 @@ export const QuickSaleView: React.FC = () => {
               onClick={() => setSelectedCategory(cat.name)}
               className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
                 selectedCategory === cat.name
-                  ? 'bg-slate-800 text-cyan-300 border border-cyan-800/80'
+                  ? 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30'
                   : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
               }`}
             >
@@ -391,15 +391,15 @@ export const QuickSaleView: React.FC = () => {
                   <button
                     key={`${item.itemType}-${item.id}`}
                     onClick={() => handleAddItem(item, item.itemType)}
-                    className="flex flex-col justify-between p-3 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-800/90 hover:border-cyan-600/60 text-left transition-all group cursor-pointer shadow-xs active:scale-[0.98]"
+                    className="flex flex-col justify-between p-3 rounded-xl border border-slate-800/80 bg-slate-900/60 hover:bg-slate-900 hover:border-indigo-500/50 text-left transition-all group cursor-pointer shadow-xs active:scale-[0.98]"
                   >
                     <div>
                       <div className="flex items-start justify-between gap-1 mb-1.5">
                         <span
-                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
                             isService
-                              ? 'bg-teal-950 text-teal-300 border border-teal-800/60'
-                              : 'bg-cyan-950 text-cyan-300 border border-cyan-800/60'
+                              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25'
+                              : 'bg-indigo-500/10 text-indigo-300 border-indigo-500/25'
                           }`}
                         >
                           {isService ? 'SERVICE' : 'PRODUCT'}
@@ -410,14 +410,14 @@ export const QuickSaleView: React.FC = () => {
                           </span>
                         )}
                       </div>
-                      <h4 className="text-xs font-semibold text-slate-100 group-hover:text-cyan-300 line-clamp-2 leading-snug">
+                      <h4 className="text-xs font-semibold text-slate-100 group-hover:text-indigo-300 line-clamp-2 leading-snug">
                         {item.name}
                       </h4>
                     </div>
 
                     <div className="pt-2 mt-2 border-t border-slate-800/80 flex items-end justify-between">
                       <div>
-                        <span className="text-sm font-mono font-bold text-slate-100 group-hover:text-cyan-400">
+                        <span className="text-sm font-mono font-bold text-slate-100 group-hover:text-indigo-300">
                           {formatCurrency(item.selling_price, organization.currency_symbol)}
                         </span>
                         {'unit' in item && (
@@ -452,9 +452,9 @@ export const QuickSaleView: React.FC = () => {
       {/* ========================================================================= */}
       <div className="w-full lg:w-96 flex flex-col bg-slate-950 border-t lg:border-t-0 border-slate-800/80 shadow-2xl">
         {/* Cart Header: Customer selector & clear */}
-        <div className="p-3 border-b border-slate-800 bg-slate-900/40 flex items-center justify-between">
+        <div className="p-3 border-b border-slate-800/80 bg-slate-900/50 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <ShoppingCart className="h-4 w-4 text-cyan-400" />
+            <ShoppingCart className="h-4 w-4 text-indigo-400" />
             <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
               Current Cart ({cart.reduce((s, i) => s + i.quantity, 0)})
             </span>
@@ -480,7 +480,7 @@ export const QuickSaleView: React.FC = () => {
               const found = customers.find((c) => c.id === e.target.value) || null;
               setSelectedCustomer(found);
             }}
-            className="flex-1 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:border-cyan-500 focus:outline-none truncate"
+            className="flex-1 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none truncate"
           >
             <option value="">Walk-in Customer</option>
             {customers.map((c) => (
@@ -519,7 +519,7 @@ export const QuickSaleView: React.FC = () => {
         </div>
 
         {/* Cart Totals & Checkout Trigger */}
-        <div className="p-3.5 border-t border-slate-800 bg-slate-900/60 space-y-2.5">
+        <div className="p-3.5 border-t border-slate-800/80 bg-slate-900/60 space-y-2.5">
           {/* Subtotal */}
           <div className="flex justify-between text-xs text-slate-400">
             <span>Subtotal:</span>
@@ -531,7 +531,7 @@ export const QuickSaleView: React.FC = () => {
           {/* Discount input */}
           <div className="flex items-center justify-between text-xs text-slate-400">
             <span className="flex items-center gap-1">
-              <Tag className="h-3 w-3 text-cyan-400" /> Order Discount:
+              <Tag className="h-3 w-3 text-indigo-400" /> Order Discount:
             </span>
             <div className="flex items-center gap-1">
               <span className="text-[10px] font-mono">{organization.currency_symbol}</span>
@@ -541,7 +541,7 @@ export const QuickSaleView: React.FC = () => {
                 value={orderDiscount || ''}
                 placeholder="0"
                 onChange={(e) => setOrderDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
-                className="w-16 px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-xs font-mono text-slate-200 text-right focus:border-cyan-500 focus:outline-none"
+                className="w-16 px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-xs font-mono text-slate-200 text-right focus:border-indigo-500 focus:outline-none"
               />
             </div>
           </div>
@@ -561,7 +561,7 @@ export const QuickSaleView: React.FC = () => {
             <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
               Grand Total:
             </span>
-            <span className="text-2xl font-mono font-extrabold text-cyan-400">
+            <span className="text-2xl font-mono font-extrabold text-emerald-400">
               {formatCurrency(grandTotal, organization.currency_symbol)}
             </span>
           </div>
@@ -572,7 +572,7 @@ export const QuickSaleView: React.FC = () => {
             size="lg"
             disabled={cart.length === 0}
             onClick={() => setIsPaymentModalOpen(true)}
-            className="w-full text-base font-bold shadow-md shadow-cyan-950 cursor-pointer"
+            className="w-full text-base font-bold shadow-xs cursor-pointer"
           >
             <span>Proceed to Payment</span>
             <ArrowRight className="h-4 w-4" />

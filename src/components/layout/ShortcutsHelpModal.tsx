@@ -29,7 +29,7 @@ export const ShortcutsHelpModal: React.FC = () => {
             className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800"
           >
             <span className="text-xs text-slate-300 font-medium">{s.desc}</span>
-            <kbd className="px-2 py-1 text-xs font-mono font-semibold text-cyan-400 bg-slate-900 border border-slate-700 rounded shadow-xs">
+            <kbd className="px-2 py-1 text-xs font-mono font-semibold text-indigo-300 bg-slate-900/90 border border-slate-700/80 rounded shadow-xs">
               {s.key}
             </kbd>
           </div>

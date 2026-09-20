@@ -2,25 +2,27 @@ import React from 'react';
 import { cn } from '../../lib/utils';
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: 'cyan' | 'teal' | 'purple' | 'amber' | 'emerald' | 'rose' | 'slate';
+  variant?: 'indigo' | 'blue' | 'cyan' | 'teal' | 'purple' | 'amber' | 'emerald' | 'rose' | 'slate';
   size?: 'sm' | 'md';
 }
 
 export const Badge: React.FC<BadgeProps> = ({
   className,
-  variant = 'cyan',
+  variant = 'indigo',
   size = 'md',
   children,
   ...props
 }) => {
   const variants = {
-    cyan: 'bg-cyan-950/80 text-cyan-300 border-cyan-800/60',
-    teal: 'bg-teal-950/80 text-teal-300 border-teal-800/60',
-    purple: 'bg-purple-950/80 text-purple-300 border-purple-800/60',
-    amber: 'bg-amber-950/80 text-amber-300 border-amber-800/60',
-    emerald: 'bg-emerald-950/80 text-emerald-300 border-emerald-800/60',
-    rose: 'bg-rose-950/80 text-rose-300 border-rose-800/60',
-    slate: 'bg-slate-800/80 text-slate-300 border-slate-700/60',
+    indigo: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/25',
+    blue: 'bg-blue-500/10 text-blue-300 border-blue-500/25',
+    cyan: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/25', // Maps smoothly to enterprise theme
+    teal: 'bg-teal-500/10 text-teal-300 border-teal-500/25',
+    purple: 'bg-purple-500/10 text-purple-300 border-purple-500/25',
+    amber: 'bg-amber-500/10 text-amber-300 border-amber-500/25',
+    emerald: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25',
+    rose: 'bg-rose-500/10 text-rose-300 border-rose-500/25',
+    slate: 'bg-slate-800/60 text-slate-300 border-slate-700/50',
   };
 
   const sizes = {

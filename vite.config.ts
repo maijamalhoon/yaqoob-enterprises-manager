@@ -8,7 +8,20 @@ export default defineConfig(() => {
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(__dirname, './src'),
+      },
+    },
+    build: {
+      chunkSizeWarningLimit: 1000,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'react-vendor': ['react', 'react-dom'],
+            'lucide-vendor': ['lucide-react'],
+            'recharts-vendor': ['recharts'],
+            'supabase-vendor': ['@supabase/supabase-js'],
+          },
+        },
       },
     },
     server: {

@@ -224,39 +224,39 @@ export const DashboardView: React.FC = () => {
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* Today's Sales */}
-        <Card className="p-3.5 bg-slate-900 border-slate-800">
+        <Card className="p-3.5 bg-slate-900/70 border-slate-800/80">
           <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
             Today&rsquo;s Sales
           </span>
           <p className="text-lg sm:text-xl font-mono font-bold text-slate-100 mt-1">
             {formatCurrency(todayRevenue, organization.currency_symbol)}
           </p>
-          <span className="text-[10px] text-cyan-400 font-mono mt-1 block">
+          <span className="text-[10px] text-indigo-400 font-mono mt-1 block">
             {todaySales.length} Transactions
           </span>
         </Card>
 
         {/* Gross Profit */}
-        <Card className="p-3.5 bg-slate-900 border-slate-800">
+        <Card className="p-3.5 bg-slate-900/70 border-slate-800/80">
           <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
             Gross Profit
           </span>
           <p className="text-lg sm:text-xl font-mono font-bold text-emerald-400 mt-1">
             {formatCurrency(todayGrossProfit, organization.currency_symbol)}
           </p>
-          <span className="text-[10px] text-emerald-500 font-mono mt-1 block">
+          <span className="text-[10px] text-emerald-400 font-mono mt-1 block">
             Margin: {grossMarginPercent}%
           </span>
         </Card>
 
         {/* Net Profit Estimate */}
-        <Card className="p-3.5 bg-slate-900 border-slate-800">
+        <Card className="p-3.5 bg-slate-900/70 border-slate-800/80">
           <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
             Est. Net Profit
           </span>
           <p
             className={`text-lg sm:text-xl font-mono font-bold mt-1 ${
-              todayNetProfit >= 0 ? 'text-teal-400' : 'text-rose-400'
+              todayNetProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'
             }`}
           >
             {formatCurrency(todayNetProfit, organization.currency_symbol)}
@@ -267,7 +267,7 @@ export const DashboardView: React.FC = () => {
         </Card>
 
         {/* Expenses Today */}
-        <Card className="p-3.5 bg-slate-900 border-slate-800">
+        <Card className="p-3.5 bg-slate-900/70 border-slate-800/80">
           <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
             Today&rsquo;s Expenses
           </span>
@@ -280,22 +280,22 @@ export const DashboardView: React.FC = () => {
         </Card>
 
         {/* Cash in Drawer */}
-        <Card className="p-3.5 bg-slate-900 border-slate-800">
+        <Card className="p-3.5 bg-slate-900/70 border-slate-800/80">
           <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
             Cash in Drawer
           </span>
-          <p className="text-lg sm:text-xl font-mono font-bold text-cyan-300 mt-1">
+          <p className="text-lg sm:text-xl font-mono font-bold text-emerald-300 mt-1">
             {formatCurrency(cashInDrawer, organization.currency_symbol)}
           </p>
           <span className="text-[10px] text-slate-400 font-mono mt-1 block">Physical Drawer</span>
         </Card>
 
         {/* Total Liquid Balances */}
-        <Card className="p-3.5 bg-slate-900 border-slate-800">
+        <Card className="p-3.5 bg-slate-900/70 border-slate-800/80">
           <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
             Liquid Funds
           </span>
-          <p className="text-lg sm:text-xl font-mono font-bold text-purple-300 mt-1">
+          <p className="text-lg sm:text-xl font-mono font-bold text-indigo-300 mt-1">
             {formatCurrency(totalLiquidBalances, organization.currency_symbol)}
           </p>
           <span className="text-[10px] text-slate-400 font-mono mt-1 block">All Accounts</span>
@@ -341,11 +341,11 @@ export const DashboardView: React.FC = () => {
               <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.35} />
                     <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                   </linearGradient>
                 </defs>
@@ -354,8 +354,8 @@ export const DashboardView: React.FC = () => {
                 <YAxis stroke="#64748b" fontSize={11} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#0f172a',
-                    borderColor: '#334155',
+                    backgroundColor: '#090a0f',
+                    borderColor: '#1e293b',
                     borderRadius: '8px',
                     fontSize: '12px',
                   }}
@@ -367,7 +367,7 @@ export const DashboardView: React.FC = () => {
                 <Area
                   type="monotone"
                   dataKey="revenue"
-                  stroke="#06b6d4"
+                  stroke="#6366f1"
                   strokeWidth={2}
                   fillOpacity={1}
                   fill="url(#colorRevenue)"
@@ -413,7 +413,7 @@ export const DashboardView: React.FC = () => {
                       Sold: {item.qty} units
                     </p>
                   </div>
-                  <span className="text-xs font-mono font-semibold text-cyan-300">
+                  <span className="text-xs font-mono font-semibold text-slate-100">
                     {formatCurrency(item.revenue, organization.currency_symbol)}
                   </span>
                 </div>
@@ -479,7 +479,7 @@ export const DashboardView: React.FC = () => {
         <Card className="p-4">
           <CardHeader className="mb-3">
             <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-cyan-400" />
+              <FileText className="h-4 w-4 text-indigo-400" />
               <CardTitle>Recent Sales Transactions</CardTitle>
             </div>
             <Button
@@ -497,7 +497,7 @@ export const DashboardView: React.FC = () => {
               <div
                 key={sale.id}
                 onClick={() => setActiveReceiptSale(sale)}
-                className="flex items-center justify-between p-2.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-cyan-800/80 cursor-pointer transition-colors"
+                className="flex items-center justify-between p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors"
               >
                 <div className="truncate pr-2">
                   <div className="flex items-center gap-2">
@@ -514,7 +514,7 @@ export const DashboardView: React.FC = () => {
                 </div>
 
                 <div className="text-right">
-                  <span className="font-mono text-xs font-bold text-cyan-300">
+                  <span className="font-mono text-xs font-bold text-slate-100">
                     {formatCurrency(sale.grand_total, organization.currency_symbol)}
                   </span>
                   <div className="mt-0.5">
