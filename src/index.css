@@ -1,5 +1,23 @@
 @import "tailwindcss";
 
+:root {
+  --ink-950: #102a43;
+  --ink-800: #243b53;
+  --ink-600: #486581;
+  --ink-500: #627d98;
+  --line: #d9e2ec;
+  --line-soft: #e6edf3;
+  --surface: #ffffff;
+  --surface-muted: #f5f7fa;
+  --surface-subtle: #eef2f6;
+  --teal: #0f766e;
+  --teal-dark: #115e59;
+  --teal-soft: #e6fffa;
+  --amber: #b45309;
+  --rose: #be123c;
+  --radius: 10px;
+}
+
 @layer base {
   * {
     border-color: #d9e2ec;
@@ -8,8 +26,9 @@
   body {
     font-family: "Aptos Display", "Aptos", "Segoe UI", sans-serif;
     color-scheme: light;
-    background-color: #f5f7fa;
-    color: #102a43;
+    background: var(--surface-muted);
+    color: var(--ink-950);
+    letter-spacing: 0;
   }
 
   .font-mono {
@@ -46,8 +65,7 @@
   background: #829ab1;
 }
 
-/* The existing screens share these utility tokens. Keep the product light and
-   consistent while individual views migrate away from the original dark palette. */
+/* Compatibility mapping for existing screen utility classes. */
 [class~="bg-slate-950"],
 [class~="bg-slate-950/95"],
 [class~="bg-slate-950/80"],
@@ -98,7 +116,50 @@
 }
 [class~="bg-indigo-950/70"],
 [class~="bg-indigo-950/20"] {
-  background-color: #e6fffa !important;
+  background-color: var(--teal-soft) !important;
+}
+
+/* Quiet global surfaces. The app uses these classes extensively, so this
+   keeps older screens visually consistent while they retain their behavior. */
+[class*="shadow"] {
+  box-shadow: 0 1px 2px rgba(16, 42, 67, 0.06) !important;
+}
+[class*="rounded-xl"],
+[class*="rounded-lg"] {
+  border-radius: var(--radius) !important;
+}
+[class~="text-indigo-500"],
+[class~="text-cyan-500"] {
+  color: var(--teal) !important;
+}
+[class~="bg-indigo-500"],
+[class~="bg-cyan-600"] {
+  background-color: var(--teal) !important;
+}
+input,
+select,
+textarea {
+  color: var(--ink-950);
+}
+button {
+  letter-spacing: 0;
+}
+
+.app-shell {
+  background: var(--surface-muted);
+}
+
+.data-table th {
+  color: var(--ink-500);
+  background: var(--surface-subtle);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.data-table td {
+  border-color: var(--line-soft);
+  color: var(--ink-800);
 }
 
 /* Print CSS for standard thermal (80mm) and A4 receipts */

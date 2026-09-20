@@ -1,8 +1,8 @@
-import React from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { useApp } from '../../context/AppContext';
-import { Button } from '../common/Button';
-import { Badge } from '../common/Badge';
+import React from "react";
+import { useAuth } from "../../context/AuthContext";
+import { useApp } from "../../context/AppContext";
+import { Button } from "../common/Button";
+import { Badge } from "../common/Badge";
 import {
   Search,
   ShoppingCart,
@@ -13,7 +13,7 @@ import {
   ShieldCheck,
   Building2,
   ChevronDown,
-} from 'lucide-react';
+} from "lucide-react";
 
 export const Header: React.FC = () => {
   const { organization, user, role, isSupabaseReady } = useAuth();
@@ -26,18 +26,18 @@ export const Header: React.FC = () => {
   } = useApp();
 
   return (
-    <header className="h-14 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md px-4 flex items-center justify-between z-20 select-none">
+    <header className="h-[68px] border-b border-slate-200 bg-white px-5 flex items-center justify-between z-20 select-none">
       {/* Left: Organization Branding & Terminal Mode */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-sm text-slate-100 tracking-tight">
+          <span className="font-semibold text-sm text-slate-900 tracking-tight">
             {organization.name}
           </span>
           <Badge variant="indigo" size="sm">
             POS Terminal
           </Badge>
-          <span className="hidden sm:inline text-xs text-slate-400 font-mono">
-            • {organization.currency} ({organization.currency_symbol})
+          <span className="hidden sm:inline text-xs text-slate-500">
+            {organization.currency} · {organization.currency_symbol}
           </span>
         </div>
       </div>
@@ -46,13 +46,13 @@ export const Header: React.FC = () => {
       <div className="flex-1 max-w-md mx-6 hidden md:block">
         <button
           onClick={() => setIsCommandPaletteOpen(true)}
-          className="w-full flex items-center justify-between px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 text-xs text-slate-400 hover:border-slate-700 hover:text-slate-300 transition-colors shadow-2xs cursor-pointer"
+          className="w-full flex items-center justify-between px-3 py-2.5 rounded-[8px] bg-slate-50 border border-slate-200 text-xs text-slate-500 hover:border-teal-300 hover:text-slate-700 transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-2">
             <Search className="h-3.5 w-3.5 text-slate-400" />
             <span>Search products, services, invoices, customers...</span>
           </div>
-          <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-slate-800 border border-slate-700/80 rounded text-slate-400">
+          <kbd className="px-1.5 py-0.5 text-[10px] bg-white border border-slate-200 rounded text-slate-500">
             Ctrl + K
           </kbd>
         </button>
@@ -63,19 +63,21 @@ export const Header: React.FC = () => {
         <Button
           variant="primary"
           size="sm"
-          onClick={() => setCurrentView('pos')}
+          onClick={() => setCurrentView("pos")}
           className="font-medium shadow-xs"
         >
           <ShoppingCart className="h-3.5 w-3.5" />
           <span className="hidden sm:inline">Quick Sale</span>
-          <kbd className="hidden lg:inline text-[10px] opacity-75 font-mono ml-1">F1</kbd>
+          <kbd className="hidden lg:inline text-[10px] opacity-75 font-mono ml-1">
+            F1
+          </kbd>
         </Button>
 
         <Button
           variant="secondary"
           size="sm"
           onClick={() => setIsQuickExpenseOpen(true)}
-          className="text-slate-200"
+          className="text-slate-700"
         >
           <Receipt className="h-3.5 w-3.5 text-amber-400" />
           <span className="hidden sm:inline">Expense</span>
@@ -85,19 +87,17 @@ export const Header: React.FC = () => {
         <button
           onClick={() => setIsSupabaseConfigOpen(true)}
           title={
-            isSupabaseReady
-              ? 'Supabase Cloud Database Connected & Active'
-              : 'Running in Local Storage Engine. Click to configure Supabase'
+            isSupabaseReady ?
+              "Supabase Cloud Database Connected & Active"
+            : "Running in Local Storage Engine. Click to configure Supabase"
           }
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-slate-800/80 bg-slate-900/60 text-xs text-slate-300 hover:border-slate-700 transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-2.5 py-2 rounded-[8px] border border-slate-200 bg-white text-xs text-slate-600 hover:border-teal-300 transition-colors cursor-pointer"
         >
-          {isSupabaseReady ? (
+          {isSupabaseReady ?
             <Cloud className="h-3.5 w-3.5 text-emerald-400" />
-          ) : (
-            <Database className="h-3.5 w-3.5 text-indigo-400" />
-          )}
+          : <Database className="h-3.5 w-3.5 text-indigo-400" />}
           <span className="hidden lg:inline text-[11px] font-medium">
-            {isSupabaseReady ? 'Cloud Synced' : 'Local DB Active'}
+            {isSupabaseReady ? "Cloud Synced" : "Local DB Active"}
           </span>
         </button>
 
@@ -105,23 +105,23 @@ export const Header: React.FC = () => {
         <button
           onClick={() => setIsShortcutsHelpOpen(true)}
           title="Keyboard Shortcuts"
-          className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-900 hover:text-slate-200 transition-colors cursor-pointer"
+          className="p-2 rounded-[8px] text-slate-500 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
         >
           <HelpCircle className="h-4 w-4" />
         </button>
 
         {/* Cashier / User Profile badge */}
         <div className="flex items-center gap-2 pl-2 border-l border-slate-800/80">
-          <div className="h-7 w-7 rounded-full bg-indigo-950/70 border border-indigo-700/50 flex items-center justify-center text-[11px] font-semibold text-indigo-200 shrink-0">
-            {(user?.full_name || 'U').slice(0, 2).toUpperCase()}
+          <div className="h-8 w-8 rounded-full bg-teal-50 border border-teal-200 flex items-center justify-center text-[11px] font-semibold text-teal-800 shrink-0">
+            {(user?.full_name || "U").slice(0, 2).toUpperCase()}
           </div>
           <div className="text-left hidden sm:block">
-            <p className="text-xs font-semibold text-slate-200 leading-tight">
-              {user?.full_name || 'Staff Cashier'}
+            <p className="text-xs font-semibold text-slate-900 leading-tight">
+              {user?.full_name || "Staff Cashier"}
             </p>
             <div className="flex items-center gap-1 mt-0.5">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" />
-              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-teal-600" />
+              <span className="text-[10px] text-slate-500 uppercase tracking-wider">
                 {role}
               </span>
             </div>

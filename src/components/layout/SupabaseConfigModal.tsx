@@ -60,9 +60,22 @@ export const SupabaseConfigModal: React.FC = () => {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    updateSupabaseConfig(url.trim(), key.trim());
-    setSaved(true);
-    showToast("success", "Supabase Configuration Updated", "Cloud keys saved.");
+    try {
+      updateSupabaseConfig(url, key.trim());
+      setSaved(true);
+      showToast(
+        "success",
+        "Supabase Configuration Updated",
+        "Cloud keys saved.",
+      );
+    } catch (error) {
+      showToast(
+        "error",
+        "Invalid Supabase URL",
+        error instanceof Error ? error.message : "Enter the project API URL.",
+      );
+      return;
+    }
     setTimeout(() => {
       setIsSupabaseConfigOpen(false);
       window.location.reload();

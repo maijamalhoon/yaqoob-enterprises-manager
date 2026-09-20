@@ -61,14 +61,14 @@ const MainShell: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-950 font-sans text-slate-100">
+    <div className="app-shell flex h-screen w-screen overflow-hidden font-sans text-slate-900">
       {/* Sidebar Navigation */}
       <Sidebar />
 
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <Header />
-        <main className="flex flex-1 flex-col overflow-hidden bg-slate-950">
+        <main className="flex flex-1 flex-col overflow-hidden bg-[#f5f7fa]">
           {renderActiveView()}
         </main>
       </div>

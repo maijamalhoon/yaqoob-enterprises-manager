@@ -78,6 +78,30 @@ DROP POLICY IF EXISTS sale_items_isolation ON public.sale_items;
 DROP POLICY IF EXISTS daily_closings_isolation ON public.daily_closings;
 DROP POLICY IF EXISTS audit_logs_isolation ON public.audit_logs;
 
+-- This migration is safe to rerun if a prior deployment applied statements
+-- before failing. Remove the policy names created below before recreating them.
+DROP POLICY IF EXISTS organizations_select ON public.organizations;
+DROP POLICY IF EXISTS organizations_update ON public.organizations;
+DROP POLICY IF EXISTS profiles_select ON public.profiles;
+DROP POLICY IF EXISTS profiles_update_self ON public.profiles;
+DROP POLICY IF EXISTS organization_members_select ON public.organization_members;
+DROP POLICY IF EXISTS organization_members_owner_manage ON public.organization_members;
+DROP POLICY IF EXISTS categories_tenant_access ON public.categories;
+DROP POLICY IF EXISTS products_tenant_access ON public.products;
+DROP POLICY IF EXISTS services_tenant_access ON public.services;
+DROP POLICY IF EXISTS service_components_tenant_access ON public.service_components;
+DROP POLICY IF EXISTS stock_movements_tenant_access ON public.stock_movements;
+DROP POLICY IF EXISTS customers_tenant_access ON public.customers;
+DROP POLICY IF EXISTS payment_accounts_tenant_access ON public.payment_accounts;
+DROP POLICY IF EXISTS account_transfers_tenant_access ON public.account_transfers;
+DROP POLICY IF EXISTS account_transactions_tenant_access ON public.account_transactions;
+DROP POLICY IF EXISTS expense_categories_tenant_access ON public.expense_categories;
+DROP POLICY IF EXISTS expenses_tenant_access ON public.expenses;
+DROP POLICY IF EXISTS sales_tenant_access ON public.sales;
+DROP POLICY IF EXISTS sale_items_tenant_access ON public.sale_items;
+DROP POLICY IF EXISTS daily_closings_tenant_access ON public.daily_closings;
+DROP POLICY IF EXISTS audit_logs_tenant_access ON public.audit_logs;
+
 CREATE POLICY organizations_select ON public.organizations
     FOR SELECT TO authenticated
     USING (id IN (SELECT org_id FROM public.get_auth_user_org_ids()));

@@ -1,7 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Organization, UserProfile } from "../types";
 import { DEFAULT_ORGANIZATION } from "../lib/mockData";
-import { getSupabaseClient, isSupabaseConfigured } from "../lib/supabase";
+import {
+  formatSupabaseError,
+  getSupabaseClient,
+  isSupabaseConfigured,
+} from "../lib/supabase";
 import { StorageEngine } from "../services/storageEngine";
 import { isTauriEnvironment } from "../services/sqliteEngine";
 import { sqliteRepository } from "../services/sqliteRepository";
@@ -80,27 +84,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       throw new Error("Cloud authentication is unavailable");
     }
 
-    const { data, error: profileError } = await supabase
-      .from("profiles")
-      .select("id,email,full_name,role,organization_id,is_active,created_at")
-      .eq("id", authUser.id)
-      .single();
+    let lastError = "Authenticated profile was not found";
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const { data, error: profileError } = await supabase
+        .from("profiles")
+        .select("id,email,full_name,role,organization_id,is_active,created_at")
+        .eq("id", authUser.id)
+        .maybeSingle();
 
-    if (profileError || !data) {
-      throw new Error(
-        profileError?.message || "Authenticated profile was not found",
-      );
+      if (profileError) {
+        lastError = profileError.message;
+      } else if (data) {
+        return {
+          id: data.id,
+          email: data.email || authUser.email || "user@yaqoob.com",
+          full_name: data.full_name || "Staff Member",
+          role: isUserRole(data.role) ? data.role : "CASHIER",
+          organization_id: data.organization_id || organization.id,
+          is_active: data.is_active === true,
+          created_at: data.created_at || authUser.created_at,
+        };
+      }
+
+      if (attempt < 4) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, 250 * (attempt + 1)),
+        );
+      }
     }
 
-    return {
-      id: data.id,
-      email: data.email || authUser.email || "user@yaqoob.com",
-      full_name: data.full_name || "Staff Member",
-      role: isUserRole(data.role) ? data.role : "CASHIER",
-      organization_id: data.organization_id || organization.id,
-      is_active: data.is_active === true,
-      created_at: data.created_at || authUser.created_at,
-    };
+    throw new Error(lastError);
   };
 
   useEffect(() => {
@@ -191,15 +204,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           return { error: sbError.message };
         }
         if (data.user) {
+          const { error: provisioningError } =
+            await supabase.rpc("ensure_my_profile");
+          if (provisioningError) throw provisioningError;
           const profile = await loadCloudProfile(data.user);
+          if (!profile.is_active) throw new Error("This account is inactive");
           setUser(profile);
           setRole(profile.role);
           setSecurityPrincipal(profile);
         }
       } catch (err: any) {
         setIsLoading(false);
-        setError(err.message || "Authentication failed");
-        return { error: err.message };
+        const message = formatSupabaseError(err);
+        setError(message);
+        return { error: message };
       }
     } else {
       const profile =
@@ -259,14 +277,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           return { error: sbError.message };
         }
         if (data.user) {
+          if (!data.session) {
+            const message =
+              "Account created. Check your email to confirm the account, then sign in.";
+            setIsLoading(false);
+            setError(message);
+            return { error: message };
+          }
+          const { error: provisioningError } =
+            await supabase.rpc("ensure_my_profile");
+          if (provisioningError) throw provisioningError;
           const profile = await loadCloudProfile(data.user);
+          if (!profile.is_active) throw new Error("This account is inactive");
           setUser(profile);
           setRole(profile.role);
+          setSecurityPrincipal(profile);
         }
       } catch (err: any) {
         setIsLoading(false);
-        setError(err.message || "Registration failed");
-        return { error: err.message };
+        const message = formatSupabaseError(err);
+        setError(message);
+        return { error: message };
       }
     } else {
       const newOrg: Organization = {

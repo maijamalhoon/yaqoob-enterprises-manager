@@ -11,8 +11,10 @@ export function getSupabaseConfig(): { url: string; anonKey: string } {
   const storedUrl = typeof window !== 'undefined' ? localStorage.getItem('yaqoob_supabase_url') || '' : '';
   const storedKey = typeof window !== 'undefined' ? localStorage.getItem('yaqoob_supabase_key') || '' : '';
 
-  const url = storedUrl || envUrl;
-  const anonKey = storedKey || envKey;
+  const storedUrlIsProjectUrl =
+    storedUrl.startsWith('https://') && !storedUrl.includes('/dashboard/');
+  const url = storedUrlIsProjectUrl ? storedUrl.replace(/\/$/, '') : envUrl;
+  const anonKey = storedUrlIsProjectUrl && storedKey ? storedKey : envKey;
 
   return { url, anonKey };
 }
@@ -59,8 +61,21 @@ export function getSupabaseClient(): SupabaseClient | null {
 
 export function updateSupabaseConfig(url: string, anonKey: string) {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('yaqoob_supabase_url', url);
+    const normalizedUrl = url.trim().replace(/\/$/, '');
+    if (normalizedUrl.includes('/dashboard/')) {
+      throw new Error('Enter the project API URL, not the Supabase dashboard URL');
+    }
+    localStorage.setItem('yaqoob_supabase_url', normalizedUrl);
     localStorage.setItem('yaqoob_supabase_key', anonKey);
     supabaseInstance = null; // reset for next getSupabaseClient call
   }
+}
+
+export function formatSupabaseError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error || '');
+  if (message.toLowerCase().includes('failed to fetch')) {
+    const { url } = getSupabaseConfig();
+    return `Cannot reach Supabase at ${url || 'the configured project'}. Check internet access, project status, and that the Project URL is https://YOUR_PROJECT_REF.supabase.co.`;
+  }
+  return message || 'Supabase request failed';
 }
