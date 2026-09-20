@@ -222,14 +222,14 @@ export const SettingsView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-slate-950 select-none">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-[#f5f7fa] select-none text-[#102a43]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#d9e2ec]">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-100">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#102a43]">
             System Settings & Enterprise Data
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-[#627d98] mt-0.5">
             Configure receipt header, currency symbols, database backups, and
             cloud synchronization.
           </p>
@@ -239,8 +239,8 @@ export const SettingsView: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left 7 cols: Business Profile Settings */}
         <div className="lg:col-span-7">
-          <Card className="p-5">
-            <CardHeader className="p-0 pb-4 mb-4 border-b border-slate-800">
+          <Card className="p-5 bg-white border border-[#d9e2ec]">
+            <CardHeader className="p-0 pb-4 mb-4 border-b border-[#d9e2ec]">
               <CardTitle>Business Profile & Invoicing</CardTitle>
             </CardHeader>
 
@@ -339,39 +339,40 @@ export const SettingsView: React.FC = () => {
         {/* Right 5 cols: Database Backup, Restore, Supabase */}
         <div className="lg:col-span-5 space-y-5">
           {/* Cloud Database Integration */}
-          <Card className="p-5 space-y-3">
+          <Card className="p-5 space-y-3 bg-white border border-[#d9e2ec]">
             <div className="flex items-center gap-2">
-              <Cloud className="h-5 w-5 text-cyan-400" />
+              <Cloud className="h-5 w-5 text-teal-700" />
               <CardTitle>Cloud Supabase Connection</CardTitle>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-xs text-[#627d98] leading-relaxed">
               Connect a hosted Supabase PostgreSQL backend with Row-Level
               Security for multi-device synchronization.
             </p>
+
             <Button
               variant="outline"
               size="sm"
               onClick={() => setIsSupabaseConfigOpen(true)}
-              className="w-full text-slate-200"
+              className="w-full text-[#102a43]"
             >
               Configure Supabase Keys
             </Button>
           </Card>
 
           {/* Local Data Backup / Restore */}
-          <Card className="p-5 space-y-4">
+          <Card className="p-5 space-y-4 bg-white border border-[#d9e2ec]">
             <div className="flex items-center gap-2">
-              <Database className="h-5 w-5 text-teal-400" />
+              <Database className="h-5 w-5 text-teal-700" />
               <CardTitle>Local Database Backup & Restore</CardTitle>
             </div>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-xs text-[#627d98] leading-relaxed">
               Export an archive of all tables or safely restore from a verified
               backup. Restricted to OWNER role.
             </p>
 
             {!isOwner && (
-              <div className="p-2.5 rounded-lg bg-amber-950/40 border border-amber-800 text-[11px] text-amber-300 flex items-center gap-2">
-                <ShieldAlert className="h-4 w-4 text-amber-400 shrink-0" />
+              <div className="p-2.5 rounded-[8px] bg-amber-50 border border-amber-200 text-[11px] text-amber-900 flex items-center gap-2">
+                <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
                 <span>Backup operations require OWNER role.</span>
               </div>
             )}
@@ -382,20 +383,20 @@ export const SettingsView: React.FC = () => {
                 size="sm"
                 disabled={!isOwner}
                 onClick={handleExportBackup}
-                className="w-full text-slate-200"
+                className="w-full"
               >
-                <Download className="h-4 w-4 text-cyan-400" />
+                <Download className="h-4 w-4 text-teal-700" />
                 <span>Export Verified Business Backup</span>
               </Button>
 
               <label
-                className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs transition-colors ${
+                className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-[8px] border text-xs transition-colors ${
                   isOwner ?
-                    "border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 cursor-pointer"
-                  : "border-slate-800 bg-slate-900 text-slate-500 cursor-not-allowed"
+                    "border-[#d9e2ec] bg-white text-[#102a43] hover:bg-[#f5f7fa] cursor-pointer"
+                  : "border-[#d9e2ec] bg-[#f5f7fa] text-[#829ab1] cursor-not-allowed"
                 }`}
               >
-                <Upload className="h-4 w-4 text-teal-400" />
+                <Upload className="h-4 w-4 text-teal-700" />
                 <span>Restore Business Backup...</span>
                 <input
                   type="file"
@@ -406,13 +407,13 @@ export const SettingsView: React.FC = () => {
                 />
               </label>
 
-              <div className="pt-2 border-t border-slate-800">
+              <div className="pt-2 border-t border-[#d9e2ec]">
                 <Button
                   variant="ghost"
                   size="sm"
                   disabled={!isOwner}
                   onClick={handleResetDemo}
-                  className="w-full text-rose-400 hover:bg-rose-950/40"
+                  className="w-full text-rose-600 hover:bg-rose-50"
                 >
                   <RefreshCw className="h-4 w-4" />
                   <span>Reset to Factory Sample Data</span>
@@ -433,22 +434,22 @@ export const SettingsView: React.FC = () => {
       >
         {pendingRestore && (
           <div className="space-y-4 py-2 text-xs">
-            <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-1">
+            <div className="p-3 rounded-[8px] bg-[#f5f7fa] border border-[#d9e2ec] space-y-1">
               <div className="flex justify-between">
-                <span className="text-slate-400">Organization:</span>
-                <span className="font-bold text-slate-200">
+                <span className="text-[#627d98]">Organization:</span>
+                <span className="font-bold text-[#102a43]">
                   {pendingRestore.archive.organization_name}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Archive Version:</span>
-                <span className="font-mono text-cyan-400">
+                <span className="text-[#627d98]">Archive Version:</span>
+                <span className="font-mono text-teal-800 font-semibold">
                   {pendingRestore.archive.version}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Exported Timestamp:</span>
-                <span className="font-mono text-slate-300">
+                <span className="text-[#627d98]">Exported Timestamp:</span>
+                <span className="font-mono text-[#243b53]">
                   {formatDateTime(pendingRestore.archive.exported_at)}
                 </span>
               </div>
@@ -456,43 +457,43 @@ export const SettingsView: React.FC = () => {
 
             {/* Counts Summary */}
             <div className="space-y-1.5">
-              <span className="font-semibold text-slate-300">
+              <span className="font-semibold text-[#102a43]">
                 Archive Collections Summary:
               </span>
               <div className="grid grid-cols-2 gap-2 font-mono text-[11px]">
-                <div className="p-2 rounded bg-slate-950 border border-slate-800 flex justify-between">
-                  <span className="text-slate-400">Products:</span>
-                  <span className="text-cyan-400 font-bold">
+                <div className="p-2 rounded-[6px] bg-white border border-[#d9e2ec] flex justify-between">
+                  <span className="text-[#627d98]">Products:</span>
+                  <span className="text-teal-800 font-bold">
                     {pendingRestore.archive.counts.products || 0}
                   </span>
                 </div>
-                <div className="p-2 rounded bg-slate-950 border border-slate-800 flex justify-between">
-                  <span className="text-slate-400">Services:</span>
-                  <span className="text-cyan-400 font-bold">
+                <div className="p-2 rounded-[6px] bg-white border border-[#d9e2ec] flex justify-between">
+                  <span className="text-[#627d98]">Services:</span>
+                  <span className="text-teal-800 font-bold">
                     {pendingRestore.archive.counts.services || 0}
                   </span>
                 </div>
-                <div className="p-2 rounded bg-slate-950 border border-slate-800 flex justify-between">
-                  <span className="text-slate-400">Sales Invoices:</span>
-                  <span className="text-emerald-400 font-bold">
+                <div className="p-2 rounded-[6px] bg-white border border-[#d9e2ec] flex justify-between">
+                  <span className="text-[#627d98]">Sales Invoices:</span>
+                  <span className="text-emerald-700 font-bold">
                     {pendingRestore.archive.counts.sales || 0}
                   </span>
                 </div>
-                <div className="p-2 rounded bg-slate-950 border border-slate-800 flex justify-between">
-                  <span className="text-slate-400">Expenses:</span>
-                  <span className="text-rose-400 font-bold">
+                <div className="p-2 rounded-[6px] bg-white border border-[#d9e2ec] flex justify-between">
+                  <span className="text-[#627d98]">Expenses:</span>
+                  <span className="text-rose-700 font-bold">
                     {pendingRestore.archive.counts.expenses || 0}
                   </span>
                 </div>
-                <div className="p-2 rounded bg-slate-950 border border-slate-800 flex justify-between">
-                  <span className="text-slate-400">Accounts:</span>
-                  <span className="text-teal-400 font-bold">
+                <div className="p-2 rounded-[6px] bg-white border border-[#d9e2ec] flex justify-between">
+                  <span className="text-[#627d98]">Accounts:</span>
+                  <span className="text-teal-800 font-bold">
                     {pendingRestore.archive.counts.accounts || 0}
                   </span>
                 </div>
-                <div className="p-2 rounded bg-slate-950 border border-slate-800 flex justify-between">
-                  <span className="text-slate-400">Customers:</span>
-                  <span className="text-amber-400 font-bold">
+                <div className="p-2 rounded-[6px] bg-white border border-[#d9e2ec] flex justify-between">
+                  <span className="text-[#627d98]">Customers:</span>
+                  <span className="text-amber-700 font-bold">
                     {pendingRestore.archive.counts.customers || 0}
                   </span>
                 </div>
@@ -500,26 +501,25 @@ export const SettingsView: React.FC = () => {
             </div>
 
             {/* Critical Warning Alert */}
-            <div className="p-3 rounded-lg bg-rose-950/40 border border-rose-800 text-rose-300 flex items-start gap-2.5">
-              <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
+            <div className="p-3 rounded-[8px] bg-rose-50 border border-rose-200 text-rose-900 flex items-start gap-2.5">
+              <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
               <div className="space-y-0.5">
-                <p className="font-bold">Irreversible Action</p>
-                <p className="text-[11px] text-rose-300/80 leading-relaxed">
+                <p className="font-bold text-rose-950">Irreversible Action</p>
+                <p className="text-[11px] text-rose-800 leading-relaxed">
                   Restoring will overwrite your current active shop records with
                   the data from this backup file.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#d9e2ec]">
               <Button variant="ghost" onClick={() => setPendingRestore(null)}>
                 Cancel
               </Button>
               <Button
-                variant="primary"
+                variant="danger"
                 disabled={isRestoring}
                 onClick={handleConfirmRestore}
-                className="bg-rose-600 hover:bg-rose-500 text-white"
               >
                 <Check className="h-4 w-4" />
                 <span>

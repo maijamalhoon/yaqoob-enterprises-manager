@@ -99,14 +99,14 @@ export const CustomersView: React.FC = () => {
   }, [customers, searchQuery]);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-slate-950 select-none">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-[#f5f7fa] select-none text-[#102a43]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#d9e2ec]">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-100">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#102a43]">
             Customer Directory
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-[#627d98] mt-0.5">
             Client contacts, purchase histories, credit receivables, and direct sale links.
           </p>
         </div>
@@ -125,27 +125,27 @@ export const CustomersView: React.FC = () => {
       {/* Filter toolbar */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         <div className="flex-1 max-w-sm relative">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#829ab1]" />
           <input
             type="text"
             placeholder="Search by customer name, mobile phone, or email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-100 placeholder:text-slate-500 focus:border-cyan-500 focus:outline-none"
+            className="w-full pl-9 pr-3 py-1.5 rounded-[8px] bg-white border border-[#d9e2ec] text-xs text-[#102a43] placeholder:text-[#829ab1] focus:border-teal-700 focus:outline-none"
           />
         </div>
 
-        <span className="text-xs font-mono text-slate-400">
+        <span className="text-xs font-mono text-[#627d98]">
           Total Customers: {filteredCustomers.length}
         </span>
       </div>
 
       {/* Table */}
-      <Card className="p-0 overflow-hidden">
+      <Card className="p-0 overflow-hidden bg-white border border-[#d9e2ec]">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-400 uppercase font-mono text-[10px]">
+              <tr className="border-b border-[#d9e2ec] bg-[#f5f7fa] text-[#627d98] uppercase font-mono text-[10px]">
                 <th className="py-3 px-4">Customer Name</th>
                 <th className="py-3 px-3">Contact</th>
                 <th className="py-3 px-3">Address</th>
@@ -155,47 +155,47 @@ export const CustomersView: React.FC = () => {
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60 font-sans">
+            <tbody className="divide-y divide-[#d9e2ec] font-sans">
               {filteredCustomers.map((cust) => (
-                <tr key={cust.id} className="hover:bg-slate-900/70 transition-colors">
+                <tr key={cust.id} className="hover:bg-[#f5f7fa] transition-colors">
                   <td className="py-3 px-4">
-                    <p className="font-semibold text-slate-200">{cust.name}</p>
+                    <p className="font-semibold text-[#102a43]">{cust.name}</p>
                     {cust.notes && (
-                      <p className="text-[10px] text-slate-500 truncate max-w-xs">{cust.notes}</p>
+                      <p className="text-[10px] text-[#627d98] truncate max-w-xs">{cust.notes}</p>
                     )}
                   </td>
                   <td className="py-3 px-3 space-y-0.5">
                     {cust.phone && (
-                      <div className="flex items-center gap-1 text-slate-300 font-mono text-[11px]">
-                        <Phone className="h-3 w-3 text-slate-500" />
+                      <div className="flex items-center gap-1 text-[#243b53] font-mono text-[11px]">
+                        <Phone className="h-3 w-3 text-[#829ab1]" />
                         <span>{cust.phone}</span>
                       </div>
                     )}
                     {cust.email && (
-                      <div className="flex items-center gap-1 text-slate-400 text-[11px]">
-                        <Mail className="h-3 w-3 text-slate-500" />
+                      <div className="flex items-center gap-1 text-[#627d98] text-[11px]">
+                        <Mail className="h-3 w-3 text-[#829ab1]" />
                         <span>{cust.email}</span>
                       </div>
                     )}
                   </td>
-                  <td className="py-3 px-3 text-slate-400 truncate max-w-xs">
+                  <td className="py-3 px-3 text-[#627d98] truncate max-w-xs">
                     {cust.address || '-'}
                   </td>
-                  <td className="py-3 px-3 text-right font-mono font-bold text-cyan-300">
+                  <td className="py-3 px-3 text-right font-mono font-bold text-teal-800">
                     {formatCurrency(cust.total_purchases || 0, organization.currency_symbol)}
                   </td>
-                  <td className="py-3 px-3 font-mono text-slate-400 text-[11px]">
+                  <td className="py-3 px-3 font-mono text-[#627d98] text-[11px]">
                     {cust.last_purchase_date
                       ? formatDateTime(cust.last_purchase_date)
                       : 'No purchases yet'}
                   </td>
                   <td className="py-3 px-3 text-right font-mono">
                     {cust.outstanding_balance > 0 ? (
-                      <span className="text-amber-400 font-bold">
+                      <span className="text-amber-700 font-bold">
                         {formatCurrency(cust.outstanding_balance, organization.currency_symbol)}
                       </span>
                     ) : (
-                      <span className="text-slate-500">Nil</span>
+                      <span className="text-[#829ab1]">Nil</span>
                     )}
                   </td>
                   <td className="py-3 px-4 text-right">
@@ -205,14 +205,14 @@ export const CustomersView: React.FC = () => {
                           setCurrentView('pos');
                         }}
                         title="Start New Sale for Customer"
-                        className="p-1.5 rounded text-cyan-400 hover:bg-slate-800 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-[6px] text-teal-700 hover:bg-teal-50 transition-colors cursor-pointer"
                       >
                         <ShoppingCart className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleOpenModal(cust)}
                         title="Edit Customer"
-                        className="p-1.5 rounded text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-[6px] text-[#627d98] hover:bg-[#f5f7fa] hover:text-[#102a43] transition-colors cursor-pointer"
                       >
                         <Edit2 className="h-4 w-4" />
                       </button>
@@ -274,7 +274,7 @@ export const CustomersView: React.FC = () => {
             onChange={(e) => setCustForm({ ...custForm, notes: e.target.value })}
           />
 
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#d9e2ec]">
             <Button variant="ghost" type="button" onClick={() => setIsModalOpen(false)}>
               Cancel
             </Button>

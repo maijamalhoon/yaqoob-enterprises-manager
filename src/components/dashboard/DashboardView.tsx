@@ -175,14 +175,14 @@ export const DashboardView: React.FC = () => {
   }, [sales, expenses]);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-slate-950 select-none">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-[#f5f7fa] select-none">
       {/* Top Header: Title & Quick Launch Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#d9e2ec]">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-100">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#102a43]">
             Executive Dashboard
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-[#627d98] mt-0.5">
             Real-time financial performance, inventory telemetry & cash drawer status.
           </p>
         </div>
@@ -203,9 +203,9 @@ export const DashboardView: React.FC = () => {
             variant="secondary"
             size="sm"
             onClick={() => setIsQuickExpenseOpen(true)}
-            className="text-slate-200"
+            className="text-[#243b53]"
           >
-            <Receipt className="h-4 w-4 text-amber-400" />
+            <Receipt className="h-4 w-4 text-amber-600" />
             <span>Expense</span>
           </Button>
 
@@ -213,9 +213,9 @@ export const DashboardView: React.FC = () => {
             variant="outline"
             size="sm"
             onClick={() => setCurrentView('closings')}
-            className="text-slate-300"
+            className="text-[#243b53]"
           >
-            <Lock className="h-4 w-4 text-cyan-400" />
+            <Lock className="h-4 w-4 text-teal-700" />
             <span>Daily Closing</span>
           </Button>
         </div>
@@ -224,81 +224,81 @@ export const DashboardView: React.FC = () => {
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* Today's Sales */}
-        <Card className="p-3.5 bg-slate-900/70 border-slate-800/80">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+        <Card className="p-3.5">
+          <span className="text-[11px] font-semibold text-[#627d98] uppercase tracking-wider block">
             Today&rsquo;s Sales
           </span>
-          <p className="text-lg sm:text-xl font-mono font-bold text-slate-100 mt-1">
+          <p className="text-lg sm:text-xl font-mono font-bold text-[#102a43] mt-1">
             {formatCurrency(todayRevenue, organization.currency_symbol)}
           </p>
-          <span className="text-[10px] text-indigo-400 font-mono mt-1 block">
+          <span className="text-[10px] text-teal-700 font-mono mt-1 block">
             {todaySales.length} Transactions
           </span>
         </Card>
 
         {/* Gross Profit */}
-        <Card className="p-3.5 bg-slate-900/70 border-slate-800/80">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+        <Card className="p-3.5">
+          <span className="text-[11px] font-semibold text-[#627d98] uppercase tracking-wider block">
             Gross Profit
           </span>
-          <p className="text-lg sm:text-xl font-mono font-bold text-emerald-400 mt-1">
+          <p className="text-lg sm:text-xl font-mono font-bold text-emerald-700 mt-1">
             {formatCurrency(todayGrossProfit, organization.currency_symbol)}
           </p>
-          <span className="text-[10px] text-emerald-400 font-mono mt-1 block">
+          <span className="text-[10px] text-emerald-700 font-mono mt-1 block">
             Margin: {grossMarginPercent}%
           </span>
         </Card>
 
         {/* Net Profit Estimate */}
-        <Card className="p-3.5 bg-slate-900/70 border-slate-800/80">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+        <Card className="p-3.5">
+          <span className="text-[11px] font-semibold text-[#627d98] uppercase tracking-wider block">
             Est. Net Profit
           </span>
           <p
             className={`text-lg sm:text-xl font-mono font-bold mt-1 ${
-              todayNetProfit >= 0 ? 'text-emerald-400' : 'text-rose-400'
+              todayNetProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'
             }`}
           >
             {formatCurrency(todayNetProfit, organization.currency_symbol)}
           </p>
-          <span className="text-[10px] text-slate-400 font-mono mt-1 block">
+          <span className="text-[10px] text-[#627d98] font-mono mt-1 block">
             GP minus Expenses
           </span>
         </Card>
 
         {/* Expenses Today */}
-        <Card className="p-3.5 bg-slate-900/70 border-slate-800/80">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+        <Card className="p-3.5">
+          <span className="text-[11px] font-semibold text-[#627d98] uppercase tracking-wider block">
             Today&rsquo;s Expenses
           </span>
-          <p className="text-lg sm:text-xl font-mono font-bold text-amber-400 mt-1">
+          <p className="text-lg sm:text-xl font-mono font-bold text-amber-700 mt-1">
             {formatCurrency(todayExpenses, organization.currency_symbol)}
           </p>
-          <span className="text-[10px] text-amber-500 font-mono mt-1 block">
+          <span className="text-[10px] text-amber-700 font-mono mt-1 block">
             Recorded Ledger
           </span>
         </Card>
 
         {/* Cash in Drawer */}
-        <Card className="p-3.5 bg-slate-900/70 border-slate-800/80">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+        <Card className="p-3.5">
+          <span className="text-[11px] font-semibold text-[#627d98] uppercase tracking-wider block">
             Cash in Drawer
           </span>
-          <p className="text-lg sm:text-xl font-mono font-bold text-emerald-300 mt-1">
+          <p className="text-lg sm:text-xl font-mono font-bold text-[#102a43] mt-1">
             {formatCurrency(cashInDrawer, organization.currency_symbol)}
           </p>
-          <span className="text-[10px] text-slate-400 font-mono mt-1 block">Physical Drawer</span>
+          <span className="text-[10px] text-[#627d98] font-mono mt-1 block">Physical Drawer</span>
         </Card>
 
         {/* Total Liquid Balances */}
-        <Card className="p-3.5 bg-slate-900/70 border-slate-800/80">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+        <Card className="p-3.5">
+          <span className="text-[11px] font-semibold text-[#627d98] uppercase tracking-wider block">
             Liquid Funds
           </span>
-          <p className="text-lg sm:text-xl font-mono font-bold text-indigo-300 mt-1">
+          <p className="text-lg sm:text-xl font-mono font-bold text-teal-800 mt-1">
             {formatCurrency(totalLiquidBalances, organization.currency_symbol)}
           </p>
-          <span className="text-[10px] text-slate-400 font-mono mt-1 block">All Accounts</span>
+          <span className="text-[10px] text-[#627d98] font-mono mt-1 block">All Accounts</span>
         </Card>
       </div>
 
@@ -308,15 +308,15 @@ export const DashboardView: React.FC = () => {
           <div
             key={acc.id}
             onClick={() => setCurrentView('accounts')}
-            className="p-3 rounded-xl border border-slate-800 bg-slate-900/60 hover:bg-slate-900 hover:border-slate-700 transition-colors flex items-center justify-between cursor-pointer"
+            className="p-3 rounded-[10px] border border-[#d9e2ec] bg-white hover:border-teal-400 hover:shadow-xs transition-colors flex items-center justify-between cursor-pointer shadow-[0_1px_2px_rgba(16,42,67,0.04)]"
           >
             <div className="truncate pr-2">
-              <span className="text-[10px] font-mono uppercase text-slate-400 block">
+              <span className="text-[10px] font-mono uppercase text-[#627d98] block">
                 {acc.type}
               </span>
-              <p className="text-xs font-semibold text-slate-200 truncate">{acc.name}</p>
+              <p className="text-xs font-semibold text-[#102a43] truncate">{acc.name}</p>
             </div>
-            <span className="text-sm font-mono font-bold text-cyan-300">
+            <span className="text-sm font-mono font-bold text-teal-800">
               {formatCurrency(acc.current_balance, organization.currency_symbol)}
             </span>
           </div>
@@ -330,7 +330,7 @@ export const DashboardView: React.FC = () => {
           <CardHeader className="mb-3">
             <div>
               <CardTitle>Revenue & Expense Velocity (Last 7 Days)</CardTitle>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-[#627d98] mt-0.5">
                 Comparison of completed sales against daily operating expenditures.
               </p>
             </div>
@@ -341,23 +341,25 @@ export const DashboardView: React.FC = () => {
               <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#0f766e" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#0f766e" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#d97706" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#d97706" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="label" stroke="#64748b" fontSize={11} />
-                <YAxis stroke="#64748b" fontSize={11} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="label" stroke="#627d98" fontSize={11} />
+                <YAxis stroke="#627d98" fontSize={11} />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#090a0f',
-                    borderColor: '#1e293b',
+                    backgroundColor: '#ffffff',
+                    borderColor: '#d9e2ec',
                     borderRadius: '8px',
                     fontSize: '12px',
+                    color: '#102a43',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.08)',
                   }}
                   formatter={(val: any) => [
                     formatCurrency(Number(val) || 0, organization.currency_symbol),
@@ -367,7 +369,7 @@ export const DashboardView: React.FC = () => {
                 <Area
                   type="monotone"
                   dataKey="revenue"
-                  stroke="#6366f1"
+                  stroke="#0f766e"
                   strokeWidth={2}
                   fillOpacity={1}
                   fill="url(#colorRevenue)"
@@ -376,7 +378,7 @@ export const DashboardView: React.FC = () => {
                 <Area
                   type="monotone"
                   dataKey="expense"
-                  stroke="#f59e0b"
+                  stroke="#d97706"
                   strokeWidth={2}
                   fillOpacity={1}
                   fill="url(#colorExpense)"
@@ -392,28 +394,28 @@ export const DashboardView: React.FC = () => {
           <CardHeader className="mb-3">
             <div>
               <CardTitle>Fast-Moving Items</CardTitle>
-              <p className="text-xs text-slate-400 mt-0.5">Top performing items by volume.</p>
+              <p className="text-xs text-[#627d98] mt-0.5">Top performing items by volume.</p>
             </div>
           </CardHeader>
 
           <div className="space-y-2.5">
             {topSellingItems.length === 0 ? (
-              <p className="text-xs text-slate-500 py-6 text-center">
+              <p className="text-xs text-[#627d98] py-6 text-center">
                 No completed sales recorded yet.
               </p>
             ) : (
               topSellingItems.map((item, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800"
+                  className="flex items-center justify-between p-2 rounded-[8px] bg-[#f5f7fa] border border-[#d9e2ec]"
                 >
                   <div className="truncate pr-2">
-                    <p className="text-xs font-semibold text-slate-200 truncate">{item.name}</p>
-                    <p className="text-[10px] text-slate-400 font-mono">
+                    <p className="text-xs font-semibold text-[#102a43] truncate">{item.name}</p>
+                    <p className="text-[10px] text-[#627d98] font-mono">
                       Sold: {item.qty} units
                     </p>
                   </div>
-                  <span className="text-xs font-mono font-semibold text-slate-100">
+                  <span className="text-xs font-mono font-semibold text-[#102a43]">
                     {formatCurrency(item.revenue, organization.currency_symbol)}
                   </span>
                 </div>
@@ -429,7 +431,7 @@ export const DashboardView: React.FC = () => {
         <Card className="p-4">
           <CardHeader className="mb-3">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-400" />
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
               <CardTitle>Low Stock Alerts</CardTitle>
             </div>
             <Button
@@ -444,23 +446,23 @@ export const DashboardView: React.FC = () => {
 
           <div className="space-y-2">
             {lowStockItems.length === 0 ? (
-              <div className="py-8 text-center text-xs text-slate-400">
+              <div className="py-8 text-center text-xs text-[#627d98]">
                 All inventory items are currently above safety thresholds.
               </div>
             ) : (
               lowStockItems.map((prod) => (
                 <div
                   key={prod.id}
-                  className="flex items-center justify-between p-2.5 rounded-lg bg-amber-950/20 border border-amber-800/40"
+                  className="flex items-center justify-between p-2.5 rounded-[8px] bg-amber-50/60 border border-amber-200"
                 >
                   <div className="truncate pr-2">
                     <div className="flex items-center gap-1.5">
-                      <p className="text-xs font-semibold text-slate-200 truncate">{prod.name}</p>
+                      <p className="text-xs font-semibold text-[#102a43] truncate">{prod.name}</p>
                       {prod.sku && (
-                        <span className="text-[10px] font-mono text-slate-400">{prod.sku}</span>
+                        <span className="text-[10px] font-mono text-[#627d98]">{prod.sku}</span>
                       )}
                     </div>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
+                    <p className="text-[10px] text-[#627d98] mt-0.5">
                       Min threshold: {prod.min_stock_threshold} {prod.unit}
                     </p>
                   </div>
@@ -479,7 +481,7 @@ export const DashboardView: React.FC = () => {
         <Card className="p-4">
           <CardHeader className="mb-3">
             <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-indigo-400" />
+              <FileText className="h-4 w-4 text-teal-700" />
               <CardTitle>Recent Sales Transactions</CardTitle>
             </div>
             <Button
@@ -497,24 +499,24 @@ export const DashboardView: React.FC = () => {
               <div
                 key={sale.id}
                 onClick={() => setActiveReceiptSale(sale)}
-                className="flex items-center justify-between p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 hover:border-indigo-500/50 cursor-pointer transition-colors"
+                className="flex items-center justify-between p-2.5 rounded-[8px] bg-[#f5f7fa] border border-[#d9e2ec] hover:border-teal-400 hover:bg-white cursor-pointer transition-colors"
               >
                 <div className="truncate pr-2">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-semibold text-slate-200">
+                    <span className="font-mono text-xs font-semibold text-[#102a43]">
                       #{sale.invoice_number}
                     </span>
-                    <span className="text-xs text-slate-300 truncate">
+                    <span className="text-xs text-[#486581] truncate">
                       {sale.customer_name || 'Walk-in'}
                     </span>
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
+                  <p className="text-[10px] text-[#627d98] mt-0.5">
                     {formatDateTime(sale.created_at)} • {sale.payment_method}
                   </p>
                 </div>
 
                 <div className="text-right">
-                  <span className="font-mono text-xs font-bold text-slate-100">
+                  <span className="font-mono text-xs font-bold text-[#102a43]">
                     {formatCurrency(sale.grand_total, organization.currency_symbol)}
                   </span>
                   <div className="mt-0.5">

@@ -29,21 +29,22 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref,
   ) => {
     const baseStyles =
-      "inline-flex items-center justify-center font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/30 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer rounded-[8px]";
+      "inline-flex items-center justify-center font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/30 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer rounded-[10px]";
 
     const variants = {
       primary:
-        "bg-teal-700 hover:bg-teal-800 text-white border border-teal-700",
-      indigo: "bg-teal-700 hover:bg-teal-800 text-white border border-teal-700",
-      teal: "bg-teal-700 hover:bg-teal-800 text-white border border-teal-700",
+        "bg-teal-700 hover:bg-teal-800 text-white border border-teal-700 shadow-[0_1px_2px_rgba(16,42,67,0.08)]",
+      indigo:
+        "bg-teal-700 hover:bg-teal-800 text-white border border-teal-700 shadow-[0_1px_2px_rgba(16,42,67,0.08)]",
+      teal: "bg-teal-700 hover:bg-teal-800 text-white border border-teal-700 shadow-[0_1px_2px_rgba(16,42,67,0.08)]",
       emerald:
-        "bg-teal-700 hover:bg-teal-800 text-white border border-teal-700",
+        "bg-teal-700 hover:bg-teal-800 text-white border border-teal-700 shadow-[0_1px_2px_rgba(16,42,67,0.08)]",
       secondary:
-        "bg-white hover:bg-slate-50 text-slate-700 border border-slate-300",
+        "bg-white hover:bg-[#f5f7fa] text-[#243b53] border border-[#d9e2ec] shadow-[0_1px_2px_rgba(16,42,67,0.04)]",
       outline:
-        "bg-white border border-slate-300 hover:bg-slate-50 text-slate-700",
-      danger: "bg-rose-700 hover:bg-rose-800 text-white border border-rose-700",
-      ghost: "hover:bg-slate-100 text-slate-600 hover:text-slate-900",
+        "bg-white border border-[#d9e2ec] hover:bg-[#f5f7fa] text-[#243b53]",
+      danger: "bg-rose-700 hover:bg-rose-800 text-white border border-rose-700 shadow-[0_1px_2px_rgba(16,42,67,0.08)]",
+      ghost: "hover:bg-[#eef2f6] text-[#486581] hover:text-[#102a43]",
     };
 
     const sizes = {

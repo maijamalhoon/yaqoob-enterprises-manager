@@ -108,13 +108,13 @@ export const QuickExpenseModal: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           {/* Expense Category */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-[#102a43] mb-1">
               Expense Category
             </label>
             <select
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
-              className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-2 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
+              className="w-full rounded-[8px] bg-white border border-[#d9e2ec] px-3 py-2 text-xs text-[#102a43] focus:border-teal-700 focus:outline-none"
             >
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -126,13 +126,13 @@ export const QuickExpenseModal: React.FC = () => {
 
           {/* Paid From Account */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-[#102a43] mb-1">
               Paid From Account
             </label>
             <select
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
-              className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-2 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
+              className="w-full rounded-[8px] bg-white border border-[#d9e2ec] px-3 py-2 text-xs text-[#102a43] focus:border-teal-700 focus:outline-none"
             >
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -155,12 +155,12 @@ export const QuickExpenseModal: React.FC = () => {
               placeholder="0.00"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="font-mono text-base font-bold text-amber-400"
+              className="font-mono text-base font-bold text-amber-700"
             />
             {selectedAccount && (
-              <p className="text-[11px] text-slate-400 mt-1">
+              <p className="text-[11px] text-[#627d98] mt-1">
                 Available in {selectedAccount.name}:{' '}
-                <span className="font-mono text-cyan-300">
+                <span className="font-mono text-teal-800">
                   {formatCurrency(selectedAccount.current_balance, organization.currency_symbol)}
                 </span>
               </p>
@@ -205,18 +205,18 @@ export const QuickExpenseModal: React.FC = () => {
         </div>
 
         {/* Impact Notice */}
-        <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-[11px] text-slate-400 flex items-start gap-2">
-          <AlertCircle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+        <div className="p-3 rounded-[8px] bg-amber-50 border border-amber-200 text-[11px] text-amber-900 flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
           <span>
             Recording this expense will instantly deduct from{' '}
-            <strong className="text-slate-200">
+            <strong className="text-amber-950">
               {selectedAccount ? selectedAccount.name : 'the selected account'}
             </strong>{' '}
             and reflect in today&rsquo;s cash closing and P&L statements.
           </span>
         </div>
 
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#d9e2ec]">
           <Button
             type="button"
             variant="ghost"
@@ -224,7 +224,7 @@ export const QuickExpenseModal: React.FC = () => {
           >
             Cancel
           </Button>
-          <Button type="submit" variant="teal" isLoading={isSubmitting}>
+          <Button type="submit" variant="primary" isLoading={isSubmitting}>
             <Check className="h-4 w-4" />
             <span>Save Expense</span>
           </Button>

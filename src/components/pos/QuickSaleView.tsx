@@ -281,15 +281,15 @@ export const QuickSaleView: React.FC = () => {
   }, [products, services, activeTab, selectedCategory, searchQuery]);
 
   return (
-    <div className="flex-1 flex flex-col lg:flex-row h-[calc(100vh-3.5rem)] overflow-hidden bg-slate-950">
+    <div className="flex-1 flex flex-col lg:flex-row h-[calc(100vh-3.5rem)] overflow-hidden bg-[#f5f7fa]">
       {/* ========================================================================= */}
       {/* LEFT AREA: Catalog Search, Category Tabs & Quick Add Grid */}
       {/* ========================================================================= */}
-      <div className="flex-1 flex flex-col border-r border-slate-800/80 overflow-hidden">
+      <div className="flex-1 flex flex-col border-r border-[#d9e2ec] overflow-hidden">
         {/* Search Header Bar */}
-        <div className="p-3 border-b border-slate-800 bg-slate-900/60 flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
+        <div className="p-3 border-b border-[#d9e2ec] bg-white flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#627d98]" />
             <input
               ref={searchInputRef}
               type="text"
@@ -297,42 +297,42 @@ export const QuickSaleView: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              className="w-full pl-9 pr-14 py-2 rounded-lg bg-slate-950 border border-slate-700/80 text-xs sm:text-sm text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
+              className="w-full pl-9 pr-14 py-2 rounded-[10px] bg-white border border-[#d9e2ec] text-xs sm:text-sm text-[#102a43] placeholder:text-[#627d98] focus:border-teal-600 focus:outline-none"
             />
             <div className="absolute right-2.5 top-2 flex items-center gap-1 pointer-events-none">
-              <Barcode className="h-3.5 w-3.5 text-slate-500" />
-              <kbd className="px-1 py-0.5 text-[9px] font-mono text-slate-400 bg-slate-800 border border-slate-700 rounded">
+              <Barcode className="h-3.5 w-3.5 text-[#627d98]" />
+              <kbd className="px-1 py-0.5 text-[9px] font-mono text-[#627d98] bg-[#f5f7fa] border border-[#d9e2ec] rounded">
                 F2
               </kbd>
             </div>
           </div>
 
           {/* Tab Filter: ALL / SERVICES / PRODUCTS */}
-          <div className="flex rounded-lg border border-slate-800 bg-slate-950 p-0.5 text-xs self-start sm:self-auto">
+          <div className="flex rounded-[10px] border border-[#d9e2ec] bg-[#f5f7fa] p-0.5 text-xs self-start sm:self-auto">
             <button
               onClick={() => setActiveTab('ALL')}
-              className={`px-3 py-1 rounded-md font-medium transition-colors cursor-pointer ${
-                activeTab === 'ALL' ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-200'
+              className={`px-3 py-1 rounded-[8px] font-medium transition-colors cursor-pointer ${
+                activeTab === 'ALL' ? 'bg-teal-700 text-white shadow-xs' : 'text-[#627d98] hover:text-[#102a43]'
               }`}
             >
               All Items
             </button>
             <button
               onClick={() => setActiveTab('SERVICES')}
-              className={`px-3 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+              className={`px-3 py-1 rounded-[8px] font-medium transition-colors cursor-pointer ${
                 activeTab === 'SERVICES'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-teal-700 text-white shadow-xs'
+                  : 'text-[#627d98] hover:text-[#102a43]'
               }`}
             >
               Services
             </button>
             <button
               onClick={() => setActiveTab('PRODUCTS')}
-              className={`px-3 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+              className={`px-3 py-1 rounded-[8px] font-medium transition-colors cursor-pointer ${
                 activeTab === 'PRODUCTS'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-teal-700 text-white shadow-xs'
+                  : 'text-[#627d98] hover:text-[#102a43]'
               }`}
             >
               Inventory
@@ -341,13 +341,13 @@ export const QuickSaleView: React.FC = () => {
         </div>
 
         {/* Categories Bar */}
-        <div className="px-3 py-2 border-b border-slate-800/80 bg-slate-950 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+        <div className="px-3 py-2 border-b border-[#d9e2ec] bg-white flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           <button
             onClick={() => setSelectedCategory('ALL')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+            className={`px-2.5 py-1 rounded-[8px] text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
               selectedCategory === 'ALL'
-                ? 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30'
-                : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+                ? 'bg-teal-50 text-teal-800 border border-teal-200'
+                : 'text-[#627d98] hover:bg-[#f5f7fa] hover:text-[#102a43]'
             }`}
           >
             All Categories
@@ -356,10 +356,10 @@ export const QuickSaleView: React.FC = () => {
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(cat.name)}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded-[8px] text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
                 selectedCategory === cat.name
-                  ? 'bg-indigo-500/15 text-indigo-300 border border-indigo-500/30'
-                  : 'text-slate-400 hover:bg-slate-900 hover:text-slate-200'
+                  ? 'bg-teal-50 text-teal-800 border border-teal-200'
+                  : 'text-[#627d98] hover:bg-[#f5f7fa] hover:text-[#102a43]'
               }`}
             >
               {cat.name}
@@ -370,10 +370,10 @@ export const QuickSaleView: React.FC = () => {
         {/* Item Cards Grid */}
         <div className="flex-1 overflow-y-auto p-3.5">
           {filteredItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-slate-500 text-center">
-              <Boxes className="h-10 w-10 text-slate-700 mb-2" />
-              <p className="text-sm font-medium text-slate-400">No items match your query</p>
-              <p className="text-xs text-slate-600 mt-1">Try another keyword or category filter</p>
+            <div className="flex flex-col items-center justify-center h-64 text-[#627d98] text-center">
+              <Boxes className="h-10 w-10 text-[#9fb3c8] mb-2" />
+              <p className="text-sm font-medium text-[#486581]">No items match your query</p>
+              <p className="text-xs text-[#627d98] mt-1">Try another keyword or category filter</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5">
@@ -391,48 +391,48 @@ export const QuickSaleView: React.FC = () => {
                   <button
                     key={`${item.itemType}-${item.id}`}
                     onClick={() => handleAddItem(item, item.itemType)}
-                    className="flex flex-col justify-between p-3 rounded-xl border border-slate-800/80 bg-slate-900/60 hover:bg-slate-900 hover:border-indigo-500/50 text-left transition-all group cursor-pointer shadow-xs active:scale-[0.98]"
+                    className="flex flex-col justify-between p-3 rounded-[10px] border border-[#d9e2ec] bg-white hover:border-teal-400 hover:shadow-sm text-left transition-all group cursor-pointer shadow-[0_1px_2px_rgba(16,42,67,0.04)] active:scale-[0.98]"
                   >
                     <div>
                       <div className="flex items-start justify-between gap-1 mb-1.5">
                         <span
                           className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
                             isService
-                              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/25'
-                              : 'bg-indigo-500/10 text-indigo-300 border-indigo-500/25'
+                              ? 'bg-teal-50 text-teal-800 border-teal-200'
+                              : 'bg-[#eef2f6] text-[#243b53] border-[#d9e2ec]'
                           }`}
                         >
                           {isService ? 'SERVICE' : 'PRODUCT'}
                         </span>
                         {item.sku && (
-                          <span className="text-[10px] font-mono text-slate-500 truncate">
+                          <span className="text-[10px] font-mono text-[#627d98] truncate">
                             {item.sku}
                           </span>
                         )}
                       </div>
-                      <h4 className="text-xs font-semibold text-slate-100 group-hover:text-indigo-300 line-clamp-2 leading-snug">
+                      <h4 className="text-xs font-semibold text-[#102a43] group-hover:text-teal-800 line-clamp-2 leading-snug">
                         {item.name}
                       </h4>
                     </div>
 
-                    <div className="pt-2 mt-2 border-t border-slate-800/80 flex items-end justify-between">
+                    <div className="pt-2 mt-2 border-t border-[#d9e2ec] flex items-end justify-between">
                       <div>
-                        <span className="text-sm font-mono font-bold text-slate-100 group-hover:text-indigo-300">
+                        <span className="text-sm font-mono font-bold text-[#102a43] group-hover:text-teal-800">
                           {formatCurrency(item.selling_price, organization.currency_symbol)}
                         </span>
                         {'unit' in item && (
-                          <span className="text-[10px] text-slate-500 ml-1">/{item.unit}</span>
+                          <span className="text-[10px] text-[#627d98] ml-1">/{item.unit}</span>
                         )}
                       </div>
 
                       {hasStock !== null && (
                         <span
-                          className={`text-[10px] font-mono font-medium px-1.5 py-0.5 rounded ${
+                          className={`text-[10px] font-mono font-medium px-1.5 py-0.5 rounded border ${
                             isOut
-                              ? 'bg-rose-950 text-rose-400 border border-rose-800/60'
+                              ? 'bg-rose-50 text-rose-800 border-rose-200'
                               : isLow
-                              ? 'bg-amber-950 text-amber-400 border border-amber-800/60'
-                              : 'text-slate-400'
+                              ? 'bg-amber-50 text-amber-800 border-amber-200'
+                              : 'bg-[#f5f7fa] text-[#627d98] border-[#d9e2ec]'
                           }`}
                         >
                           {hasStock} left
@@ -450,12 +450,12 @@ export const QuickSaleView: React.FC = () => {
       {/* ========================================================================= */}
       {/* RIGHT AREA: Current Cart / Order Summary */}
       {/* ========================================================================= */}
-      <div className="w-full lg:w-96 flex flex-col bg-slate-950 border-t lg:border-t-0 border-slate-800/80 shadow-2xl">
+      <div className="w-full lg:w-96 flex flex-col bg-white border-t lg:border-t-0 border-[#d9e2ec] shadow-sm">
         {/* Cart Header: Customer selector & clear */}
-        <div className="p-3 border-b border-slate-800/80 bg-slate-900/50 flex items-center justify-between">
+        <div className="p-3 border-b border-[#d9e2ec] bg-[#f5f7fa] flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <ShoppingCart className="h-4 w-4 text-indigo-400" />
-            <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+            <ShoppingCart className="h-4 w-4 text-teal-700" />
+            <span className="text-xs font-bold text-[#102a43] uppercase tracking-wider">
               Current Cart ({cart.reduce((s, i) => s + i.quantity, 0)})
             </span>
           </div>
@@ -463,7 +463,7 @@ export const QuickSaleView: React.FC = () => {
           {cart.length > 0 && (
             <button
               onClick={handleClearCart}
-              className="text-[11px] text-slate-400 hover:text-rose-400 flex items-center gap-1 transition-colors cursor-pointer"
+              className="text-[11px] text-[#627d98] hover:text-rose-700 flex items-center gap-1 transition-colors cursor-pointer"
             >
               <RotateCcw className="h-3 w-3" />
               <span>Clear</span>
@@ -472,15 +472,15 @@ export const QuickSaleView: React.FC = () => {
         </div>
 
         {/* Customer Selector Bar */}
-        <div className="px-3 py-2 bg-slate-900/70 border-b border-slate-800/80 flex items-center justify-between gap-2">
-          <span className="text-[11px] text-slate-400">Customer:</span>
+        <div className="px-3 py-2 bg-white border-b border-[#d9e2ec] flex items-center justify-between gap-2">
+          <span className="text-[11px] text-[#627d98]">Customer:</span>
           <select
             value={selectedCustomer?.id || ''}
             onChange={(e) => {
               const found = customers.find((c) => c.id === e.target.value) || null;
               setSelectedCustomer(found);
             }}
-            className="flex-1 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none truncate"
+            className="flex-1 bg-white border border-[#d9e2ec] rounded-[8px] px-2 py-1 text-xs text-[#102a43] focus:border-teal-600 focus:outline-none truncate"
           >
             <option value="">Walk-in Customer</option>
             {customers.map((c) => (
@@ -492,14 +492,14 @@ export const QuickSaleView: React.FC = () => {
         </div>
 
         {/* Cart Items List */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+        <div className="flex-1 overflow-y-auto p-3 space-y-2 bg-[#f5f7fa]">
           {cart.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-slate-500 p-6 text-center">
-              <div className="p-3 rounded-full bg-slate-900 border border-slate-800 mb-2">
-                <ShoppingCart className="h-6 w-6 text-slate-600" />
+            <div className="h-full flex flex-col items-center justify-center text-[#627d98] p-6 text-center">
+              <div className="p-3 rounded-full bg-white border border-[#d9e2ec] mb-2">
+                <ShoppingCart className="h-6 w-6 text-[#9fb3c8]" />
               </div>
-              <p className="text-xs font-medium text-slate-400">Your cart is empty</p>
-              <p className="text-[11px] text-slate-600 mt-1">
+              <p className="text-xs font-medium text-[#486581]">Your cart is empty</p>
+              <p className="text-[11px] text-[#627d98] mt-1">
                 Click any product or service on the left to add items to invoice.
               </p>
             </div>
@@ -519,19 +519,19 @@ export const QuickSaleView: React.FC = () => {
         </div>
 
         {/* Cart Totals & Checkout Trigger */}
-        <div className="p-3.5 border-t border-slate-800/80 bg-slate-900/60 space-y-2.5">
+        <div className="p-3.5 border-t border-[#d9e2ec] bg-white space-y-2.5">
           {/* Subtotal */}
-          <div className="flex justify-between text-xs text-slate-400">
+          <div className="flex justify-between text-xs text-[#627d98]">
             <span>Subtotal:</span>
-            <span className="font-mono text-slate-200">
+            <span className="font-mono text-[#102a43]">
               {formatCurrency(cartSubtotal, organization.currency_symbol)}
             </span>
           </div>
 
           {/* Discount input */}
-          <div className="flex items-center justify-between text-xs text-slate-400">
+          <div className="flex items-center justify-between text-xs text-[#627d98]">
             <span className="flex items-center gap-1">
-              <Tag className="h-3 w-3 text-indigo-400" /> Order Discount:
+              <Tag className="h-3 w-3 text-teal-700" /> Order Discount:
             </span>
             <div className="flex items-center gap-1">
               <span className="text-[10px] font-mono">{organization.currency_symbol}</span>
@@ -541,27 +541,27 @@ export const QuickSaleView: React.FC = () => {
                 value={orderDiscount || ''}
                 placeholder="0"
                 onChange={(e) => setOrderDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
-                className="w-16 px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-xs font-mono text-slate-200 text-right focus:border-indigo-500 focus:outline-none"
+                className="w-16 px-1.5 py-0.5 rounded-[6px] bg-white border border-[#d9e2ec] text-xs font-mono text-[#102a43] text-right focus:border-teal-600 focus:outline-none"
               />
             </div>
           </div>
 
           {/* Tax (if configured) */}
           {organization.tax_enabled && (
-            <div className="flex justify-between text-xs text-slate-400">
+            <div className="flex justify-between text-xs text-[#627d98]">
               <span>Tax ({organization.tax_rate}%):</span>
-              <span className="font-mono text-slate-200">
+              <span className="font-mono text-[#102a43]">
                 {formatCurrency(taxAmount, organization.currency_symbol)}
               </span>
             </div>
           )}
 
           {/* Grand Total */}
-          <div className="pt-2 border-t border-slate-800 flex items-baseline justify-between">
-            <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+          <div className="pt-2 border-t border-[#d9e2ec] flex items-baseline justify-between">
+            <span className="text-xs font-bold text-[#102a43] uppercase tracking-wider">
               Grand Total:
             </span>
-            <span className="text-2xl font-mono font-extrabold text-emerald-400">
+            <span className="text-2xl font-mono font-extrabold text-teal-800">
               {formatCurrency(grandTotal, organization.currency_symbol)}
             </span>
           </div>

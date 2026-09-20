@@ -342,14 +342,14 @@ export const InventoryView: React.FC = () => {
   }, [services, searchQuery, categoryFilter]);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-slate-950 select-none">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-[#f5f7fa] select-none text-[#102a43]">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#d9e2ec]">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-100">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#102a43]">
             Catalog & Inventory Management
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-[#627d98] mt-0.5">
             Maintain physical products, WAC costing, recipes, and labor services.
           </p>
         </div>
@@ -369,7 +369,7 @@ export const InventoryView: React.FC = () => {
 
           {activeTab === 'SERVICES' && (
             <Button
-              variant="teal"
+              variant="primary"
               size="sm"
               onClick={() => handleOpenServiceModal()}
               className="font-semibold"
@@ -382,13 +382,13 @@ export const InventoryView: React.FC = () => {
       </div>
 
       {/* Main Tabs */}
-      <div className="flex border-b border-slate-800 gap-4 text-xs font-semibold">
+      <div className="flex border-b border-[#d9e2ec] gap-4 text-xs font-semibold">
         <button
           onClick={() => setActiveTab('PRODUCTS')}
           className={`pb-2.5 flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
             activeTab === 'PRODUCTS'
-              ? 'border-cyan-500 text-cyan-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-teal-700 text-teal-800'
+              : 'border-transparent text-[#627d98] hover:text-[#102a43]'
           }`}
         >
           <Boxes className="h-4 w-4" />
@@ -399,8 +399,8 @@ export const InventoryView: React.FC = () => {
           onClick={() => setActiveTab('SERVICES')}
           className={`pb-2.5 flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
             activeTab === 'SERVICES'
-              ? 'border-teal-500 text-teal-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-teal-700 text-teal-800'
+              : 'border-transparent text-[#627d98] hover:text-[#102a43]'
           }`}
         >
           <Zap className="h-4 w-4" />
@@ -411,8 +411,8 @@ export const InventoryView: React.FC = () => {
           onClick={() => setActiveTab('MOVEMENTS')}
           className={`pb-2.5 flex items-center gap-2 border-b-2 transition-colors cursor-pointer ${
             activeTab === 'MOVEMENTS'
-              ? 'border-cyan-500 text-cyan-400'
-              : 'border-transparent text-slate-400 hover:text-slate-200'
+              ? 'border-teal-700 text-teal-800'
+              : 'border-transparent text-[#627d98] hover:text-[#102a43]'
           }`}
         >
           <ArrowUpDown className="h-4 w-4" />
@@ -424,22 +424,22 @@ export const InventoryView: React.FC = () => {
       {activeTab !== 'MOVEMENTS' && (
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
           <div className="flex-1 max-w-sm relative">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#627d98]" />
             <input
               type="text"
               placeholder="Search by name or SKU..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-100 placeholder:text-slate-500 focus:border-cyan-500 focus:outline-none"
+              className="w-full pl-9 pr-3 py-1.5 rounded-[8px] bg-white border border-[#d9e2ec] text-xs text-[#102a43] placeholder:text-[#627d98] focus:border-teal-700 focus:outline-none"
             />
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400">Category:</span>
+            <span className="text-xs text-[#627d98]">Category:</span>
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 focus:border-cyan-500 focus:outline-none"
+              className="bg-white border border-[#d9e2ec] rounded-[8px] px-3 py-1.5 text-xs text-[#102a43] focus:border-teal-700 focus:outline-none"
             >
               <option value="ALL">All Categories</option>
               {categories.map((c) => (
@@ -458,7 +458,7 @@ export const InventoryView: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-400 uppercase font-mono text-[10px]">
+                <tr className="border-b border-[#d9e2ec] bg-[#f5f7fa] text-[#627d98] uppercase font-mono text-[10px]">
                   <th className="py-3 px-4">Item & SKU</th>
                   <th className="py-3 px-3">Category</th>
                   <th className="py-3 px-3 text-right">Avg Cost (WAC)</th>
@@ -469,7 +469,7 @@ export const InventoryView: React.FC = () => {
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-sans">
+              <tbody className="divide-y divide-[#d9e2ec] font-sans">
                 {filteredProducts.map((p) => {
                   const margin =
                     p.selling_price > 0
@@ -483,22 +483,22 @@ export const InventoryView: React.FC = () => {
                   const isOut = p.track_stock && p.current_stock <= 0;
 
                   return (
-                    <tr key={p.id} className="hover:bg-slate-900/70 transition-colors">
+                    <tr key={p.id} className="hover:bg-[#f5f7fa] transition-colors">
                       <td className="py-3 px-4">
-                        <p className="font-semibold text-slate-200">{p.name}</p>
-                        <p className="text-[10px] font-mono text-slate-500">{p.sku}</p>
+                        <p className="font-semibold text-[#102a43]">{p.name}</p>
+                        <p className="text-[10px] font-mono text-[#627d98]">{p.sku}</p>
                       </td>
-                      <td className="py-3 px-3 text-slate-400">
+                      <td className="py-3 px-3 text-[#627d98]">
                         {p.category_name || 'General'}
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-slate-300">
+                      <td className="py-3 px-3 text-right font-mono text-[#243b53]">
                         {formatCurrency(p.average_cost || p.purchase_price, organization.currency_symbol)}
                       </td>
-                      <td className="py-3 px-3 text-right font-mono font-semibold text-cyan-300">
+                      <td className="py-3 px-3 text-right font-mono font-semibold text-teal-800">
                         {formatCurrency(p.selling_price, organization.currency_symbol)}
                       </td>
                       <td className="py-3 px-3 text-right font-mono">
-                        <span className={margin >= 30 ? 'text-emerald-400' : 'text-amber-400'}>
+                        <span className={margin >= 30 ? 'text-emerald-700' : 'text-amber-700'}>
                           {margin}%
                         </span>
                       </td>
@@ -507,7 +507,7 @@ export const InventoryView: React.FC = () => {
                           {p.current_stock} {p.unit}
                         </Badge>
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-slate-300">
+                      <td className="py-3 px-3 text-right font-mono text-[#243b53]">
                         {formatCurrency(
                           p.current_stock * (p.average_cost || p.purchase_price),
                           organization.currency_symbol
@@ -518,14 +518,14 @@ export const InventoryView: React.FC = () => {
                           <button
                             onClick={() => handleOpenStockMovement(p)}
                             title="Restock or Adjust Inventory"
-                            className="p-1.5 rounded text-cyan-400 hover:bg-slate-800 transition-colors cursor-pointer"
+                            className="p-1.5 rounded text-teal-700 hover:bg-[#e4e7eb] transition-colors cursor-pointer"
                           >
                             <PackagePlus className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => handleOpenProductModal(p)}
                             title="Edit Product"
-                            className="p-1.5 rounded text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors cursor-pointer"
+                            className="p-1.5 rounded text-[#627d98] hover:bg-[#e4e7eb] hover:text-[#102a43] transition-colors cursor-pointer"
                           >
                             <Edit2 className="h-4 w-4" />
                           </button>
@@ -546,7 +546,7 @@ export const InventoryView: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-400 uppercase font-mono text-[10px]">
+                <tr className="border-b border-[#d9e2ec] bg-[#f5f7fa] text-[#627d98] uppercase font-mono text-[10px]">
                   <th className="py-3 px-4">Service Name & SKU</th>
                   <th className="py-3 px-3">Category</th>
                   <th className="py-3 px-3 text-right">Rate / Selling Price</th>
@@ -555,36 +555,36 @@ export const InventoryView: React.FC = () => {
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-sans">
+              <tbody className="divide-y divide-[#d9e2ec] font-sans">
                 {filteredServices.map((s) => (
-                  <tr key={s.id} className="hover:bg-slate-900/70 transition-colors">
+                  <tr key={s.id} className="hover:bg-[#f5f7fa] transition-colors">
                     <td className="py-3 px-4">
-                      <p className="font-semibold text-slate-200">{s.name}</p>
-                      <p className="text-[10px] font-mono text-slate-500">{s.sku}</p>
+                      <p className="font-semibold text-[#102a43]">{s.name}</p>
+                      <p className="text-[10px] font-mono text-[#627d98]">{s.sku}</p>
                     </td>
-                    <td className="py-3 px-3 text-slate-400">
+                    <td className="py-3 px-3 text-[#627d98]">
                       {s.category_name || 'Service'}
                     </td>
-                    <td className="py-3 px-3 text-right font-mono font-semibold text-teal-300">
+                    <td className="py-3 px-3 text-right font-mono font-semibold text-teal-800">
                       {formatCurrency(s.selling_price, organization.currency_symbol)}
                     </td>
-                    <td className="py-3 px-3 text-right font-mono text-slate-400">
+                    <td className="py-3 px-3 text-right font-mono text-[#627d98]">
                       {formatCurrency(s.estimated_cost, organization.currency_symbol)}
                     </td>
-                    <td className="py-3 px-3 text-slate-400">
+                    <td className="py-3 px-3 text-[#627d98]">
                       {s.components && s.components.length > 0 ? (
-                        <span className="text-[11px] font-mono text-cyan-400">
+                        <span className="text-[11px] font-mono text-teal-700">
                           {s.components.length} ingredients linked
                         </span>
                       ) : (
-                        <span className="text-[11px] text-slate-500">Pure Service</span>
+                        <span className="text-[11px] text-[#627d98]">Pure Service</span>
                       )}
                     </td>
                     <td className="py-3 px-4 text-right">
                       <button
                         onClick={() => handleOpenServiceModal(s)}
                         title="Edit Service"
-                        className="p-1.5 rounded text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors cursor-pointer"
+                        className="p-1.5 rounded text-[#627d98] hover:bg-[#e4e7eb] hover:text-[#102a43] transition-colors cursor-pointer"
                       >
                         <Edit2 className="h-4 w-4" />
                       </button>
@@ -603,7 +603,7 @@ export const InventoryView: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-400 uppercase font-mono text-[10px]">
+                <tr className="border-b border-[#d9e2ec] bg-[#f5f7fa] text-[#627d98] uppercase font-mono text-[10px]">
                   <th className="py-3 px-4">Date & Time</th>
                   <th className="py-3 px-3">Product</th>
                   <th className="py-3 px-3">Movement Type</th>
@@ -613,7 +613,7 @@ export const InventoryView: React.FC = () => {
                   <th className="py-3 px-4">Notes / User</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-sans">
+              <tbody className="divide-y divide-[#d9e2ec] font-sans">
                 {movements.map((m) => {
                   const prod = products.find((p) => p.id === m.product_id);
                   const isPositive = ['PURCHASE', 'ADJUSTMENT_INCREASE', 'CUSTOMER_RETURN', 'OPENING_STOCK'].includes(
@@ -621,18 +621,18 @@ export const InventoryView: React.FC = () => {
                   );
 
                   return (
-                    <tr key={m.id} className="hover:bg-slate-900/70 transition-colors">
-                      <td className="py-3 px-4 font-mono text-slate-400">
+                    <tr key={m.id} className="hover:bg-[#f5f7fa] transition-colors">
+                      <td className="py-3 px-4 font-mono text-[#627d98]">
                         {new Date(m.created_at).toLocaleString()}
                       </td>
-                      <td className="py-3 px-3 font-semibold text-slate-200">
+                      <td className="py-3 px-3 font-semibold text-[#102a43]">
                         {prod ? prod.name : 'Unknown Product'}
                       </td>
                       <td className="py-3 px-3">
                         <Badge
                           variant={
                             m.movement_type === 'PURCHASE'
-                              ? 'cyan'
+                              ? 'teal'
                               : m.movement_type === 'SALE'
                               ? 'slate'
                               : m.movement_type.includes('DECREASE') || m.movement_type.includes('DAMAGE')
@@ -645,17 +645,17 @@ export const InventoryView: React.FC = () => {
                         </Badge>
                       </td>
                       <td className="py-3 px-3 text-right font-mono font-bold">
-                        <span className={isPositive ? 'text-emerald-400' : 'text-rose-400'}>
+                        <span className={isPositive ? 'text-emerald-700' : 'text-rose-700'}>
                           {isPositive ? `+${m.quantity}` : `-${m.quantity}`}
                         </span>
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-slate-300">
+                      <td className="py-3 px-3 text-right font-mono text-[#243b53]">
                         {formatCurrency(m.unit_cost, organization.currency_symbol)}
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-slate-300">
+                      <td className="py-3 px-3 text-right font-mono text-[#243b53]">
                         {formatCurrency(m.total_cost, organization.currency_symbol)}
                       </td>
-                      <td className="py-3 px-4 text-slate-400 text-[11px]">
+                      <td className="py-3 px-4 text-[#627d98] text-[11px]">
                         {m.notes || 'Automated movement'} • {m.created_by || 'System'}
                       </td>
                     </tr>
@@ -693,13 +693,13 @@ export const InventoryView: React.FC = () => {
             />
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-[#102a43] mb-1.5">
                 Category
               </label>
               <select
                 value={prodForm.category_id}
                 onChange={(e) => setProdForm({ ...prodForm, category_id: e.target.value })}
-                className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-2 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
+                className="w-full rounded-[8px] bg-white border border-[#d9e2ec] px-3 py-2 text-xs text-[#102a43] focus:border-teal-700 focus:outline-none"
               >
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -765,7 +765,7 @@ export const InventoryView: React.FC = () => {
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#d9e2ec]">
             <Button
               type="button"
               variant="ghost"
@@ -807,13 +807,13 @@ export const InventoryView: React.FC = () => {
             />
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-[#102a43] mb-1.5">
                 Category
               </label>
               <select
                 value={servForm.category_id}
                 onChange={(e) => setServForm({ ...servForm, category_id: e.target.value })}
-                className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-2 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
+                className="w-full rounded-[8px] bg-white border border-[#d9e2ec] px-3 py-2 text-xs text-[#102a43] focus:border-teal-700 focus:outline-none"
               >
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -855,11 +855,11 @@ export const InventoryView: React.FC = () => {
           />
 
           {/* Recipe Components Builder */}
-          <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3">
+          <div className="p-3.5 rounded-[10px] bg-[#f5f7fa] border border-[#d9e2ec] space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold text-slate-200">Raw Material Consumption (Recipe)</p>
-                <p className="text-[10px] text-slate-400">
+                <p className="text-xs font-bold text-[#102a43]">Raw Material Consumption (Recipe)</p>
+                <p className="text-[10px] text-[#627d98]">
                   Deduct physical stock items when this service is sold (e.g. 1 A4 Paper per Photocopy).
                 </p>
               </div>
@@ -870,7 +870,7 @@ export const InventoryView: React.FC = () => {
             </div>
 
             {servComponents.length === 0 ? (
-              <p className="text-[11px] text-slate-500 italic py-1">
+              <p className="text-[11px] text-[#627d98] italic py-1">
                 No inventory consumption linked. This service will be sold as pure service/labor.
               </p>
             ) : (
@@ -881,13 +881,13 @@ export const InventoryView: React.FC = () => {
                   return (
                     <div
                       key={idx}
-                      className="flex items-center gap-2 bg-slate-900/90 p-2 rounded-lg border border-slate-800 text-xs"
+                      className="flex items-center gap-2 bg-white p-2 rounded-[8px] border border-[#d9e2ec] text-xs"
                     >
                       <div className="flex-1">
                         <select
                           value={comp.product_id}
                           onChange={(e) => handleUpdateRecipeComponent(idx, 'product_id', e.target.value)}
-                          className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-slate-200 focus:border-cyan-500 focus:outline-none"
+                          className="w-full rounded bg-white border border-[#d9e2ec] px-2 py-1 text-xs text-[#102a43] focus:border-teal-700 focus:outline-none"
                         >
                           {products.map((p) => (
                             <option key={p.id} value={p.id}>
@@ -907,18 +907,18 @@ export const InventoryView: React.FC = () => {
                             handleUpdateRecipeComponent(idx, 'quantity_consumed', parseFloat(e.target.value) || 0)
                           }
                           placeholder="Qty"
-                          className="w-full rounded bg-slate-950 border border-slate-700 px-2 py-1 text-xs text-slate-200 text-right font-mono"
+                          className="w-full rounded bg-white border border-[#d9e2ec] px-2 py-1 text-xs text-[#102a43] text-right font-mono"
                         />
                       </div>
 
-                      <span className="text-xs font-mono text-cyan-400 w-24 text-right shrink-0">
+                      <span className="text-xs font-mono text-teal-800 w-24 text-right shrink-0">
                         {formatCurrency(lineCost, organization.currency_symbol)}
                       </span>
 
                       <button
                         type="button"
                         onClick={() => handleRemoveRecipeComponent(idx)}
-                        className="p-1 rounded text-rose-400 hover:bg-rose-950/40 cursor-pointer"
+                        className="p-1 rounded text-rose-600 hover:bg-rose-50 cursor-pointer"
                         title="Remove component"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -927,9 +927,9 @@ export const InventoryView: React.FC = () => {
                   );
                 })}
 
-                <div className="flex justify-between items-center text-xs font-semibold pt-1 border-t border-slate-800">
-                  <span className="text-slate-400">Total Material Cost per Job:</span>
-                  <span className="font-mono text-cyan-300">
+                <div className="flex justify-between items-center text-xs font-semibold pt-1 border-t border-[#d9e2ec]">
+                  <span className="text-[#627d98]">Total Material Cost per Job:</span>
+                  <span className="font-mono text-teal-800">
                     {formatCurrency(computedRecipeCost, organization.currency_symbol)}
                   </span>
                 </div>
@@ -937,7 +937,7 @@ export const InventoryView: React.FC = () => {
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#d9e2ec]">
             <Button
               type="button"
               variant="ghost"
@@ -945,7 +945,7 @@ export const InventoryView: React.FC = () => {
             >
               Cancel
             </Button>
-            <Button type="submit" variant="teal">
+            <Button type="submit" variant="primary">
               <Check className="h-4 w-4" />
               <span>Save Service</span>
             </Button>
@@ -963,7 +963,7 @@ export const InventoryView: React.FC = () => {
       >
         <form onSubmit={handleExecuteStockMovement} className="space-y-4 py-1">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+            <label className="block text-xs font-semibold text-[#102a43] mb-1.5">
               Movement Reason / Type
             </label>
             <select
@@ -974,7 +974,7 @@ export const InventoryView: React.FC = () => {
                   movement_type: e.target.value as StockMovement['movement_type'],
                 })
               }
-              className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-2 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
+              className="w-full rounded-[8px] bg-white border border-[#d9e2ec] px-3 py-2 text-xs text-[#102a43] focus:border-teal-700 focus:outline-none"
             >
               <option value="PURCHASE">Supplier Purchase / Stock In (Updates WAC)</option>
               <option value="ADJUSTMENT_INCREASE">Stock Audit Increase (+)</option>
@@ -1014,9 +1014,9 @@ export const InventoryView: React.FC = () => {
             />
           </div>
 
-          <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 text-xs flex justify-between font-mono">
-            <span className="text-slate-400">Total Valuation Impact:</span>
-            <span className="font-bold text-cyan-300">
+          <div className="p-3 rounded-[8px] bg-[#f5f7fa] border border-[#d9e2ec] text-xs flex justify-between font-mono">
+            <span className="text-[#627d98]">Total Valuation Impact:</span>
+            <span className="font-bold text-teal-800">
               {formatCurrency(
                 roundMoney(movementForm.quantity * movementForm.unit_cost),
                 organization.currency_symbol
@@ -1031,7 +1031,7 @@ export const InventoryView: React.FC = () => {
             onChange={(e) => setMovementForm({ ...movementForm, notes: e.target.value })}
           />
 
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#d9e2ec]">
             <Button
               type="button"
               variant="ghost"

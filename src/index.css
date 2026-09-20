@@ -65,77 +65,7 @@
   background: #829ab1;
 }
 
-/* Compatibility mapping for existing screen utility classes. */
-[class~="bg-slate-950"],
-[class~="bg-slate-950/95"],
-[class~="bg-slate-950/80"],
-[class~="bg-slate-950/70"] {
-  background-color: #f5f7fa !important;
-}
-[class~="bg-slate-900"],
-[class~="bg-slate-900/90"],
-[class~="bg-slate-900/80"],
-[class~="bg-slate-900/70"],
-[class~="bg-slate-900/60"] {
-  background-color: #ffffff !important;
-}
-[class~="bg-slate-800"],
-[class~="bg-slate-800/90"] {
-  background-color: #eef2f6 !important;
-}
-[class~="text-slate-100"],
-[class~="text-slate-200"] {
-  color: #102a43 !important;
-}
-[class~="text-slate-300"] {
-  color: #243b53 !important;
-}
-[class~="text-slate-400"],
-[class~="text-slate-500"] {
-  color: #627d98 !important;
-}
-[class~="text-slate-600"] {
-  color: #486581 !important;
-}
-[class~="border-slate-800"],
-[class~="border-slate-800/80"],
-[class~="border-slate-800/60"] {
-  border-color: #d9e2ec !important;
-}
-[class~="border-slate-700"],
-[class~="border-slate-700/60"] {
-  border-color: #bcccdc !important;
-}
-[class~="bg-indigo-600"] {
-  background-color: #0f766e !important;
-}
-[class~="text-indigo-400"],
-[class~="text-indigo-300"],
-[class~="text-cyan-400"] {
-  color: #0f766e !important;
-}
-[class~="bg-indigo-950/70"],
-[class~="bg-indigo-950/20"] {
-  background-color: var(--teal-soft) !important;
-}
-
-/* Quiet global surfaces. The app uses these classes extensively, so this
-   keeps older screens visually consistent while they retain their behavior. */
-[class*="shadow"] {
-  box-shadow: 0 1px 2px rgba(16, 42, 67, 0.06) !important;
-}
-[class*="rounded-xl"],
-[class*="rounded-lg"] {
-  border-radius: var(--radius) !important;
-}
-[class~="text-indigo-500"],
-[class~="text-cyan-500"] {
-  color: var(--teal) !important;
-}
-[class~="bg-indigo-500"],
-[class~="bg-cyan-600"] {
-  background-color: var(--teal) !important;
-}
+/* Input and interactive element normalization */
 input,
 select,
 textarea {

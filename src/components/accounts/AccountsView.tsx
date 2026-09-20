@@ -142,14 +142,14 @@ export const AccountsView: React.FC = () => {
       : transactions.filter((t) => t.account_id === selectedAccountId);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-slate-950 select-none">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-[#f5f7fa] select-none text-[#102a43]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#d9e2ec]">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-100">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#102a43]">
             Payment Accounts & Cash Drawer
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-[#627d98] mt-0.5">
             Liquid balances, cash box auditing, bank deposits, and inter-account transfers.
           </p>
         </div>
@@ -159,9 +159,8 @@ export const AccountsView: React.FC = () => {
             variant="secondary"
             size="sm"
             onClick={() => setIsTransferModalOpen(true)}
-            className="text-slate-200"
           >
-            <ArrowRightLeft className="h-4 w-4 text-cyan-400" />
+            <ArrowRightLeft className="h-4 w-4 text-teal-700" />
             <span>Transfer Funds</span>
           </Button>
 
@@ -189,35 +188,35 @@ export const AccountsView: React.FC = () => {
               onClick={() => setSelectedAccountId(acc.id)}
               className={`p-4 cursor-pointer transition-all border ${
                 selectedAccountId === acc.id
-                  ? 'border-cyan-500 bg-slate-900 shadow-md shadow-cyan-950/20'
-                  : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
+                  ? 'border-teal-700 bg-teal-50/40 shadow-sm'
+                  : 'border-[#d9e2ec] bg-white hover:border-[#bcccdc]'
               }`}
             >
               <div className="flex items-start justify-between mb-2">
-                <div className="p-2 rounded-lg bg-slate-950 border border-slate-800 text-cyan-400">
+                <div className="p-2 rounded-[8px] bg-[#f5f7fa] border border-[#d9e2ec] text-teal-800">
                   {isCash ? (
                     <Wallet className="h-4 w-4" />
                   ) : isBank ? (
                     <Building2 className="h-4 w-4" />
                   ) : (
-                    <Smartphone className="h-4 w-4 text-teal-400" />
+                    <Smartphone className="h-4 w-4 text-teal-700" />
                   )}
                 </div>
-                <Badge variant={isCash ? 'cyan' : isBank ? 'purple' : 'teal'} size="sm">
+                <Badge variant={isCash ? 'teal' : isBank ? 'slate' : 'emerald'} size="sm">
                   {acc.type}
                 </Badge>
               </div>
 
-              <h3 className="text-sm font-semibold text-slate-200 truncate">{acc.name}</h3>
+              <h3 className="text-sm font-semibold text-[#102a43] truncate">{acc.name}</h3>
               {acc.account_number && (
-                <p className="text-[10px] font-mono text-slate-500 truncate mt-0.5">
+                <p className="text-[10px] font-mono text-[#627d98] truncate mt-0.5">
                   #{acc.account_number}
                 </p>
               )}
 
-              <div className="mt-3 pt-2 border-t border-slate-800/80 flex items-baseline justify-between">
-                <span className="text-[10px] text-slate-400 font-mono">Current Balance</span>
-                <span className="text-base font-mono font-bold text-slate-100">
+              <div className="mt-3 pt-2 border-t border-[#d9e2ec] flex items-baseline justify-between">
+                <span className="text-[10px] text-[#627d98] font-mono">Current Balance</span>
+                <span className="text-base font-mono font-bold text-[#102a43]">
                   {formatCurrency(acc.current_balance, organization.currency_symbol)}
                 </span>
               </div>
@@ -230,17 +229,17 @@ export const AccountsView: React.FC = () => {
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-bold text-slate-200">Account Movement Ledger</h2>
+            <h2 className="text-sm font-bold text-[#102a43]">Account Movement Ledger</h2>
             {selectedAccountId !== 'ALL' && (
               <button
                 onClick={() => setSelectedAccountId('ALL')}
-                className="text-[11px] text-cyan-400 hover:underline cursor-pointer"
+                className="text-[11px] text-teal-700 hover:underline cursor-pointer"
               >
                 (View All Accounts)
               </button>
             )}
           </div>
-          <span className="text-xs text-slate-400 font-mono">
+          <span className="text-xs text-[#627d98] font-mono">
             {filteredTransactions.length} records
           </span>
         </div>
@@ -249,7 +248,7 @@ export const AccountsView: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-400 uppercase font-mono text-[10px]">
+                <tr className="border-b border-[#d9e2ec] bg-[#f5f7fa] text-[#627d98] uppercase font-mono text-[10px]">
                   <th className="py-3 px-4">Date</th>
                   <th className="py-3 px-3">Account</th>
                   <th className="py-3 px-3">Type</th>
@@ -258,14 +257,14 @@ export const AccountsView: React.FC = () => {
                   <th className="py-3 px-4 text-right">Balance After</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-sans">
+              <tbody className="divide-y divide-[#d9e2ec] font-sans">
                 {filteredTransactions.map((tx) => {
                   const isPositive = ['INCOME', 'TRANSFER_IN', 'ADJUSTMENT'].includes(tx.type);
 
                   return (
-                    <tr key={tx.id} className="hover:bg-slate-900/70 transition-colors">
-                      <td className="py-3 px-4 font-mono text-slate-400">{tx.date}</td>
-                      <td className="py-3 px-3 font-semibold text-slate-200">
+                    <tr key={tx.id} className="hover:bg-[#f5f7fa] transition-colors">
+                      <td className="py-3 px-4 font-mono text-[#627d98]">{tx.date}</td>
+                      <td className="py-3 px-3 font-semibold text-[#102a43]">
                         {accounts.find((a) => a.id === tx.account_id)?.name || 'Account'}
                       </td>
                       <td className="py-3 px-3">
@@ -275,21 +274,21 @@ export const AccountsView: React.FC = () => {
                               ? 'emerald'
                               : tx.type === 'EXPENSE'
                               ? 'amber'
-                              : 'cyan'
+                              : 'teal'
                           }
                           size="sm"
                         >
                           {tx.type}
                         </Badge>
                       </td>
-                      <td className="py-3 px-3 text-slate-300">{tx.description}</td>
+                      <td className="py-3 px-3 text-[#243b53]">{tx.description}</td>
                       <td className="py-3 px-3 text-right font-mono font-bold">
-                        <span className={isPositive ? 'text-emerald-400' : 'text-amber-400'}>
+                        <span className={isPositive ? 'text-emerald-700' : 'text-amber-700'}>
                           {isPositive ? `+` : `-`}
                           {formatCurrency(tx.amount, organization.currency_symbol)}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right font-mono text-slate-300">
+                      <td className="py-3 px-4 text-right font-mono text-[#243b53]">
                         {formatCurrency(tx.balance_after, organization.currency_symbol)}
                       </td>
                     </tr>
@@ -312,13 +311,13 @@ export const AccountsView: React.FC = () => {
         <form onSubmit={handleExecuteTransfer} className="space-y-4 py-1">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-[#102a43] mb-1.5">
                 From Account (Debit)
               </label>
               <select
                 value={fromAccountId}
                 onChange={(e) => setFromAccountId(e.target.value)}
-                className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-2 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
+                className="w-full rounded-[8px] bg-white border border-[#d9e2ec] px-3 py-2 text-xs text-[#102a43] focus:border-teal-700 focus:outline-none"
               >
                 {accounts.map((a) => (
                   <option key={a.id} value={a.id}>
@@ -329,13 +328,13 @@ export const AccountsView: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-[#102a43] mb-1.5">
                 To Account (Credit)
               </label>
               <select
                 value={toAccountId}
                 onChange={(e) => setToAccountId(e.target.value)}
-                className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-2 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
+                className="w-full rounded-[8px] bg-white border border-[#d9e2ec] px-3 py-2 text-xs text-[#102a43] focus:border-teal-700 focus:outline-none"
               >
                 {accounts.map((a) => (
                   <option key={a.id} value={a.id}>
@@ -355,7 +354,7 @@ export const AccountsView: React.FC = () => {
             placeholder="0.00"
             value={transferAmount}
             onChange={(e) => setTransferAmount(e.target.value)}
-            className="font-mono text-base font-bold text-cyan-300"
+            className="font-mono text-base font-bold text-teal-800"
           />
 
           <Input
@@ -365,7 +364,7 @@ export const AccountsView: React.FC = () => {
             onChange={(e) => setTransferNotes(e.target.value)}
           />
 
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#d9e2ec]">
             <Button
               type="button"
               variant="ghost"
@@ -401,7 +400,7 @@ export const AccountsView: React.FC = () => {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-[#102a43] mb-1.5">
                 Account Type
               </label>
               <select
@@ -409,7 +408,7 @@ export const AccountsView: React.FC = () => {
                 onChange={(e) =>
                   setAccForm({ ...accForm, type: e.target.value as PaymentAccount['type'] })
                 }
-                className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-2 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
+                className="w-full rounded-[8px] bg-white border border-[#d9e2ec] px-3 py-2 text-xs text-[#102a43] focus:border-teal-700 focus:outline-none"
               >
                 <option value="CASH">Cash Drawer</option>
                 <option value="BANK">Commercial Bank</option>
@@ -436,7 +435,7 @@ export const AccountsView: React.FC = () => {
             }
           />
 
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#d9e2ec]">
             <Button
               type="button"
               variant="ghost"

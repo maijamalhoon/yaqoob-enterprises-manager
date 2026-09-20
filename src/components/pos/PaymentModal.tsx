@@ -148,19 +148,19 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     >
       <div onKeyDown={handleKeyDown} className="space-y-4 py-1 select-none">
         {/* Top: Grand Total Highlight Card */}
-        <div className="p-4 rounded-xl bg-gradient-to-r from-slate-900 to-slate-950 border border-indigo-500/30 flex items-center justify-between shadow-lg">
+        <div className="p-4 rounded-[10px] bg-[#f5f7fa] border border-[#d9e2ec] flex items-center justify-between shadow-[0_1px_2px_rgba(16,42,67,0.04)]">
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+            <p className="text-xs font-semibold text-[#627d98] uppercase tracking-wider">
               Total Amount Payable
             </p>
-            <h1 className="text-2xl sm:text-3xl font-mono font-extrabold text-emerald-400 mt-0.5">
+            <h1 className="text-2xl sm:text-3xl font-mono font-extrabold text-teal-800 mt-0.5">
               {formatCurrency(grandTotal, currencySymbol)}
             </h1>
           </div>
 
           <div className="text-right">
-            <span className="text-xs text-slate-400 block">Customer</span>
-            <span className="text-sm font-semibold text-slate-200">
+            <span className="text-xs text-[#627d98] block">Customer</span>
+            <span className="text-sm font-semibold text-[#102a43]">
               {selectedCustomer ? selectedCustomer.name : 'Walk-in Customer'}
             </span>
           </div>
@@ -169,7 +169,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         {/* Customer Selector */}
         <div className="flex items-center gap-2">
           <div className="flex-1">
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-[#243b53] mb-1">
               Select Customer (Optional)
             </label>
             <select
@@ -178,7 +178,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                 const found = customers.find((c) => c.id === e.target.value) || null;
                 onSelectCustomer(found);
               }}
-              className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-2 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none"
+              className="w-full rounded-[10px] bg-white border border-[#d9e2ec] px-3 py-2 text-xs text-[#102a43] focus:border-teal-600 focus:outline-none"
             >
               <option value="">Walk-in Customer (General Public)</option>
               {customers.map((c) => (
@@ -191,17 +191,17 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
           {/* Mode Switch: Single vs Split */}
           <div className="w-48">
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
+            <label className="block text-xs font-semibold text-[#243b53] mb-1">
               Payment Structure
             </label>
-            <div className="flex rounded-lg border border-slate-700 bg-slate-900 p-0.5 text-xs">
+            <div className="flex rounded-[10px] border border-[#d9e2ec] bg-[#f5f7fa] p-0.5 text-xs">
               <button
                 type="button"
                 onClick={() => setPaymentMode('single')}
-                className={`flex-1 py-1.5 rounded-md font-medium transition-colors cursor-pointer ${
+                className={`flex-1 py-1.5 rounded-[8px] font-medium transition-colors cursor-pointer ${
                   paymentMode === 'single'
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-teal-700 text-white shadow-xs'
+                    : 'text-[#627d98] hover:text-[#102a43]'
                 }`}
               >
                 Single Account
@@ -209,10 +209,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               <button
                 type="button"
                 onClick={() => setPaymentMode('split')}
-                className={`flex-1 py-1.5 rounded-md font-medium transition-colors cursor-pointer ${
+                className={`flex-1 py-1.5 rounded-[8px] font-medium transition-colors cursor-pointer ${
                   paymentMode === 'split'
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'bg-teal-700 text-white shadow-xs'
+                    : 'text-[#627d98] hover:text-[#102a43]'
                 }`}
               >
                 Split Tender
@@ -225,7 +225,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
         {paymentMode === 'single' && (
           <div className="space-y-3.5">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-[#243b53] mb-1.5">
                 Payment Account / Method
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -236,17 +236,17 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                       key={acc.id}
                       type="button"
                       onClick={() => setSelectedAccountId(acc.id)}
-                      className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
+                      className={`p-2.5 rounded-[10px] border text-left transition-all cursor-pointer ${
                         isSelected
-                          ? 'border-indigo-500 bg-indigo-500/15 text-indigo-200 shadow-sm'
-                          : 'border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700'
+                          ? 'border-teal-700 bg-teal-50/50 text-teal-900 shadow-xs'
+                          : 'border-[#d9e2ec] bg-white text-[#243b53] hover:border-teal-400 hover:bg-[#f5f7fa]'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-semibold truncate">{acc.name}</span>
-                        {isSelected && <Check className="h-3.5 w-3.5 text-indigo-400 shrink-0" />}
+                        {isSelected && <Check className="h-3.5 w-3.5 text-teal-700 shrink-0" />}
                       </div>
-                      <p className="text-[10px] text-slate-400 font-mono">
+                      <p className="text-[10px] text-[#627d98] font-mono">
                         Bal: {currencySymbol} {acc.current_balance}
                       </p>
                     </button>
@@ -264,42 +264,42 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                   step="any"
                   value={amountPaid}
                   onChange={(e) => setAmountPaid(parseFloat(e.target.value) || 0)}
-                  className="font-mono text-base font-bold text-slate-100"
+                  className="font-mono text-base font-bold text-[#102a43]"
                 />
                 {/* Quick denomination chips */}
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   <button
                     type="button"
                     onClick={() => handleQuickCash(grandTotal)}
-                    className="px-2 py-1 text-[11px] font-mono font-medium rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+                    className="px-2 py-1 text-[11px] font-mono font-medium rounded-[6px] bg-[#f5f7fa] hover:bg-[#eef2f6] text-[#243b53] border border-[#d9e2ec]"
                   >
                     Exact
                   </button>
                   <button
                     type="button"
                     onClick={() => handleQuickCash(Math.ceil(grandTotal / 50) * 50)}
-                    className="px-2 py-1 text-[11px] font-mono font-medium rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+                    className="px-2 py-1 text-[11px] font-mono font-medium rounded-[6px] bg-[#f5f7fa] hover:bg-[#eef2f6] text-[#243b53] border border-[#d9e2ec]"
                   >
                     Round 50
                   </button>
                   <button
                     type="button"
                     onClick={() => handleQuickCash(Math.ceil(grandTotal / 100) * 100)}
-                    className="px-2 py-1 text-[11px] font-mono font-medium rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+                    className="px-2 py-1 text-[11px] font-mono font-medium rounded-[6px] bg-[#f5f7fa] hover:bg-[#eef2f6] text-[#243b53] border border-[#d9e2ec]"
                   >
                     Round 100
                   </button>
                   <button
                     type="button"
                     onClick={() => handleQuickCash(Math.ceil(grandTotal / 500) * 500)}
-                    className="px-2 py-1 text-[11px] font-mono font-medium rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+                    className="px-2 py-1 text-[11px] font-mono font-medium rounded-[6px] bg-[#f5f7fa] hover:bg-[#eef2f6] text-[#243b53] border border-[#d9e2ec]"
                   >
                     Round 500
                   </button>
                   <button
                     type="button"
                     onClick={() => handleQuickCash(Math.ceil(grandTotal / 1000) * 1000)}
-                    className="px-2 py-1 text-[11px] font-mono font-medium rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+                    className="px-2 py-1 text-[11px] font-mono font-medium rounded-[6px] bg-[#f5f7fa] hover:bg-[#eef2f6] text-[#243b53] border border-[#d9e2ec]"
                   >
                     Round 1000
                   </button>
@@ -307,16 +307,16 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               </div>
 
               {/* Change calculation display */}
-              <div className="p-3.5 rounded-lg bg-slate-950 border border-slate-800 flex flex-col justify-center">
-                <span className="text-xs text-slate-400">Change Due to Customer</span>
+              <div className="p-3.5 rounded-[10px] bg-[#f5f7fa] border border-[#d9e2ec] flex flex-col justify-center">
+                <span className="text-xs text-[#627d98]">Change Due to Customer</span>
                 <span
                   className={`text-xl sm:text-2xl font-mono font-bold mt-1 ${
-                    changeDue > 0 ? 'text-emerald-400' : 'text-slate-300'
+                    changeDue > 0 ? 'text-emerald-700' : 'text-[#243b53]'
                   }`}
                 >
                   {formatCurrency(changeDue, currencySymbol)}
                 </span>
-                <span className="text-[11px] text-slate-400 mt-1">
+                <span className="text-[11px] text-[#627d98] mt-1">
                   {amountPaid < grandTotal
                     ? `⚠️ Short by ${formatCurrency(grandTotal - amountPaid, currencySymbol)}`
                     : 'Full payment received'}
@@ -328,18 +328,18 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
         {/* Split Payment Mode */}
         {paymentMode === 'split' && (
-          <div className="space-y-3 p-3 rounded-lg bg-slate-950 border border-slate-800">
-            <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-800">
-              <span className="font-semibold text-slate-200">Allocate Split Tender</span>
+          <div className="space-y-3 p-3 rounded-[10px] bg-[#f5f7fa] border border-[#d9e2ec]">
+            <div className="flex items-center justify-between text-xs pb-2 border-b border-[#d9e2ec]">
+              <span className="font-semibold text-[#102a43]">Allocate Split Tender</span>
               <div className="flex items-center gap-2 font-mono">
-                <span className="text-slate-400">Remaining:</span>
+                <span className="text-[#627d98]">Remaining:</span>
                 <span
                   className={`font-bold ${
                     splitRemaining === 0
-                      ? 'text-emerald-400'
+                      ? 'text-emerald-700'
                       : splitRemaining > 0
-                      ? 'text-amber-400'
-                      : 'text-rose-400'
+                      ? 'text-amber-700'
+                      : 'text-rose-700'
                   }`}
                 >
                   {formatCurrency(splitRemaining, currencySymbol)}
@@ -351,11 +351,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               {accounts.map((acc) => (
                 <div
                   key={acc.id}
-                  className="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-slate-800"
+                  className="flex items-center justify-between p-2 rounded-[8px] bg-white border border-[#d9e2ec]"
                 >
                   <div className="truncate pr-2">
-                    <p className="text-xs font-semibold text-slate-200 truncate">{acc.name}</p>
-                    <p className="text-[10px] text-slate-400 font-mono">
+                    <p className="text-xs font-semibold text-[#102a43] truncate">{acc.name}</p>
+                    <p className="text-[10px] text-[#627d98] font-mono">
                       Bal: {currencySymbol} {acc.current_balance}
                     </p>
                   </div>
@@ -367,7 +367,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
                     onChange={(e) =>
                       handleSplitAmountChange(acc.id, parseFloat(e.target.value) || 0)
                     }
-                    className="w-24 px-2 py-1 rounded bg-slate-950 border border-slate-700 text-xs font-mono font-bold text-slate-100 text-right focus:border-indigo-500 focus:outline-none"
+                    className="w-24 px-2 py-1 rounded-[6px] bg-white border border-[#d9e2ec] text-xs font-mono font-bold text-[#102a43] text-right focus:border-teal-600 focus:outline-none"
                   />
                 </div>
               ))}
@@ -377,7 +377,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
         {/* Notes */}
         <div>
-          <label className="block text-xs font-semibold text-slate-300 mb-1">
+          <label className="block text-xs font-semibold text-[#243b53] mb-1">
             Order Notes (Optional)
           </label>
           <input
@@ -385,12 +385,12 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             placeholder="e.g. Urgent passport photo delivery, urgent typing file"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="w-full rounded-lg bg-slate-900 border border-slate-700/80 px-3 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none"
+            className="w-full rounded-[10px] bg-white border border-[#d9e2ec] px-3 py-1.5 text-xs text-[#102a43] placeholder:text-[#627d98] focus:border-teal-600 focus:outline-none"
           />
         </div>
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+        <div className="flex items-center justify-between pt-3 border-t border-[#d9e2ec]">
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>
             Cancel
           </Button>
@@ -402,9 +402,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               size="md"
               isLoading={isLoading}
               onClick={() => handleSubmit(true)}
-              className="text-slate-200"
+              className="text-[#243b53]"
             >
-              <Printer className="h-4 w-4 text-indigo-400" />
+              <Printer className="h-4 w-4 text-teal-700" />
               <span>Save & Print</span>
             </Button>
 

@@ -42,7 +42,7 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#102a43]/40 backdrop-blur-xs animate-in fade-in duration-150">
       <div
         className="fixed inset-0"
         onClick={onClose}
@@ -52,18 +52,18 @@ export const Modal: React.FC<ModalProps> = ({
         role="dialog"
         aria-modal="true"
         className={cn(
-          'relative w-full rounded-xl border border-slate-800/90 bg-slate-900/95 backdrop-blur-xl shadow-2xl shadow-black/90 flex flex-col max-h-[90vh] z-10 animate-in zoom-in-95 duration-150',
+          'relative w-full rounded-[10px] border border-[#d9e2ec] bg-white shadow-xl flex flex-col max-h-[90vh] z-10 animate-in zoom-in-95 duration-150',
           widthClasses[maxWidth]
         )}
       >
-        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4">
+        <div className="flex items-center justify-between border-b border-[#d9e2ec] px-6 py-4">
           <div>
-            <h2 className="text-base font-semibold text-slate-100">{title}</h2>
-            {description && <p className="text-xs text-slate-400 mt-0.5">{description}</p>}
+            <h2 className="text-base font-semibold text-[#102a43]">{title}</h2>
+            {description && <p className="text-xs text-[#627d98] mt-0.5">{description}</p>}
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors cursor-pointer"
+            className="rounded-[8px] p-1.5 text-[#627d98] hover:bg-[#eef2f6] hover:text-[#102a43] transition-colors cursor-pointer"
             aria-label="Close dialog"
           >
             <X className="h-5 w-5" />

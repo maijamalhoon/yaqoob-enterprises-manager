@@ -127,36 +127,36 @@ export const CommandPalette: React.FC = () => {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-black/75 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-[#102a43]/40 backdrop-blur-xs">
       <div
         className="fixed inset-0"
         onClick={() => setIsCommandPaletteOpen(false)}
         aria-hidden="true"
       />
-      <div className="relative w-full max-w-xl rounded-xl border border-slate-800/90 bg-slate-900/95 backdrop-blur-xl shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-100">
-        <div className="flex items-center px-4 border-b border-slate-800">
-          <Search className="h-4 w-4 text-indigo-400 shrink-0" />
+      <div className="relative w-full max-w-xl rounded-[10px] border border-[#d9e2ec] bg-white shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-100">
+        <div className="flex items-center px-4 border-b border-[#d9e2ec]">
+          <Search className="h-4 w-4 text-teal-700 shrink-0" />
           <input
             autoFocus
             type="text"
             placeholder="Type a command, product, service, customer, or invoice..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full bg-transparent px-3 py-3.5 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none font-sans"
+            className="w-full bg-transparent px-3 py-3.5 text-sm text-[#102a43] placeholder:text-[#627d98] focus:outline-none font-sans"
           />
           <button
             onClick={() => setIsCommandPaletteOpen(false)}
-            className="p-1 text-slate-400 hover:text-slate-200 cursor-pointer"
+            className="p-1 text-[#627d98] hover:text-[#102a43] cursor-pointer"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="max-h-96 overflow-y-auto p-2 divide-y divide-slate-800/60">
+        <div className="max-h-96 overflow-y-auto p-2 divide-y divide-[#e6edf3]">
           {/* Quick Page Navigation */}
           {!query && (
             <div className="p-2">
-              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+              <p className="text-[10px] font-semibold text-[#627d98] uppercase tracking-wider mb-2">
                 Quick Navigation
               </p>
               <div className="grid grid-cols-2 gap-1.5">
@@ -166,9 +166,9 @@ export const CommandPalette: React.FC = () => {
                     <button
                       key={page.view}
                       onClick={() => navigateTo(page.view)}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-300 hover:bg-slate-800/70 hover:text-indigo-300 transition-colors text-left cursor-pointer"
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-[10px] text-xs font-medium text-[#243b53] hover:bg-[#f5f7fa] hover:text-teal-800 transition-colors text-left cursor-pointer"
                     >
-                      <Icon className="h-3.5 w-3.5 text-slate-400" />
+                      <Icon className="h-3.5 w-3.5 text-[#627d98]" />
                       <span>{page.label}</span>
                     </button>
                   );
@@ -182,25 +182,25 @@ export const CommandPalette: React.FC = () => {
             <div className="space-y-3 p-1">
               {filteredProducts.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-1">
+                  <p className="text-[10px] font-semibold text-[#627d98] uppercase tracking-wider px-2 py-1">
                     Products
                   </p>
                   {filteredProducts.map((p) => (
                     <div
                       key={p.id}
                       onClick={() => navigateTo("inventory")}
-                      className="flex items-center justify-between px-3 py-2 rounded-lg text-xs hover:bg-slate-800/70 cursor-pointer transition-colors"
+                      className="flex items-center justify-between px-3 py-2 rounded-[10px] text-xs hover:bg-[#f5f7fa] cursor-pointer transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        <Boxes className="h-3.5 w-3.5 text-indigo-400" />
-                        <span className="text-slate-200 font-medium">
+                        <Boxes className="h-3.5 w-3.5 text-teal-700" />
+                        <span className="text-[#102a43] font-medium">
                           {p.name}
                         </span>
-                        <span className="text-[10px] font-mono text-slate-400">
+                        <span className="text-[10px] font-mono text-[#627d98]">
                           {p.sku}
                         </span>
                       </div>
-                      <span className="font-mono font-medium text-indigo-300">
+                      <span className="font-mono font-medium text-teal-700">
                         {organization.currency_symbol} {p.selling_price}
                       </span>
                     </div>
@@ -210,22 +210,22 @@ export const CommandPalette: React.FC = () => {
 
               {filteredServices.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1">
+                  <p className="text-[10px] font-bold text-[#627d98] uppercase tracking-wider px-2 py-1">
                     Services
                   </p>
                   {filteredServices.map((s) => (
                     <div
                       key={s.id}
                       onClick={() => navigateTo("pos")}
-                      className="flex items-center justify-between px-3 py-2 rounded-lg text-xs hover:bg-slate-800 cursor-pointer"
+                      className="flex items-center justify-between px-3 py-2 rounded-[10px] text-xs hover:bg-[#f5f7fa] cursor-pointer"
                     >
                       <div className="flex items-center gap-2">
-                        <Zap className="h-3.5 w-3.5 text-emerald-400" />
-                        <span className="text-slate-200 font-medium">
+                        <Zap className="h-3.5 w-3.5 text-teal-700" />
+                        <span className="text-[#102a43] font-medium">
                           {s.name}
                         </span>
                       </div>
-                      <span className="font-mono text-emerald-300">
+                      <span className="font-mono font-medium text-teal-700">
                         {organization.currency_symbol} {s.selling_price}
                       </span>
                     </div>
@@ -235,27 +235,27 @@ export const CommandPalette: React.FC = () => {
 
               {filteredCustomers.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1">
+                  <p className="text-[10px] font-bold text-[#627d98] uppercase tracking-wider px-2 py-1">
                     Customers
                   </p>
                   {filteredCustomers.map((c) => (
                     <div
                       key={c.id}
                       onClick={() => navigateTo("customers")}
-                      className="flex items-center justify-between px-3 py-2 rounded-lg text-xs hover:bg-slate-800 cursor-pointer"
+                      className="flex items-center justify-between px-3 py-2 rounded-[10px] text-xs hover:bg-[#f5f7fa] cursor-pointer"
                     >
                       <div className="flex items-center gap-2">
-                        <Users className="h-3.5 w-3.5 text-purple-400" />
-                        <span className="text-slate-200 font-medium">
+                        <Users className="h-3.5 w-3.5 text-teal-700" />
+                        <span className="text-[#102a43] font-medium">
                           {c.name}
                         </span>
                         {c.phone && (
-                          <span className="text-[11px] text-slate-400 font-mono">
+                          <span className="text-[11px] text-[#627d98] font-mono">
                             {c.phone}
                           </span>
                         )}
                       </div>
-                      <ArrowRight className="h-3.5 w-3.5 text-slate-500" />
+                      <ArrowRight className="h-3.5 w-3.5 text-[#627d98]" />
                     </div>
                   ))}
                 </div>
@@ -263,7 +263,7 @@ export const CommandPalette: React.FC = () => {
 
               {filteredInvoices.length > 0 && (
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1">
+                  <p className="text-[10px] font-bold text-[#627d98] uppercase tracking-wider px-2 py-1">
                     Invoices
                   </p>
                   {filteredInvoices.map((inv) => (
@@ -273,18 +273,18 @@ export const CommandPalette: React.FC = () => {
                         setActiveReceiptSale(inv);
                         setIsCommandPaletteOpen(false);
                       }}
-                      className="flex items-center justify-between px-3 py-2 rounded-lg text-xs hover:bg-slate-800 cursor-pointer"
+                      className="flex items-center justify-between px-3 py-2 rounded-[10px] text-xs hover:bg-[#f5f7fa] cursor-pointer"
                     >
                       <div className="flex items-center gap-2">
-                        <FileText className="h-3.5 w-3.5 text-amber-400" />
-                        <span className="font-mono font-semibold text-slate-200">
+                        <FileText className="h-3.5 w-3.5 text-amber-600" />
+                        <span className="font-mono font-semibold text-[#102a43]">
                           #{inv.invoice_number}
                         </span>
-                        <span className="text-slate-400">
+                        <span className="text-[#627d98]">
                           {inv.customer_name}
                         </span>
                       </div>
-                      <span className="font-mono font-medium text-emerald-300">
+                      <span className="font-mono font-medium text-emerald-700">
                         {organization.currency_symbol} {inv.grand_total}
                       </span>
                     </div>
@@ -296,7 +296,7 @@ export const CommandPalette: React.FC = () => {
                 filteredServices.length === 0 &&
                 filteredCustomers.length === 0 &&
                 filteredInvoices.length === 0 && (
-                  <div className="py-8 text-center text-xs text-slate-400">
+                  <div className="py-8 text-center text-xs text-[#627d98]">
                     No results found for &ldquo;{query}&rdquo;
                   </div>
                 )}
@@ -304,7 +304,7 @@ export const CommandPalette: React.FC = () => {
           )}
         </div>
 
-        <div className="bg-slate-950 px-4 py-2 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+        <div className="bg-[#f5f7fa] px-4 py-2 border-t border-[#d9e2ec] flex items-center justify-between text-[11px] text-[#627d98]">
           <span>Navigate with mouse or shortcuts</span>
           <div className="flex items-center gap-2 font-mono">
             <span>Esc to close</span>

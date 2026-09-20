@@ -113,13 +113,13 @@ export const SupabaseConfigModal: React.FC = () => {
     >
       <div className="space-y-4 py-2">
         {/* Navigation Tabs */}
-        <div className="flex border-b border-slate-800 text-xs">
+        <div className="flex border-b border-[#d9e2ec] text-xs">
           <button
             onClick={() => setActiveTab("CONFIG")}
             className={`pb-2 px-3 font-medium transition-colors cursor-pointer ${
               activeTab === "CONFIG" ?
-                "border-b-2 border-cyan-500 text-cyan-400 font-bold"
-              : "text-slate-400 hover:text-slate-200"
+                "border-b-2 border-teal-700 text-teal-800 font-semibold"
+              : "text-[#627d98] hover:text-[#102a43]"
             }`}
           >
             Cloud Credentials
@@ -128,13 +128,13 @@ export const SupabaseConfigModal: React.FC = () => {
             onClick={() => setActiveTab("SYNC")}
             className={`pb-2 px-3 font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
               activeTab === "SYNC" ?
-                "border-b-2 border-cyan-500 text-cyan-400 font-bold"
-              : "text-slate-400 hover:text-slate-200"
+                "border-b-2 border-teal-700 text-teal-800 font-semibold"
+              : "text-[#627d98] hover:text-[#102a43]"
             }`}
           >
             <span>Sync Queue & Diagnostics</span>
             {syncStatus.pendingCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500/20 text-amber-400 font-mono">
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-50 text-amber-700 border border-amber-200 font-mono">
                 {syncStatus.pendingCount}
               </span>
             )}
@@ -144,16 +144,16 @@ export const SupabaseConfigModal: React.FC = () => {
         {activeTab === "CONFIG" && (
           <div className="space-y-4">
             {/* Connection status banner */}
-            <div className="flex items-start gap-3 p-3.5 rounded-lg bg-slate-950 border border-slate-800">
+            <div className="flex items-start gap-3 p-3.5 rounded-[10px] bg-[#f5f7fa] border border-[#d9e2ec]">
               {isSupabaseReady ?
-                <Cloud className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
-              : <Database className="h-5 w-5 text-cyan-400 shrink-0 mt-0.5" />}
+                <Cloud className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+              : <Database className="h-5 w-5 text-teal-700 shrink-0 mt-0.5" />}
               <div className="text-xs space-y-1 text-left">
-                <p className="font-semibold text-slate-200">
+                <p className="font-semibold text-[#102a43]">
                   Current Storage Mode:{" "}
                   <span
                     className={
-                      isSupabaseReady ? "text-emerald-400" : "text-cyan-400"
+                      isSupabaseReady ? "text-emerald-700" : "text-teal-700"
                     }
                   >
                     {isSupabaseReady ?
@@ -161,7 +161,7 @@ export const SupabaseConfigModal: React.FC = () => {
                     : "Offline-First Local Store (Active)"}
                   </span>
                 </p>
-                <p className="text-slate-400 leading-relaxed">
+                <p className="text-[#627d98] leading-relaxed">
                   {isSupabaseReady ?
                     "Completed business operations are queued locally and synchronized to Supabase when the authenticated workspace is cloud-compatible."
                   : "The application operates offline. Configure a Supabase project to enable authenticated cloud synchronization."
@@ -186,21 +186,21 @@ export const SupabaseConfigModal: React.FC = () => {
                 onChange={(e) => setKey(e.target.value)}
               />
 
-              <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800 text-[11px] text-slate-400 space-y-1">
-                <div className="flex items-center gap-1.5 text-slate-300 font-semibold">
-                  <ShieldCheck className="h-4 w-4 text-cyan-400" />
+              <div className="p-3 rounded-[10px] bg-[#f5f7fa] border border-[#d9e2ec] text-[11px] text-[#627d98] space-y-1">
+                <div className="flex items-center gap-1.5 text-[#243b53] font-semibold">
+                  <ShieldCheck className="h-4 w-4 text-teal-700" />
                   <span>Security & Principle of Minimum Privilege</span>
                 </div>
                 <p>
                   Only public/publishable credentials may be entered. The
                   privileged{" "}
-                  <code className="text-rose-400 font-mono">service_role</code>{" "}
+                  <code className="text-rose-700 font-mono">service_role</code>{" "}
                   secret key must never be entered or distributed with client
                   applications.
                 </p>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#d9e2ec]">
                 <Button
                   type="button"
                   variant="ghost"
@@ -211,7 +211,7 @@ export const SupabaseConfigModal: React.FC = () => {
                 <Button type="submit" variant="primary">
                   {saved ?
                     <>
-                      <CheckCircle2 className="h-4 w-4 text-emerald-400" />{" "}
+                      <CheckCircle2 className="h-4 w-4 text-white" />{" "}
                       Saved!
                     </>
                   : "Save & Connect"}
@@ -225,38 +225,38 @@ export const SupabaseConfigModal: React.FC = () => {
           <div className="space-y-4">
             {/* Live Status Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-              <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
-                <span className="text-[10px] text-slate-400 uppercase font-mono block">
+              <div className="p-3 rounded-[10px] bg-[#f5f7fa] border border-[#d9e2ec]">
+                <span className="text-[10px] text-[#627d98] uppercase font-mono block">
                   Network Connectivity
                 </span>
                 <div className="flex items-center gap-1.5 mt-1 font-bold text-xs">
                   {syncStatus.isOnline ?
                     <>
-                      <Wifi className="h-3.5 w-3.5 text-emerald-400" />
-                      <span className="text-emerald-400">ONLINE</span>
+                      <Wifi className="h-3.5 w-3.5 text-emerald-600" />
+                      <span className="text-emerald-700">ONLINE</span>
                     </>
                   : <>
-                      <WifiOff className="h-3.5 w-3.5 text-rose-400" />
-                      <span className="text-rose-400">OFFLINE</span>
+                      <WifiOff className="h-3.5 w-3.5 text-rose-600" />
+                      <span className="text-rose-700">OFFLINE</span>
                     </>
                   }
                 </div>
               </div>
 
-              <div className="p-3 rounded-lg bg-slate-950 border border-slate-800">
-                <span className="text-[10px] text-slate-400 uppercase font-mono block">
+              <div className="p-3 rounded-[10px] bg-[#f5f7fa] border border-[#d9e2ec]">
+                <span className="text-[10px] text-[#627d98] uppercase font-mono block">
                   Pending Offline Queue
                 </span>
-                <p className="text-sm font-bold font-mono text-cyan-400 mt-1">
+                <p className="text-sm font-bold font-mono text-teal-700 mt-1">
                   {syncStatus.pendingCount} Record(s)
                 </p>
               </div>
 
-              <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 col-span-2 sm:col-span-1">
-                <span className="text-[10px] text-slate-400 uppercase font-mono block">
+              <div className="p-3 rounded-[10px] bg-[#f5f7fa] border border-[#d9e2ec] col-span-2 sm:col-span-1">
+                <span className="text-[10px] text-[#627d98] uppercase font-mono block">
                   Last Cloud Sync
                 </span>
-                <p className="text-xs font-mono text-slate-300 mt-1 truncate">
+                <p className="text-xs font-mono text-[#243b53] mt-1 truncate">
                   {syncStatus.lastSyncTime ?
                     formatDateTime(syncStatus.lastSyncTime)
                   : "Never"}
@@ -265,12 +265,12 @@ export const SupabaseConfigModal: React.FC = () => {
             </div>
 
             {/* Sync Now Action */}
-            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-900 border border-slate-800">
+            <div className="flex items-center justify-between p-3 rounded-[10px] bg-[#f5f7fa] border border-[#d9e2ec]">
               <div className="text-xs">
-                <p className="font-semibold text-slate-200">
+                <p className="font-semibold text-[#102a43]">
                   Force Instant Cloud Synchronization
                 </p>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-[11px] text-[#627d98]">
                   Drain pending local changes to remote PostgreSQL with
                   idempotent deduplication.
                 </p>
@@ -291,30 +291,30 @@ export const SupabaseConfigModal: React.FC = () => {
 
             {/* Sync Log History */}
             <div className="space-y-1.5">
-              <span className="text-xs font-semibold text-slate-300 block">
+              <span className="text-xs font-semibold text-[#243b53] block">
                 Recent Sync Events
               </span>
-              <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950 p-2 text-[11px] space-y-1.5">
+              <div className="max-h-48 overflow-y-auto rounded-[10px] border border-[#d9e2ec] bg-white p-2 text-[11px] space-y-1.5">
                 {syncLogs.length === 0 ?
-                  <p className="text-slate-500 text-center py-4 italic">
+                  <p className="text-[#627d98] text-center py-4 italic">
                     No sync events logged yet.
                   </p>
                 : syncLogs.map((log) => (
                     <div
                       key={log.id}
-                      className="flex items-center justify-between p-1.5 rounded bg-slate-900/60 border border-slate-800/60"
+                      className="flex items-center justify-between p-1.5 rounded-[8px] bg-[#f5f7fa] border border-[#d9e2ec]"
                     >
                       <div className="flex items-center gap-2">
-                        <Activity className="h-3 w-3 text-cyan-400" />
-                        <span className="text-slate-300 font-mono font-medium">
+                        <Activity className="h-3 w-3 text-teal-700" />
+                        <span className="text-[#243b53] font-mono font-medium">
                           {log.sync_type}
                         </span>
-                        <span className="text-slate-500">•</span>
-                        <span className="text-slate-400">
+                        <span className="text-[#627d98]">•</span>
+                        <span className="text-[#627d98]">
                           Pushed {log.records_pushed}
                         </span>
                       </div>
-                      <span className="text-[10px] font-mono text-slate-500">
+                      <span className="text-[10px] font-mono text-[#627d98]">
                         {formatDateTime(log.created_at)}
                       </span>
                     </div>
@@ -323,7 +323,7 @@ export const SupabaseConfigModal: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-slate-800">
+            <div className="flex justify-end pt-2 border-t border-[#d9e2ec]">
               <Button
                 type="button"
                 variant="ghost"

@@ -99,12 +99,12 @@ export const ReportsView: React.FC = () => {
 
   if (!role || !hasPermission(role, "VIEW_REPORTS_PL")) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-slate-50 p-6">
-        <div className="max-w-md rounded-xl border border-slate-200 bg-white p-6 text-center">
-          <h1 className="text-lg font-semibold text-slate-900">
+      <div className="flex-1 flex items-center justify-center bg-[#f5f7fa] p-6">
+        <div className="max-w-md rounded-[10px] border border-[#d9e2ec] bg-white p-6 text-center">
+          <h1 className="text-lg font-semibold text-[#102a43]">
             Reports access required
           </h1>
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-2 text-sm text-[#627d98]">
             Your authenticated role does not have permission to view financial
             reports.
           </p>
@@ -467,14 +467,14 @@ export const ReportsView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-slate-950 select-none text-slate-100">
+    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5 bg-[#f5f7fa] select-none text-[#102a43]">
       {/* Header Bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-800 no-print">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-[#d9e2ec] no-print">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-100">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#102a43]">
             Enterprise Financial & Operational Reports
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p className="text-xs text-[#627d98] mt-0.5">
             Audit-reconciled statements, stock valuation, and cashier
             performance for {organization.name}.
           </p>
@@ -483,16 +483,16 @@ export const ReportsView: React.FC = () => {
         {/* Date Period Controls & Actions */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Period Selector Tabs */}
-          <div className="flex rounded-lg border border-slate-800 bg-slate-900 p-0.5 text-xs">
+          <div className="flex rounded-[10px] border border-[#d9e2ec] bg-[#f5f7fa] p-0.5 text-xs">
             {(["TODAY", "WEEK", "MONTH", "YEAR", "ALL", "CUSTOM"] as const).map(
               (p) => (
                 <button
                   key={p}
                   onClick={() => setPeriod(p)}
-                  className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                  className={`px-2.5 py-1 rounded-[8px] font-medium transition-colors cursor-pointer ${
                     period === p ?
-                      "bg-cyan-600 text-white shadow-xs font-semibold"
-                    : "text-slate-400 hover:text-slate-200"
+                      "bg-teal-700 text-white shadow-xs font-semibold"
+                    : "text-[#627d98] hover:text-[#102a43]"
                   }`}
                 >
                   {p === "TODAY" ?
@@ -513,19 +513,19 @@ export const ReportsView: React.FC = () => {
 
           {/* Custom Date Inputs if CUSTOM selected */}
           {period === "CUSTOM" && (
-            <div className="flex items-center gap-1.5 text-xs bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+            <div className="flex items-center gap-1.5 text-xs bg-white px-2 py-1 rounded-[8px] border border-[#d9e2ec]">
               <input
                 type="date"
                 value={customStartDate}
                 onChange={(e) => setCustomStartDate(e.target.value)}
-                className="bg-transparent border-none text-slate-200 text-xs focus:outline-none"
+                className="bg-transparent border-none text-[#102a43] text-xs focus:outline-none"
               />
-              <span className="text-slate-500">to</span>
+              <span className="text-[#627d98]">to</span>
               <input
                 type="date"
                 value={customEndDate}
                 onChange={(e) => setCustomEndDate(e.target.value)}
-                className="bg-transparent border-none text-slate-200 text-xs focus:outline-none"
+                className="bg-transparent border-none text-[#102a43] text-xs focus:outline-none"
               />
             </div>
           )}
@@ -543,7 +543,7 @@ export const ReportsView: React.FC = () => {
       </div>
 
       {/* Primary Navigation Tabs for Reports */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 border-b border-slate-800/80 no-print text-xs">
+      <div className="flex gap-1.5 overflow-x-auto pb-1 border-b border-[#d9e2ec] no-print text-xs">
         {[
           { id: "PL", label: "Profit & Loss (P&L)", icon: BarChart3 },
           { id: "SALES", label: "Sales & Invoices", icon: TrendingUp },
@@ -568,10 +568,10 @@ export const ReportsView: React.FC = () => {
                 setActiveTab(tab.id as ReportTab);
                 setSearchQuery("");
               }}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-colors cursor-pointer ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-[8px] font-medium whitespace-nowrap transition-colors cursor-pointer ${
                 isActive ?
-                  "bg-cyan-600/20 text-cyan-400 border border-cyan-500/40 font-semibold"
-                : "text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-transparent"
+                  "bg-teal-50 text-teal-800 border border-teal-200 font-semibold"
+                : "text-[#627d98] hover:text-[#102a43] hover:bg-[#f5f7fa] border border-transparent"
               }`}
             >
               <Icon className="h-3.5 w-3.5" />
@@ -583,54 +583,54 @@ export const ReportsView: React.FC = () => {
 
       {/* KPI Highlight Strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="p-3.5 bg-slate-900/90 border-slate-800">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+        <Card className="p-3.5">
+          <span className="text-[11px] font-semibold text-[#627d98] uppercase tracking-wider block">
             Gross Sales Revenue
           </span>
-          <p className="text-xl font-mono font-bold text-slate-100 mt-1">
+          <p className="text-xl font-mono font-bold text-[#102a43] mt-1">
             {formatCurrency(grossRevenue, organization.currency_symbol)}
           </p>
-          <span className="text-[10px] text-cyan-400 font-mono mt-0.5 block">
+          <span className="text-[10px] text-teal-700 font-mono mt-0.5 block">
             {filteredSales.length} Invoices Completed
           </span>
         </Card>
 
-        <Card className="p-3.5 bg-slate-900/90 border-slate-800">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+        <Card className="p-3.5">
+          <span className="text-[11px] font-semibold text-[#627d98] uppercase tracking-wider block">
             Cost of Goods (COGS)
           </span>
-          <p className="text-xl font-mono font-bold text-rose-400 mt-1">
+          <p className="text-xl font-mono font-bold text-rose-700 mt-1">
             {formatCurrency(totalCogs, organization.currency_symbol)}
           </p>
-          <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">
+          <span className="text-[10px] text-[#627d98] font-mono mt-0.5 block">
             Weighted Average Cost Depleted
           </span>
         </Card>
 
-        <Card className="p-3.5 bg-slate-900/90 border-slate-800">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+        <Card className="p-3.5">
+          <span className="text-[11px] font-semibold text-[#627d98] uppercase tracking-wider block">
             Gross Profit Margin
           </span>
-          <p className="text-xl font-mono font-bold text-emerald-400 mt-1">
+          <p className="text-xl font-mono font-bold text-emerald-700 mt-1">
             {formatCurrency(grossProfit, organization.currency_symbol)}
           </p>
-          <span className="text-[10px] text-emerald-400 font-mono mt-0.5 block">
+          <span className="text-[10px] text-emerald-700 font-mono mt-0.5 block">
             Gross Margin: {grossMargin}%
           </span>
         </Card>
 
-        <Card className="p-3.5 bg-slate-900/90 border-slate-800">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+        <Card className="p-3.5">
+          <span className="text-[11px] font-semibold text-[#627d98] uppercase tracking-wider block">
             Net Business Profit
           </span>
           <p
             className={`text-xl font-mono font-bold mt-1 ${
-              netProfit >= 0 ? "text-teal-300" : "text-rose-400"
+              netProfit >= 0 ? "text-teal-800" : "text-rose-700"
             }`}
           >
             {formatCurrency(netProfit, organization.currency_symbol)}
           </p>
-          <span className="text-[10px] text-slate-400 font-mono mt-0.5 block">
+          <span className="text-[10px] text-[#627d98] font-mono mt-0.5 block">
             After Rs. {totalExpenses} Overheads ({netMargin}%)
           </span>
         </Card>
@@ -642,15 +642,15 @@ export const ReportsView: React.FC = () => {
 
       {/* TAB 1: PROFIT & LOSS STATEMENT */}
       {activeTab === "PL" && (
-        <Card className="p-6 bg-slate-900/90 border-slate-800 max-w-4xl mx-auto space-y-6">
-          <div className="text-center pb-4 border-b border-slate-800">
-            <h2 className="text-lg font-bold text-slate-100 uppercase tracking-wide">
+        <Card className="p-6 max-w-4xl mx-auto space-y-6">
+          <div className="text-center pb-4 border-b border-[#d9e2ec]">
+            <h2 className="text-lg font-bold text-[#102a43] uppercase tracking-wide">
               {organization.name}
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-[#627d98]">
               Formal Statement of Profit and Loss
             </p>
-            <p className="text-[11px] font-mono text-cyan-400 mt-1">
+            <p className="text-[11px] font-mono text-teal-800 mt-1">
               Period: {dateRange.start} to {dateRange.end} • Currency:{" "}
               {organization.currency}
             </p>
@@ -658,16 +658,16 @@ export const ReportsView: React.FC = () => {
 
           {/* Section 1: Revenue */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between font-bold text-sm text-slate-200 pb-1 border-b border-slate-800">
+            <div className="flex items-center justify-between font-bold text-sm text-[#102a43] pb-1 border-b border-[#d9e2ec]">
               <span>1. OPERATING REVENUE</span>
-              <span className="font-mono text-cyan-400">
+              <span className="font-mono text-teal-800">
                 {formatCurrency(grossRevenue, organization.currency_symbol)}
               </span>
             </div>
-            <div className="pl-4 space-y-1 text-xs text-slate-400">
+            <div className="pl-4 space-y-1 text-xs text-[#627d98]">
               <div className="flex justify-between">
                 <span>Completed Sales & POS Counter Billings</span>
-                <span className="font-mono text-slate-300">
+                <span className="font-mono text-[#102a43]">
                   {formatCurrency(grossRevenue, organization.currency_symbol)}
                 </span>
               </div>
@@ -676,16 +676,16 @@ export const ReportsView: React.FC = () => {
 
           {/* Section 2: COGS */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between font-bold text-sm text-slate-200 pb-1 border-b border-slate-800">
+            <div className="flex items-center justify-between font-bold text-sm text-[#102a43] pb-1 border-b border-[#d9e2ec]">
               <span>2. COST OF GOODS SOLD (COGS)</span>
-              <span className="font-mono text-rose-400">
+              <span className="font-mono text-rose-700">
                 ({formatCurrency(totalCogs, organization.currency_symbol)})
               </span>
             </div>
-            <div className="pl-4 space-y-1 text-xs text-slate-400">
+            <div className="pl-4 space-y-1 text-xs text-[#627d98]">
               <div className="flex justify-between">
                 <span>Paper, Raw Materials & Consumables Depletion</span>
-                <span className="font-mono text-slate-300">
+                <span className="font-mono text-[#102a43]">
                   {formatCurrency(totalCogs, organization.currency_symbol)}
                 </span>
               </div>
@@ -693,9 +693,9 @@ export const ReportsView: React.FC = () => {
           </div>
 
           {/* Gross Margin Subtotal */}
-          <div className="flex items-center justify-between font-bold text-sm p-3 rounded-lg bg-slate-950 border border-slate-800">
-            <span className="text-slate-200">GROSS PROFIT:</span>
-            <span className="font-mono text-emerald-400">
+          <div className="flex items-center justify-between font-bold text-sm p-3 rounded-[8px] bg-[#f5f7fa] border border-[#d9e2ec]">
+            <span className="text-[#102a43]">GROSS PROFIT:</span>
+            <span className="font-mono text-emerald-700">
               {formatCurrency(grossProfit, organization.currency_symbol)} (
               {grossMargin}%)
             </span>
@@ -703,21 +703,21 @@ export const ReportsView: React.FC = () => {
 
           {/* Section 3: Operating Expenses */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between font-bold text-sm text-slate-200 pb-1 border-b border-slate-800">
+            <div className="flex items-center justify-between font-bold text-sm text-[#102a43] pb-1 border-b border-[#d9e2ec]">
               <span>3. OPERATING OVERHEAD EXPENSES</span>
-              <span className="font-mono text-rose-400">
+              <span className="font-mono text-rose-700">
                 ({formatCurrency(totalExpenses, organization.currency_symbol)})
               </span>
             </div>
-            <div className="pl-4 space-y-1 text-xs text-slate-400">
+            <div className="pl-4 space-y-1 text-xs text-[#627d98]">
               {expenseByCategory.length === 0 ?
-                <p className="italic text-slate-500">
+                <p className="italic text-[#627d98]">
                   No overhead expenses recorded for this period.
                 </p>
               : expenseByCategory.map(([category, amt]) => (
                   <div key={category} className="flex justify-between">
                     <span>{category}</span>
-                    <span className="font-mono text-slate-300">
+                    <span className="font-mono text-[#102a43]">
                       {formatCurrency(amt, organization.currency_symbol)}
                     </span>
                   </div>
@@ -727,11 +727,11 @@ export const ReportsView: React.FC = () => {
           </div>
 
           {/* Net Profit Summary */}
-          <div className="flex items-center justify-between font-bold text-base p-4 rounded-lg bg-slate-950 border-2 border-slate-800">
-            <span className="text-slate-100">NET OPERATING PROFIT (EBIT):</span>
+          <div className="flex items-center justify-between font-bold text-base p-4 rounded-[8px] bg-[#f5f7fa] border border-[#d9e2ec]">
+            <span className="text-[#102a43]">NET OPERATING PROFIT (EBIT):</span>
             <span
-              className={`font-mono text-lg ${
-                netProfit >= 0 ? "text-teal-300" : "text-rose-400"
+              className={`font-mono text-lg font-bold ${
+                netProfit >= 0 ? "text-teal-800" : "text-rose-700"
               }`}
             >
               {formatCurrency(netProfit, organization.currency_symbol)}
@@ -743,15 +743,15 @@ export const ReportsView: React.FC = () => {
       {/* TAB 2: DETAILED SALES REPORT */}
       {activeTab === "SALES" && (
         <Card className="p-0 overflow-hidden">
-          <div className="p-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-300">
+          <div className="p-3 bg-[#f5f7fa] border-b border-[#d9e2ec] flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#102a43]">
               Sales Invoices ({filteredSales.length} transactions)
             </span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-400 uppercase font-mono text-[10px]">
+                <tr className="border-b border-[#d9e2ec] bg-[#f5f7fa] text-[#627d98] uppercase font-mono text-[10px]">
                   <th className="py-2.5 px-3">Invoice #</th>
                   <th className="py-2.5 px-3">Date & Time</th>
                   <th className="py-2.5 px-3">Customer</th>
@@ -763,28 +763,28 @@ export const ReportsView: React.FC = () => {
                   <th className="py-2.5 px-3 text-right">Profit</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-sans">
+              <tbody className="divide-y divide-[#d9e2ec] font-sans">
                 {filteredSales.length === 0 ?
                   <tr>
-                    <td colSpan={9} className="py-8 text-center text-slate-500">
+                    <td colSpan={9} className="py-8 text-center text-[#627d98]">
                       No sales found for the selected timeframe.
                     </td>
                   </tr>
                 : filteredSales.map((s) => (
                     <tr
                       key={s.id}
-                      className="hover:bg-slate-900/60 transition-colors"
+                      className="hover:bg-[#f5f7fa] transition-colors"
                     >
-                      <td className="py-2.5 px-3 font-mono font-bold text-cyan-400">
+                      <td className="py-2.5 px-3 font-mono font-bold text-teal-800">
                         {s.invoice_number}
                       </td>
-                      <td className="py-2.5 px-3 font-mono text-slate-400">
+                      <td className="py-2.5 px-3 font-mono text-[#627d98]">
                         {formatDateTime(s.created_at)}
                       </td>
-                      <td className="py-2.5 px-3 text-slate-200">
+                      <td className="py-2.5 px-3 text-[#102a43]">
                         {s.customer_name || "Walk-in Customer"}
                       </td>
-                      <td className="py-2.5 px-3 text-slate-400">
+                      <td className="py-2.5 px-3 text-[#627d98]">
                         {s.cashier_name}
                       </td>
                       <td className="py-2.5 px-3">
@@ -792,22 +792,22 @@ export const ReportsView: React.FC = () => {
                           {s.payment_method}
                         </Badge>
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-slate-400">
+                      <td className="py-2.5 px-3 text-right font-mono text-[#627d98]">
                         {s.items.length}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-100">
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-[#102a43]">
                         {formatCurrency(
                           s.grand_total,
                           organization.currency_symbol,
                         )}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-rose-400">
+                      <td className="py-2.5 px-3 text-right font-mono text-rose-700">
                         {formatCurrency(
                           s.total_cogs,
                           organization.currency_symbol,
                         )}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-emerald-400 font-semibold">
+                      <td className="py-2.5 px-3 text-right font-mono text-emerald-700 font-semibold">
                         {formatCurrency(
                           s.gross_profit,
                           organization.currency_symbol,
@@ -825,15 +825,15 @@ export const ReportsView: React.FC = () => {
       {/* TAB 3: OPERATING EXPENSES REPORT */}
       {activeTab === "EXPENSES" && (
         <Card className="p-0 overflow-hidden">
-          <div className="p-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-300">
+          <div className="p-3 bg-[#f5f7fa] border-b border-[#d9e2ec] flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#102a43]">
               Active Operating Expenses ({filteredExpenses.length} records)
             </span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-400 uppercase font-mono text-[10px]">
+                <tr className="border-b border-[#d9e2ec] bg-[#f5f7fa] text-[#627d98] uppercase font-mono text-[10px]">
                   <th className="py-2.5 px-3">Date</th>
                   <th className="py-2.5 px-3">Category</th>
                   <th className="py-2.5 px-3">Account Paid From</th>
@@ -843,37 +843,37 @@ export const ReportsView: React.FC = () => {
                   <th className="py-2.5 px-3 text-right">Amount</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-sans">
+              <tbody className="divide-y divide-[#d9e2ec] font-sans">
                 {filteredExpenses.length === 0 ?
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-500">
+                    <td colSpan={7} className="py-8 text-center text-[#627d98]">
                       No expenses recorded for the selected timeframe.
                     </td>
                   </tr>
                 : filteredExpenses.map((e) => (
                     <tr
                       key={e.id}
-                      className="hover:bg-slate-900/60 transition-colors"
+                      className="hover:bg-[#f5f7fa] transition-colors"
                     >
-                      <td className="py-2.5 px-3 font-mono text-slate-400">
+                      <td className="py-2.5 px-3 font-mono text-[#627d98]">
                         {formatDate(e.date)}
                       </td>
-                      <td className="py-2.5 px-3 font-semibold text-slate-200">
+                      <td className="py-2.5 px-3 font-semibold text-[#102a43]">
                         {e.category_name}
                       </td>
-                      <td className="py-2.5 px-3 text-slate-400">
+                      <td className="py-2.5 px-3 text-[#627d98]">
                         {e.account_name}
                       </td>
-                      <td className="py-2.5 px-3 text-slate-300">
+                      <td className="py-2.5 px-3 text-[#243b53]">
                         {e.description}
                       </td>
-                      <td className="py-2.5 px-3 font-mono text-slate-500">
+                      <td className="py-2.5 px-3 font-mono text-[#627d98]">
                         {e.reference_number || "-"}
                       </td>
-                      <td className="py-2.5 px-3 text-slate-400">
+                      <td className="py-2.5 px-3 text-[#627d98]">
                         {e.entered_by}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-amber-400">
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-amber-700">
                         {formatCurrency(e.amount, organization.currency_symbol)}
                       </td>
                     </tr>
@@ -889,11 +889,11 @@ export const ReportsView: React.FC = () => {
       {activeTab === "INVENTORY" && (
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Card className="p-3.5 bg-slate-900 border-slate-800">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+            <Card className="p-3.5">
+              <span className="text-[11px] font-semibold text-[#627d98] uppercase tracking-wider block">
                 Total Stock Valuation (WAC Cost)
               </span>
-              <p className="text-xl font-mono font-bold text-cyan-400 mt-1">
+              <p className="text-xl font-mono font-bold text-teal-800 mt-1">
                 {formatCurrency(
                   totalStockValuation,
                   organization.currency_symbol,
@@ -901,11 +901,11 @@ export const ReportsView: React.FC = () => {
               </p>
             </Card>
 
-            <Card className="p-3.5 bg-slate-900 border-slate-800">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+            <Card className="p-3.5">
+              <span className="text-[11px] font-semibold text-[#627d98] uppercase tracking-wider block">
                 Total Potential Retail Value
               </span>
-              <p className="text-xl font-mono font-bold text-emerald-400 mt-1">
+              <p className="text-xl font-mono font-bold text-emerald-700 mt-1">
                 {formatCurrency(
                   totalRetailPotential,
                   organization.currency_symbol,
@@ -913,26 +913,26 @@ export const ReportsView: React.FC = () => {
               </p>
             </Card>
 
-            <Card className="p-3.5 bg-slate-900 border-slate-800">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+            <Card className="p-3.5">
+              <span className="text-[11px] font-semibold text-[#627d98] uppercase tracking-wider block">
                 Low Stock Warning Items
               </span>
-              <p className="text-xl font-mono font-bold text-amber-400 mt-1">
+              <p className="text-xl font-mono font-bold text-amber-700 mt-1">
                 {lowStockItems.length} Products
               </p>
             </Card>
           </div>
 
           <Card className="p-0 overflow-hidden">
-            <div className="p-3 bg-slate-900 border-b border-slate-800">
-              <span className="text-xs font-semibold text-slate-300">
+            <div className="p-3 bg-[#f5f7fa] border-b border-[#d9e2ec]">
+              <span className="text-xs font-semibold text-[#102a43]">
                 Complete Inventory Asset Valuation
               </span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-400 uppercase font-mono text-[10px]">
+                  <tr className="border-b border-[#d9e2ec] bg-[#f5f7fa] text-[#627d98] uppercase font-mono text-[10px]">
                     <th className="py-2.5 px-3">SKU</th>
                     <th className="py-2.5 px-3">Product Name</th>
                     <th className="py-2.5 px-3">Category</th>
@@ -948,7 +948,7 @@ export const ReportsView: React.FC = () => {
                     <th className="py-2.5 px-3 text-center">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 font-sans">
+                <tbody className="divide-y divide-[#d9e2ec] font-sans">
                   {products.map((p) => {
                     const isLow =
                       p.track_stock && p.current_stock <= p.min_stock_threshold;
@@ -956,25 +956,25 @@ export const ReportsView: React.FC = () => {
                     return (
                       <tr
                         key={p.id}
-                        className="hover:bg-slate-900/60 transition-colors"
+                        className="hover:bg-[#f5f7fa] transition-colors"
                       >
-                        <td className="py-2.5 px-3 font-mono text-slate-400">
+                        <td className="py-2.5 px-3 font-mono text-[#627d98]">
                           {p.sku}
                         </td>
-                        <td className="py-2.5 px-3 font-semibold text-slate-200">
+                        <td className="py-2.5 px-3 font-semibold text-[#102a43]">
                           {p.name}
                         </td>
-                        <td className="py-2.5 px-3 text-slate-400">
+                        <td className="py-2.5 px-3 text-[#627d98]">
                           {p.category_name || "-"}
                         </td>
-                        <td className="py-2.5 px-3 text-slate-400">{p.unit}</td>
-                        <td className="py-2.5 px-3 text-right font-mono text-slate-300">
+                        <td className="py-2.5 px-3 text-[#627d98]">{p.unit}</td>
+                        <td className="py-2.5 px-3 text-right font-mono text-[#243b53]">
                           {formatCurrency(
                             p.average_cost,
                             organization.currency_symbol,
                           )}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-teal-300">
+                        <td className="py-2.5 px-3 text-right font-mono text-teal-800">
                           {formatCurrency(
                             p.selling_price,
                             organization.currency_symbol,
@@ -983,13 +983,13 @@ export const ReportsView: React.FC = () => {
                         <td className="py-2.5 px-3 text-right font-mono font-bold">
                           <span
                             className={
-                              isLow ? "text-rose-400" : "text-slate-200"
+                              isLow ? "text-rose-700" : "text-[#102a43]"
                             }
                           >
                             {p.current_stock}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-cyan-400">
+                        <td className="py-2.5 px-3 text-right font-mono font-bold text-teal-800">
                           {formatCurrency(val, organization.currency_symbol)}
                         </td>
                         <td className="py-2.5 px-3 text-center">
@@ -1015,15 +1015,15 @@ export const ReportsView: React.FC = () => {
       {/* TAB 5: STOCK MOVEMENTS AUDIT FLOW */}
       {activeTab === "MOVEMENTS" && (
         <Card className="p-0 overflow-hidden">
-          <div className="p-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-300">
+          <div className="p-3 bg-[#f5f7fa] border-b border-[#d9e2ec] flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#102a43]">
               Stock In & Out Audit Flow ({filteredMovements.length} events)
             </span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-400 uppercase font-mono text-[10px]">
+                <tr className="border-b border-[#d9e2ec] bg-[#f5f7fa] text-[#627d98] uppercase font-mono text-[10px]">
                   <th className="py-2.5 px-3">Date & Time</th>
                   <th className="py-2.5 px-3">Product</th>
                   <th className="py-2.5 px-3">Movement Type</th>
@@ -1033,10 +1033,10 @@ export const ReportsView: React.FC = () => {
                   <th className="py-2.5 px-3">Reference / Notes</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-sans">
+              <tbody className="divide-y divide-[#d9e2ec] font-sans">
                 {filteredMovements.length === 0 ?
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-500">
+                    <td colSpan={7} className="py-8 text-center text-[#627d98]">
                       No stock movements recorded for this timeframe.
                     </td>
                   </tr>
@@ -1045,12 +1045,12 @@ export const ReportsView: React.FC = () => {
                     return (
                       <tr
                         key={m.id}
-                        className="hover:bg-slate-900/60 transition-colors"
+                        className="hover:bg-[#f5f7fa] transition-colors"
                       >
-                        <td className="py-2.5 px-3 font-mono text-slate-400">
+                        <td className="py-2.5 px-3 font-mono text-[#627d98]">
                           {formatDateTime(m.created_at)}
                         </td>
-                        <td className="py-2.5 px-3 font-semibold text-slate-200">
+                        <td className="py-2.5 px-3 font-semibold text-[#102a43]">
                           {m.product_name || "Item"}
                         </td>
                         <td className="py-2.5 px-3">
@@ -1061,25 +1061,25 @@ export const ReportsView: React.FC = () => {
                         <td className="py-2.5 px-3 text-right font-mono font-bold">
                           <span
                             className={
-                              isPos ? "text-emerald-400" : "text-rose-400"
+                              isPos ? "text-emerald-700" : "text-rose-700"
                             }
                           >
                             {isPos ? `+${m.quantity}` : m.quantity}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-slate-300">
+                        <td className="py-2.5 px-3 text-right font-mono text-[#243b53]">
                           {formatCurrency(
                             m.unit_cost,
                             organization.currency_symbol,
                           )}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-slate-300">
+                        <td className="py-2.5 px-3 text-right font-mono text-[#243b53]">
                           {formatCurrency(
                             m.total_cost,
                             organization.currency_symbol,
                           )}
                         </td>
-                        <td className="py-2.5 px-3 text-slate-400 text-[11px]">
+                        <td className="py-2.5 px-3 text-[#627d98] text-[11px]">
                           {m.notes || "-"}
                         </td>
                       </tr>
@@ -1095,15 +1095,15 @@ export const ReportsView: React.FC = () => {
       {/* TAB 6: TOP PRODUCTS & SERVICES */}
       {activeTab === "TOP_ITEMS" && (
         <Card className="p-0 overflow-hidden">
-          <div className="p-3 bg-slate-900 border-b border-slate-800">
-            <span className="text-xs font-semibold text-slate-300">
+          <div className="p-3 bg-[#f5f7fa] border-b border-[#d9e2ec]">
+            <span className="text-xs font-semibold text-[#102a43]">
               Fastest Moving Products & Services by Billing Volume
             </span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-400 uppercase font-mono text-[10px]">
+                <tr className="border-b border-[#d9e2ec] bg-[#f5f7fa] text-[#627d98] uppercase font-mono text-[10px]">
                   <th className="py-2.5 px-3">Rank</th>
                   <th className="py-2.5 px-3">Item Name</th>
                   <th className="py-2.5 px-3">Type</th>
@@ -1116,22 +1116,22 @@ export const ReportsView: React.FC = () => {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-sans">
+              <tbody className="divide-y divide-[#d9e2ec] font-sans">
                 {topItemsRanking.length === 0 ?
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-500">
+                    <td colSpan={6} className="py-8 text-center text-[#627d98]">
                       No sales data available to rank items.
                     </td>
                   </tr>
                 : topItemsRanking.map((it, idx) => (
                     <tr
                       key={it.id}
-                      className="hover:bg-slate-900/60 transition-colors"
+                      className="hover:bg-[#f5f7fa] transition-colors"
                     >
-                      <td className="py-2.5 px-3 font-mono font-bold text-slate-400">
+                      <td className="py-2.5 px-3 font-mono font-bold text-[#627d98]">
                         #{idx + 1}
                       </td>
-                      <td className="py-2.5 px-3 font-semibold text-slate-200">
+                      <td className="py-2.5 px-3 font-semibold text-[#102a43]">
                         {it.name}
                       </td>
                       <td className="py-2.5 px-3">
@@ -1142,16 +1142,16 @@ export const ReportsView: React.FC = () => {
                           {it.type}
                         </Badge>
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-100">
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-[#102a43]">
                         {it.qty}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-cyan-400">
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-teal-800">
                         {formatCurrency(
                           it.revenue,
                           organization.currency_symbol,
                         )}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-semibold text-emerald-400">
+                      <td className="py-2.5 px-3 text-right font-mono font-semibold text-emerald-700">
                         {formatCurrency(
                           it.profit,
                           organization.currency_symbol,
@@ -1173,15 +1173,15 @@ export const ReportsView: React.FC = () => {
             {paymentMethodsBreakdown.map((pm) => (
               <Card
                 key={pm.name}
-                className="p-3.5 bg-slate-900 border-slate-800"
+                className="p-3.5"
               >
-                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
+                <span className="text-[11px] font-semibold text-[#627d98] uppercase tracking-wider block">
                   {pm.name}
                 </span>
-                <p className="text-xl font-mono font-bold text-slate-100 mt-1">
+                <p className="text-xl font-mono font-bold text-[#102a43] mt-1">
                   {formatCurrency(pm.total, organization.currency_symbol)}
                 </p>
-                <span className="text-[10px] text-cyan-400 font-mono mt-0.5 block">
+                <span className="text-[10px] text-teal-700 font-mono mt-0.5 block">
                   {pm.count} Invoices Collected
                 </span>
               </Card>
@@ -1189,15 +1189,15 @@ export const ReportsView: React.FC = () => {
           </div>
 
           <Card className="p-0 overflow-hidden">
-            <div className="p-3 bg-slate-900 border-b border-slate-800">
-              <span className="text-xs font-semibold text-slate-300">
+            <div className="p-3 bg-[#f5f7fa] border-b border-[#d9e2ec]">
+              <span className="text-xs font-semibold text-[#102a43]">
                 Account Balances & Liquid Funds
               </span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-400 uppercase font-mono text-[10px]">
+                  <tr className="border-b border-[#d9e2ec] bg-[#f5f7fa] text-[#627d98] uppercase font-mono text-[10px]">
                     <th className="py-2.5 px-3">Account Name</th>
                     <th className="py-2.5 px-3">Type</th>
                     <th className="py-2.5 px-3">Account #</th>
@@ -1207,13 +1207,13 @@ export const ReportsView: React.FC = () => {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 font-sans">
+                <tbody className="divide-y divide-[#d9e2ec] font-sans">
                   {accounts.map((acc) => (
                     <tr
                       key={acc.id}
-                      className="hover:bg-slate-900/60 transition-colors"
+                      className="hover:bg-[#f5f7fa] transition-colors"
                     >
-                      <td className="py-2.5 px-3 font-semibold text-slate-200">
+                      <td className="py-2.5 px-3 font-semibold text-[#102a43]">
                         {acc.name}
                       </td>
                       <td className="py-2.5 px-3">
@@ -1221,16 +1221,16 @@ export const ReportsView: React.FC = () => {
                           {acc.type}
                         </Badge>
                       </td>
-                      <td className="py-2.5 px-3 font-mono text-slate-500">
+                      <td className="py-2.5 px-3 font-mono text-[#627d98]">
                         {acc.account_number || "-"}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono text-slate-400">
+                      <td className="py-2.5 px-3 text-right font-mono text-[#627d98]">
                         {formatCurrency(
                           acc.opening_balance,
                           organization.currency_symbol,
                         )}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-teal-300">
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-teal-800">
                         {formatCurrency(
                           acc.current_balance,
                           organization.currency_symbol,
@@ -1248,15 +1248,15 @@ export const ReportsView: React.FC = () => {
       {/* TAB 8: CUSTOMER SALES & RECEIVABLES */}
       {activeTab === "CUSTOMERS" && (
         <Card className="p-0 overflow-hidden">
-          <div className="p-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-300">
+          <div className="p-3 bg-[#f5f7fa] border-b border-[#d9e2ec] flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#102a43]">
               Customer Ledger & Outstanding Receivables
             </span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-400 uppercase font-mono text-[10px]">
+                <tr className="border-b border-[#d9e2ec] bg-[#f5f7fa] text-[#627d98] uppercase font-mono text-[10px]">
                   <th className="py-2.5 px-3">Customer Name</th>
                   <th className="py-2.5 px-3">Phone</th>
                   <th className="py-2.5 px-3">Address</th>
@@ -1266,34 +1266,34 @@ export const ReportsView: React.FC = () => {
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-sans">
+              <tbody className="divide-y divide-[#d9e2ec] font-sans">
                 {customers.length === 0 ?
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-slate-500">
+                    <td colSpan={5} className="py-8 text-center text-[#627d98]">
                       No customer accounts registered.
                     </td>
                   </tr>
                 : customers.map((c) => (
                     <tr
                       key={c.id}
-                      className="hover:bg-slate-900/60 transition-colors"
+                      className="hover:bg-[#f5f7fa] transition-colors"
                     >
-                      <td className="py-2.5 px-3 font-semibold text-slate-200">
+                      <td className="py-2.5 px-3 font-semibold text-[#102a43]">
                         {c.name}
                       </td>
-                      <td className="py-2.5 px-3 font-mono text-slate-400">
+                      <td className="py-2.5 px-3 font-mono text-[#627d98]">
                         {c.phone || "-"}
                       </td>
-                      <td className="py-2.5 px-3 text-slate-400 text-[11px]">
+                      <td className="py-2.5 px-3 text-[#627d98] text-[11px]">
                         {c.address || "-"}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-100">
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-[#102a43]">
                         {formatCurrency(
                           c.total_purchases,
                           organization.currency_symbol,
                         )}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-mono font-bold text-amber-400">
+                      <td className="py-2.5 px-3 text-right font-mono font-bold text-amber-700">
                         {formatCurrency(
                           c.outstanding_balance,
                           organization.currency_symbol,
@@ -1311,15 +1311,15 @@ export const ReportsView: React.FC = () => {
       {/* TAB 9: DAILY CLOSINGS AUDIT */}
       {activeTab === "CLOSINGS" && (
         <Card className="p-0 overflow-hidden">
-          <div className="p-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-300">
+          <div className="p-3 bg-[#f5f7fa] border-b border-[#d9e2ec] flex items-center justify-between">
+            <span className="text-xs font-semibold text-[#102a43]">
               Daily Cash Register Closing Log ({filteredClosings.length} audits)
             </span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-800 bg-slate-900/90 text-slate-400 uppercase font-mono text-[10px]">
+                <tr className="border-b border-[#d9e2ec] bg-[#f5f7fa] text-[#627d98] uppercase font-mono text-[10px]">
                   <th className="py-2.5 px-3">Date</th>
                   <th className="py-2.5 px-3 text-right">Opening Cash</th>
                   <th className="py-2.5 px-3 text-right">Cash Sales</th>
@@ -1335,10 +1335,10 @@ export const ReportsView: React.FC = () => {
                   <th className="py-2.5 px-3">Audit Timestamp</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-sans">
+              <tbody className="divide-y divide-[#d9e2ec] font-sans">
                 {filteredClosings.length === 0 ?
                   <tr>
-                    <td colSpan={9} className="py-8 text-center text-slate-500">
+                    <td colSpan={9} className="py-8 text-center text-[#627d98]">
                       No daily closing records found for this timeframe.
                     </td>
                   </tr>
@@ -1347,36 +1347,36 @@ export const ReportsView: React.FC = () => {
                     return (
                       <tr
                         key={cl.id}
-                        className="hover:bg-slate-900/60 transition-colors"
+                        className="hover:bg-[#f5f7fa] transition-colors"
                       >
-                        <td className="py-2.5 px-3 font-mono font-bold text-slate-200">
+                        <td className="py-2.5 px-3 font-mono font-bold text-[#102a43]">
                           {cl.closing_date}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-slate-400">
+                        <td className="py-2.5 px-3 text-right font-mono text-[#627d98]">
                           {formatCurrency(
                             cl.opening_cash,
                             organization.currency_symbol,
                           )}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-emerald-400">
+                        <td className="py-2.5 px-3 text-right font-mono text-emerald-700">
                           {formatCurrency(
                             cl.cash_sales,
                             organization.currency_symbol,
                           )}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-rose-400">
+                        <td className="py-2.5 px-3 text-right font-mono text-rose-700">
                           {formatCurrency(
                             cl.cash_expenses,
                             organization.currency_symbol,
                           )}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-slate-200 font-semibold">
+                        <td className="py-2.5 px-3 text-right font-mono text-[#102a43] font-semibold">
                           {formatCurrency(
                             cl.expected_cash,
                             organization.currency_symbol,
                           )}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-cyan-300 font-bold">
+                        <td className="py-2.5 px-3 text-right font-mono text-teal-800 font-bold">
                           {formatCurrency(
                             cl.actual_cash,
                             organization.currency_symbol,
@@ -1385,10 +1385,10 @@ export const ReportsView: React.FC = () => {
                         <td className="py-2.5 px-3 text-right font-mono font-bold">
                           <span
                             className={
-                              cl.difference === 0 ? "text-emerald-400"
+                              cl.difference === 0 ? "text-emerald-700"
                               : cl.difference > 0 ?
-                                "text-cyan-400"
-                              : "text-rose-400"
+                                "text-teal-700"
+                              : "text-rose-700"
                             }
                           >
                             {cl.difference > 0 ?
@@ -1396,10 +1396,10 @@ export const ReportsView: React.FC = () => {
                             : cl.difference}
                           </span>
                         </td>
-                        <td className="py-2.5 px-3 text-slate-300">
+                        <td className="py-2.5 px-3 text-[#243b53]">
                           {cl.closed_by}
                         </td>
-                        <td className="py-2.5 px-3 font-mono text-slate-500 text-[10px]">
+                        <td className="py-2.5 px-3 font-mono text-[#627d98] text-[10px]">
                           {formatDateTime(cl.closed_at)}
                         </td>
                       </tr>

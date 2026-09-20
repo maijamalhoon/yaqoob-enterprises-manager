@@ -61,7 +61,7 @@ const MainShell: React.FC = () => {
   };
 
   return (
-    <div className="app-shell flex h-screen w-screen overflow-hidden font-sans text-slate-900">
+    <div className="app-shell flex h-screen w-screen overflow-hidden font-sans text-[#102a43]">
       {/* Sidebar Navigation */}
       <Sidebar />
 
@@ -96,7 +96,7 @@ const AuthenticationGate: React.FC = () => {
 
   if (isLoading)
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-600">
+      <div className="min-h-screen bg-[#f5f7fa] flex items-center justify-center text-[#627d98]">
         Loading secure session...
       </div>
     );
@@ -114,19 +114,19 @@ const AuthenticationGate: React.FC = () => {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+    <main className="min-h-screen bg-[#f5f7fa] flex items-center justify-center p-6">
       <form
         onSubmit={submit}
-        className="w-full max-w-md bg-white border border-slate-200 rounded-xl p-8 shadow-sm space-y-5"
+        className="w-full max-w-md bg-white border border-[#d9e2ec] rounded-[10px] p-8 shadow-[0_1px_2px_rgba(16,42,67,0.06)] space-y-5"
       >
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-700">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-teal-700">
             Yaqoob Enterprises
           </p>
-          <h1 className="mt-2 text-2xl font-semibold text-slate-900">
+          <h1 className="mt-2 text-2xl font-semibold text-[#102a43]">
             {isCreating ? "Create owner account" : "Sign in to your workspace"}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-[#627d98]">
             Authentication is required before business data is available.
           </p>
         </div>
@@ -162,26 +162,26 @@ const AuthenticationGate: React.FC = () => {
           onChange={(event) => setPassword(event.target.value)}
         />
         {!isCreating && (
-          <div className="bg-cyan-50/70 border border-cyan-200 rounded-lg p-3 text-xs text-cyan-900 space-y-1">
+          <div className="bg-teal-50 border border-teal-200 rounded-[10px] p-3 text-xs text-teal-950 space-y-1">
             <div className="flex justify-between items-center">
-              <span className="font-semibold">Default Owner Credentials</span>
+              <span className="font-semibold text-teal-900">Default Owner Credentials</span>
               <button
                 type="button"
                 onClick={() => {
                   setEmail("yaqoobenterprisesofficial@gmail.com");
                   setPassword("admin123");
                 }}
-                className="text-cyan-700 underline font-medium hover:text-cyan-900 cursor-pointer"
+                className="text-teal-700 underline font-medium hover:text-teal-800 cursor-pointer"
               >
                 Reset to default
               </button>
             </div>
-            <p className="text-slate-600 font-mono">Email: yaqoobenterprisesofficial@gmail.com</p>
-            <p className="text-slate-600 font-mono">Password: admin123</p>
+            <p className="text-[#486581] font-mono">Email: yaqoobenterprisesofficial@gmail.com</p>
+            <p className="text-[#486581] font-mono">Password: admin123</p>
           </div>
         )}
         {error && (
-          <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-lg p-3">
+          <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-[10px] p-3">
             {error}
           </p>
         )}
@@ -194,7 +194,7 @@ const AuthenticationGate: React.FC = () => {
             setIsCreating((value) => !value);
             clearError();
           }}
-          className="w-full text-sm text-cyan-700 hover:text-cyan-900"
+          className="w-full text-sm text-teal-700 hover:text-teal-800"
         >
           {isCreating ?
             "Already have an account? Sign in"

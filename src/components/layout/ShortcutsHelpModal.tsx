@@ -26,10 +26,10 @@ export const ShortcutsHelpModal: React.FC = () => {
         {shortcuts.map((s) => (
           <div
             key={s.key}
-            className="flex items-center justify-between p-2.5 rounded-lg bg-slate-950 border border-slate-800"
+            className="flex items-center justify-between p-2.5 rounded-[10px] bg-[#f5f7fa] border border-[#d9e2ec]"
           >
-            <span className="text-xs text-slate-300 font-medium">{s.desc}</span>
-            <kbd className="px-2 py-1 text-xs font-mono font-semibold text-indigo-300 bg-slate-900/90 border border-slate-700/80 rounded shadow-xs">
+            <span className="text-xs text-[#243b53] font-medium">{s.desc}</span>
+            <kbd className="px-2 py-1 text-xs font-mono font-semibold text-teal-800 bg-white border border-[#d9e2ec] rounded-[6px] shadow-xs">
               {s.key}
             </kbd>
           </div>
