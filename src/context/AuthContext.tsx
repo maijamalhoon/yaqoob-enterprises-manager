@@ -58,6 +58,21 @@ function decodeBytes(value: string): Uint8Array {
   );
 }
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "string" && error) return error;
+  if (error && typeof error === "object") {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message) return message;
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
 async function hashPin(pin: string): Promise<{ hash: string; salt: string }> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   return { hash: await derivePin(pin, salt), salt: encodeBytes(salt) };
@@ -247,12 +262,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       activate(profile, org);
       return { success: true };
     } catch (creationError) {
+      console.error("Local account creation failed:", creationError);
       return {
         success: false,
-        error:
-          creationError instanceof Error ?
-            creationError.message
-          : "Could not create the local account.",
+        error: getErrorMessage(
+          creationError,
+          "Could not create the local account.",
+        ),
       };
     }
   };
