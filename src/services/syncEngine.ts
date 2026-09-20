@@ -1,5 +1,5 @@
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
-import { getSqliteDatabase } from './sqliteEngine';
+import { getSqliteDatabase, SqlDatabase } from './sqliteEngine';
 import { getSecurityPrincipal } from '../lib/security';
 
 export interface SyncStatus {
@@ -204,11 +204,6 @@ class SyncEngineService {
       );
 
       await this.refreshPendingCount();
-
-      // If online, immediately trigger a background drain
-      if (typeof navigator !== 'undefined' && navigator.onLine && !this.isSyncing) {
-        this.syncNow().catch(() => {});
-      }
     } catch (err) {
       await this.refreshPendingCount();
       console.warn('Could not enqueue sync record:', err);
@@ -233,14 +228,15 @@ class SyncEngineService {
     let pushed = 0;
     let pulled = 0;
     const pushErrors: string[] = [];
+    let db: SqlDatabase | null = null;
+    let syncLogWritten = false;
 
     try {
-      const db = await getSqliteDatabase();
+      db = await getSqliteDatabase();
       const principal = getSecurityPrincipal();
       if (!principal) throw new Error('Authentication required before synchronization');
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(principal.organizationId)) {
-        this.lastError = 'Cloud synchronization requires a UUID-backed organization';
-        return { pushed: 0, pulled: 0, error: this.lastError };
+        throw new Error('Cloud synchronization requires a UUID-backed organization');
       }
 
       const queue = await db.select<{
@@ -389,9 +385,21 @@ class SyncEngineService {
          VALUES (?, 'BIDIRECTIONAL', ?, ?, ?, ?, ?)`,
         [`slog-${Date.now()}`, finalStatus, pushed, pulled, this.lastError || null, syncTime]
       );
+      syncLogWritten = true;
     } catch (err: any) {
       this.lastError = err?.message || 'Sync failed';
       console.warn('Sync engine exception:', err);
+      if (db && !syncLogWritten) {
+        try {
+          await db.execute(
+            `INSERT INTO sync_logs (id, sync_type, status, records_pushed, records_pulled, error_message, created_at)
+             VALUES (?, 'BIDIRECTIONAL', 'FAILED', ?, ?, ?, ?)`,
+            [`slog-${Date.now()}`, pushed, pulled, this.lastError, new Date().toISOString()]
+          );
+        } catch {
+          // Preserve the original sync error when diagnostics logging also fails.
+        }
+      }
     } finally {
       await this.refreshPendingCount();
       this.isSyncing = false;

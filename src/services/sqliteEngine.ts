@@ -152,7 +152,7 @@ class InMemorySqliteDatabase implements SqlDatabase {
 
     // Delete
     if (q.startsWith('DELETE FROM')) {
-      const match = query.match(/DELETE\s+FROM\s+([a-zA-Z0-9_]+)(?:\s+WHERE\s+(.+))?$/i);
+      const match = query.match(/DELETE\s+FROM\s+([a-zA-Z0-9_]+)(?:\s+WHERE\s+(.+?))?\s*;?$/i);
       if (match) {
         const tbl = match[1].toLowerCase();
         if (this.tables[tbl]) {
@@ -684,7 +684,10 @@ export async function runSqliteMigrations(db: SqlDatabase): Promise<void> {
 
   if (!appliedSet.has(4)) {
     await db.execute(`ALTER TABLE profiles ADD COLUMN password_hash TEXT;`);
-    await db.execute(`ALTER TABLE sync_queue ADD COLUMN organization_id TEXT;`);
+    const syncQueueColumns = await db.select<{ name: string }>(`PRAGMA table_info(sync_queue);`);
+    if (!syncQueueColumns.some((column) => column.name === 'organization_id')) {
+      await db.execute(`ALTER TABLE sync_queue ADD COLUMN organization_id TEXT;`);
+    }
     await db.execute(`ALTER TABLE sync_queue ADD COLUMN conflict_state TEXT;`);
     await db.execute(`ALTER TABLE sync_queue ADD COLUMN deleted_at TEXT;`);
     await db.execute(
@@ -699,6 +702,27 @@ export async function runSqliteMigrations(db: SqlDatabase): Promise<void> {
     await db.execute(
       `INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?);`,
       [5, 'organization_scoped_sync_cursors', new Date().toISOString()]
+    );
+  }
+
+  if (!appliedSet.has(6)) {
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS local_auth_accounts (
+        id TEXT PRIMARY KEY,
+        organization_id TEXT NOT NULL,
+        profile_id TEXT NOT NULL,
+        pin_hash TEXT NOT NULL,
+        pin_salt TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE (organization_id),
+        UNIQUE (profile_id)
+      );
+    `);
+    await db.execute(`CREATE INDEX IF NOT EXISTS idx_local_auth_org ON local_auth_accounts(organization_id);`);
+    await db.execute(
+      `INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?);`,
+      [6, 'local_offline_auth_accounts', new Date().toISOString()]
     );
   }
 }

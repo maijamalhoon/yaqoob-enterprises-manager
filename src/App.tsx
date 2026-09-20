@@ -6,10 +6,9 @@ import { Header } from "./components/layout/Header";
 import { ToastContainer } from "./components/common/ToastContainer";
 import { CommandPalette } from "./components/layout/CommandPalette";
 import { ShortcutsHelpModal } from "./components/layout/ShortcutsHelpModal";
-import { SupabaseConfigModal } from "./components/layout/SupabaseConfigModal";
 import { QuickExpenseModal } from "./components/expenses/QuickExpenseModal";
 import { PrintReceiptModal } from "./components/pos/PrintReceiptModal";
-import { LockScreen } from "./components/auth/LockScreen";
+import { LockScreen, SignUpScreen } from "./components/auth/LockScreen";
 
 // Views
 import { DashboardView } from "./components/dashboard/DashboardView";
@@ -71,14 +70,13 @@ const MainShell: React.FC = () => {
       <PrintReceiptModal />
       <CommandPalette />
       <ShortcutsHelpModal />
-      <SupabaseConfigModal />
       <ToastContainer />
     </div>
   );
 };
 
 const WorkspaceGate: React.FC = () => {
-  const { isLoading, isLocked } = useAuth();
+  const { isLoading, isLocked, hasLocalAccount } = useAuth();
 
   if (isLoading) {
     return (
@@ -89,7 +87,7 @@ const WorkspaceGate: React.FC = () => {
   }
 
   if (isLocked) {
-    return <LockScreen />;
+    return hasLocalAccount ? <LockScreen /> : <SignUpScreen />;
   }
 
   return <MainShell />;

@@ -16,8 +16,8 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
     "@tailwindcss/vite": "^4.0.9",
-    "@tauri-apps/api": "^2.2.0",
-    "@tauri-apps/plugin-sql": "^2.2.0",
+    "@tauri-apps/api": "^2.6.0",
+    "@tauri-apps/plugin-sql": "^2.4.1",
     "@vitejs/plugin-react": "^4.3.4",
     "clsx": "^2.1.1",
     "dotenv": "^16.4.7",
@@ -30,7 +30,7 @@
     "vite": "^6.2.0"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.2.7",
+    "@tauri-apps/cli": "^2.6.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@types/node": "^22.13.5",

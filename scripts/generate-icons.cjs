@@ -111,7 +111,7 @@ function createIco(png32) {
   entry[3] = 0;  // reserved
   entry.writeUInt16LE(1, 4);  // color planes
   entry.writeUInt16LE(32, 6); // bits per pixel
-  entry.writeUInt32BE(png32.length, 8); // image size
+  entry.writeUInt32LE(png32.length, 8); // image size
   entry.writeUInt32LE(22, 12); // image offset (6 + 16 = 22)
 
   return Buffer.concat([header, entry, png32]);

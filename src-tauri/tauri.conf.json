@@ -42,7 +42,7 @@
     "windows": {
       "nsis": {
         "installMode": "perMachine",
-        "languages": ["en-US"],
+        "languages": ["English"],
         "displayLanguageSelector": false
       }
     }

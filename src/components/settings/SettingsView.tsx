@@ -25,7 +25,7 @@ import { formatDateTime } from "../../lib/utils";
 
 export const SettingsView: React.FC = () => {
   const { organization, updateOrganization, updatePin } = useAuth();
-  const { showToast, setIsSupabaseConfigOpen, refreshData } = useApp();
+  const { showToast, refreshData } = useApp();
 
   const [form, setForm] = useState({
     name: organization.name,
@@ -74,16 +74,28 @@ export const SettingsView: React.FC = () => {
   const handleChangePin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPin !== confirmPin) {
-      showToast("error", "PIN Mismatch", "New PIN and confirmation do not match.");
+      showToast(
+        "error",
+        "PIN Mismatch",
+        "New PIN and confirmation do not match.",
+      );
       return;
     }
     setIsChangingPin(true);
     const res = await updatePin(currentPin, newPin);
     setIsChangingPin(false);
     if (!res.success) {
-      showToast("error", "Failed to Update PIN", res.error || "Please check your current PIN.");
+      showToast(
+        "error",
+        "Failed to Update PIN",
+        res.error || "Please check your current PIN.",
+      );
     } else {
-      showToast("success", "PIN Updated", "Counter screen lock PIN has been updated successfully.");
+      showToast(
+        "success",
+        "PIN Updated",
+        "Counter screen lock PIN has been updated successfully.",
+      );
       setCurrentPin("");
       setNewPin("");
       setConfirmPin("");
@@ -219,8 +231,7 @@ export const SettingsView: React.FC = () => {
             Shop Settings & Data
           </h1>
           <p className="text-xs text-[#667085] mt-0.5">
-            Configure receipt header, currency symbols, database backups, and
-            cloud synchronization.
+            Configure receipt header, currency symbols, and database backups.
           </p>
         </div>
       </div>
@@ -316,29 +327,8 @@ export const SettingsView: React.FC = () => {
           </Card>
         </div>
 
-        {/* Right 5 cols: Database Backup, Restore, Supabase */}
+        {/* Right 5 cols: Database Backup and Restore */}
         <div className="lg:col-span-5 space-y-5">
-          {/* Cloud Database Integration */}
-          <Card className="p-5 space-y-3 bg-white border border-[#e6e8ec]">
-            <div className="flex items-center gap-2">
-              <Cloud className="h-5 w-5 text-[#4f46e5]" />
-              <CardTitle>Cloud Supabase Connection</CardTitle>
-            </div>
-            <p className="text-xs text-[#667085] leading-relaxed">
-              Connect a hosted Supabase PostgreSQL backend with Row-Level
-              Security for multi-device synchronization.
-            </p>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsSupabaseConfigOpen(true)}
-              className="w-full text-[#14181f]"
-            >
-              Configure Supabase Keys
-            </Button>
-          </Card>
-
           {/* Counter Screen Lock PIN Security */}
           <Card className="p-5 space-y-4 bg-white border border-[#e6e8ec]">
             <div className="flex items-center gap-2">
@@ -346,7 +336,8 @@ export const SettingsView: React.FC = () => {
               <CardTitle>Counter Screen Lock PIN</CardTitle>
             </div>
             <p className="text-xs text-[#667085] leading-relaxed">
-              Set or update your counter terminal PIN. This physical security gate prevents unauthorized counter access when stepping away.
+              Set or update your counter terminal PIN. This physical security
+              gate prevents unauthorized counter access when stepping away.
             </p>
 
             <form onSubmit={handleChangePin} className="space-y-3">
@@ -409,9 +400,7 @@ export const SettingsView: React.FC = () => {
                 <span>Export Verified Business Backup</span>
               </Button>
 
-              <label
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs transition-colors border-[#e6e8ec] bg-white text-[#14181f] hover:bg-[#f8f9fb] cursor-pointer"
-              >
+              <label className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs transition-colors border-[#e6e8ec] bg-white text-[#14181f] hover:bg-[#f8f9fb] cursor-pointer">
                 <Upload className="h-4 w-4 text-[#4f46e5]" />
                 <span>Restore Business Backup...</span>
                 <input

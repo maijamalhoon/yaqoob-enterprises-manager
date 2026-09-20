@@ -10,15 +10,13 @@ export interface SecurityPrincipal {
 
 let activePrincipal: SecurityPrincipal | null = null;
 
-export function setSecurityPrincipal(profile: UserProfile | null): void {
-  activePrincipal = profile && profile.is_active
-    ? {
-        id: profile.id,
-        organizationId: profile.organization_id,
-        role: profile.role,
-        fullName: profile.full_name,
-      }
-    : null;
+export function setSecurityPrincipal(profile: UserProfile | SecurityPrincipal | null): void {
+  activePrincipal = profile ? {
+    id: profile.id,
+    organizationId: 'organization_id' in profile ? profile.organization_id : profile.organizationId,
+    role: profile.role,
+    fullName: 'full_name' in profile ? profile.full_name : profile.fullName,
+  } : null;
 }
 
 export function getSecurityPrincipal(): SecurityPrincipal | null {

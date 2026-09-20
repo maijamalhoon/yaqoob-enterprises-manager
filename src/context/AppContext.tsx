@@ -1,22 +1,27 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Sale } from '../types';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+} from "react";
+import { Sale } from "../types";
 
 export type AppView =
-  | 'pos'
-  | 'dashboard'
-  | 'inventory'
-  | 'sales'
-  | 'expenses'
-  | 'accounts'
-  | 'customers'
-  | 'closings'
-  | 'reports'
-  | 'settings';
-
+  | "pos"
+  | "dashboard"
+  | "inventory"
+  | "sales"
+  | "expenses"
+  | "accounts"
+  | "customers"
+  | "closings"
+  | "reports"
+  | "settings";
 
 export interface ToastMessage {
   id: string;
-  type: 'success' | 'error' | 'info' | 'warning';
+  type: "success" | "error" | "info" | "warning";
   title: string;
   message?: string;
 }
@@ -27,7 +32,11 @@ interface AppContextType {
   dataVersion: number;
   refreshData: () => void;
   toasts: ToastMessage[];
-  showToast: (type: ToastMessage['type'], title: string, message?: string) => void;
+  showToast: (
+    type: ToastMessage["type"],
+    title: string,
+    message?: string,
+  ) => void;
   removeToast: (id: string) => void;
   isQuickExpenseOpen: boolean;
   setIsQuickExpenseOpen: (open: boolean) => void;
@@ -35,22 +44,23 @@ interface AppContextType {
   setIsCommandPaletteOpen: (open: boolean) => void;
   isShortcutsHelpOpen: boolean;
   setIsShortcutsHelpOpen: (open: boolean) => void;
-  isSupabaseConfigOpen: boolean;
-  setIsSupabaseConfigOpen: (open: boolean) => void;
   activeReceiptSale: Sale | null;
   setActiveReceiptSale: (sale: Sale | null) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentView, setCurrentView] = useState<AppView>('pos'); // Default to Quick Sale as highest priority
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [currentView, setCurrentView] = useState<AppView>("pos"); // Default to Quick Sale as highest priority
   const [dataVersion, setDataVersion] = useState<number>(1);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isQuickExpenseOpen, setIsQuickExpenseOpen] = useState<boolean>(false);
-  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
-  const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState<boolean>(false);
-  const [isSupabaseConfigOpen, setIsSupabaseConfigOpen] = useState<boolean>(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] =
+    useState<boolean>(false);
+  const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] =
+    useState<boolean>(false);
   const [activeReceiptSale, setActiveReceiptSale] = useState<Sale | null>(null);
 
   const refreshData = useCallback(() => {
@@ -58,7 +68,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const showToast = useCallback(
-    (type: ToastMessage['type'], title: string, message?: string) => {
+    (type: ToastMessage["type"], title: string, message?: string) => {
       const id = `toast-${Date.now()}-${Math.random()}`;
       setToasts((prev) => [...prev, { id, type, title, message }]);
 
@@ -67,7 +77,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setToasts((prev) => prev.filter((t) => t.id !== id));
       }, 4000);
     },
-    []
+    [],
   );
 
   const removeToast = useCallback((id: string) => {
@@ -78,44 +88,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ctrl+K -> Command Palette
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setIsCommandPaletteOpen((prev) => !prev);
         return;
       }
 
       // Ctrl+N -> New Sale (Switch to Quick Sale view)
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'n') {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        !e.shiftKey &&
+        e.key.toLowerCase() === "n"
+      ) {
         e.preventDefault();
-        setCurrentView('pos');
-        showToast('info', 'Quick Sale Mode', 'Switched to POS terminal');
+        setCurrentView("pos");
+        showToast("info", "Quick Sale Mode", "Switched to POS terminal");
         return;
       }
 
       // Ctrl+Shift+E -> New Quick Expense
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'e') {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        e.shiftKey &&
+        e.key.toLowerCase() === "e"
+      ) {
         e.preventDefault();
         setIsQuickExpenseOpen(true);
         return;
       }
 
       // Escape -> close dialogs
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         if (isCommandPaletteOpen) setIsCommandPaletteOpen(false);
         if (isQuickExpenseOpen) setIsQuickExpenseOpen(false);
         if (isShortcutsHelpOpen) setIsShortcutsHelpOpen(false);
-        if (isSupabaseConfigOpen) setIsSupabaseConfigOpen(false);
         if (activeReceiptSale) setActiveReceiptSale(null);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     isCommandPaletteOpen,
     isQuickExpenseOpen,
     isShortcutsHelpOpen,
-    isSupabaseConfigOpen,
     activeReceiptSale,
     showToast,
   ]);
@@ -136,8 +152,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsCommandPaletteOpen,
         isShortcutsHelpOpen,
         setIsShortcutsHelpOpen,
-        isSupabaseConfigOpen,
-        setIsSupabaseConfigOpen,
         activeReceiptSale,
         setActiveReceiptSale,
       }}
@@ -150,7 +164,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 export function useApp() {
   const context = useContext(AppContext);
   if (!context) {
-    throw new Error('useApp must be used within an AppProvider');
+    throw new Error("useApp must be used within an AppProvider");
   }
   return context;
 }

@@ -33,6 +33,16 @@ export interface UserProfile {
   created_at: string;
 }
 
+export interface LocalAuthAccount {
+  id: string;
+  organization_id: string;
+  profile_id: string;
+  pin_hash: string;
+  pin_salt: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export type ItemType = 'PRODUCT' | 'SERVICE';
 
 export interface Category {

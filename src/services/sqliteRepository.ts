@@ -18,7 +18,7 @@ import {
 import { getSqliteDatabase, SqlDatabase } from './sqliteEngine';
 import { requireOrganization, requirePermission } from '../lib/security';
 import { roundMoney } from '../lib/utils';
-import { Organization, UserProfile } from '../types';
+import { LocalAuthAccount, Organization, UserProfile } from '../types';
 import type {
   IAccountRepository,
   IAuditRepository,
@@ -47,6 +47,47 @@ export class SQLiteRepository {
   async getOrganization(organizationId: string): Promise<Organization | null> {
     const row = (await (await this.database()).select<Organization>('SELECT * FROM organizations WHERE id = ?', [organizationId]))[0];
     return row || null;
+  }
+
+  async getLocalAuthAccount(): Promise<LocalAuthAccount | null> {
+    const row = (await (await this.database()).select<LocalAuthAccount>(
+      'SELECT * FROM local_auth_accounts ORDER BY created_at LIMIT 1',
+    ))[0];
+    return row || null;
+  }
+
+  async createLocalAuthAccount(
+    organization: Organization,
+    profile: UserProfile,
+    pinHash: string,
+    pinSalt: string,
+  ): Promise<void> {
+    const existing = await this.getLocalAuthAccount();
+    if (existing) throw new Error('A local shop account already exists');
+    await this.transaction(async (transactionDb) => {
+      await this.insert(transactionDb, 'organizations', {
+        ...organization,
+        next_invoice_number: organization.next_invoice_number || 1001,
+        updated_at: organization.updated_at || now(),
+      });
+      await this.insert(transactionDb, 'profiles', { ...profile, updated_at: now(), is_active: 1 });
+      await this.insert(transactionDb, 'organization_members', {
+        id: id(), organization_id: organization.id, user_id: profile.id,
+        role: 'OWNER', is_active: 1, created_at: now(), updated_at: now(),
+      });
+      await this.insert(transactionDb, 'local_auth_accounts', {
+        id: id(), organization_id: organization.id, profile_id: profile.id,
+        pin_hash: pinHash, pin_salt: pinSalt, created_at: now(), updated_at: now(),
+      });
+    });
+  }
+
+  async updateLocalAuthAccount(accountId: string, pinHash: string, pinSalt: string): Promise<void> {
+    const now = () => new Date().toISOString();
+    await (await this.database()).execute(
+      'UPDATE local_auth_accounts SET pin_hash = ?, pin_salt = ?, updated_at = ? WHERE id = ?',
+      [pinHash, pinSalt, now(), accountId],
+    );
   }
 
   async findLocalProfileByEmail(email: string): Promise<UserProfile | null> {
