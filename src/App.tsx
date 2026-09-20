@@ -87,8 +87,8 @@ const MainShell: React.FC = () => {
 const AuthenticationGate: React.FC = () => {
   const { user, isLoading, error, signIn, signUp, clearError } = useAuth();
   const [isCreating, setIsCreating] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("yaqoobenterprisesofficial@gmail.com");
+  const [password, setPassword] = useState("admin123");
   const [fullName, setFullName] = useState("");
   const [organizationName, setOrganizationName] =
     useState("Yaqoob Enterprises");
@@ -161,6 +161,25 @@ const AuthenticationGate: React.FC = () => {
           value={password}
           onChange={(event) => setPassword(event.target.value)}
         />
+        {!isCreating && (
+          <div className="bg-cyan-50/70 border border-cyan-200 rounded-lg p-3 text-xs text-cyan-900 space-y-1">
+            <div className="flex justify-between items-center">
+              <span className="font-semibold">Default Owner Credentials</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("yaqoobenterprisesofficial@gmail.com");
+                  setPassword("admin123");
+                }}
+                className="text-cyan-700 underline font-medium hover:text-cyan-900 cursor-pointer"
+              >
+                Reset to default
+              </button>
+            </div>
+            <p className="text-slate-600 font-mono">Email: yaqoobenterprisesofficial@gmail.com</p>
+            <p className="text-slate-600 font-mono">Password: admin123</p>
+          </div>
+        )}
         {error && (
           <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-lg p-3">
             {error}

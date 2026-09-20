@@ -84,6 +84,7 @@ function loadStorage(): StorageSchema {
           role: 'OWNER',
           organization_id: DEFAULT_ORGANIZATION.id,
           is_active: true,
+          password_hash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', // admin123
           created_at: new Date().toISOString(),
         },
       ],
@@ -129,7 +130,15 @@ function loadStorage(): StorageSchema {
   }
 
   try {
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.profiles)) {
+      for (const p of parsed.profiles) {
+        if (!p.password_hash) {
+          p.password_hash = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';
+        }
+      }
+    }
+    return parsed;
   } catch (e) {
     console.error('Failed to parse storage data:', e);
     return {
