@@ -222,6 +222,116 @@ export class StorageEngine {
     db.organizations.push(org);
     db.profiles.push(profile);
     this.setDB(db);
+    this.ensureOrganizationDefaults(org.id);
+  }
+
+  static ensureOrganizationDefaults(orgId: string): void {
+    const db = this.getDB();
+    let modified = false;
+
+    const existingAccounts = db.accounts.filter((a) => a.organization_id === orgId);
+    if (existingAccounts.length === 0) {
+      const defaultAccounts: PaymentAccount[] = [
+        {
+          id: `acc-cash-${orgId}`,
+          organization_id: orgId,
+          name: 'Cash Drawer (Shop Till)',
+          type: 'CASH',
+          current_balance: 10000,
+          opening_balance: 10000,
+          is_active: true,
+          is_default: true,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: `acc-bank-${orgId}`,
+          organization_id: orgId,
+          name: 'Business Bank Account',
+          type: 'BANK',
+          current_balance: 0,
+          opening_balance: 0,
+          is_active: true,
+          is_default: false,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: `acc-jazzcash-${orgId}`,
+          organization_id: orgId,
+          name: 'JazzCash Merchant Wallet',
+          type: 'DIGITAL_WALLET',
+          current_balance: 0,
+          opening_balance: 0,
+          is_active: true,
+          is_default: false,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: `acc-easypaisa-${orgId}`,
+          organization_id: orgId,
+          name: 'Easypaisa Business Wallet',
+          type: 'DIGITAL_WALLET',
+          current_balance: 0,
+          opening_balance: 0,
+          is_active: true,
+          is_default: false,
+          created_at: new Date().toISOString(),
+        },
+      ];
+      db.accounts.push(...defaultAccounts);
+      modified = true;
+    }
+
+    const existingCategories = db.categories.filter((c) => c.organization_id === orgId);
+    if (existingCategories.length === 0) {
+      const defaultCategories: Category[] = STARTER_CATEGORIES.map((c) => ({
+        ...c,
+        id: `cat-${c.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${orgId.slice(0, 6)}`,
+        organization_id: orgId,
+        created_at: new Date().toISOString(),
+      }));
+      db.categories.push(...defaultCategories);
+      modified = true;
+
+      const defaultProducts: Product[] = STARTER_PRODUCTS.map((p) => {
+        const cat = defaultCategories.find((c) => c.name === p.category_name) || defaultCategories[0];
+        return {
+          ...p,
+          id: `prod-${p.sku.toLowerCase()}-${orgId.slice(0, 6)}`,
+          organization_id: orgId,
+          category_id: cat ? cat.id : p.category_id,
+          created_at: new Date().toISOString(),
+        };
+      });
+      db.products.push(...defaultProducts);
+
+      const defaultServices: Service[] = STARTER_SERVICES.map((s) => {
+        const cat = defaultCategories.find((c) => c.name === s.category_name) || defaultCategories[0];
+        return {
+          ...s,
+          id: `srv-${s.sku.toLowerCase()}-${orgId.slice(0, 6)}`,
+          organization_id: orgId,
+          category_id: cat ? cat.id : s.category_id,
+          created_at: new Date().toISOString(),
+        };
+      });
+      db.services.push(...defaultServices);
+    }
+
+    const existingExpCategories = db.expense_categories.filter((c) => c.organization_id === orgId);
+    if (existingExpCategories.length === 0) {
+      const defaultExpCategories: ExpenseCategory[] = STARTER_EXPENSE_CATEGORIES.map((e) => ({
+        ...e,
+        id: `expcat-${e.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${orgId.slice(0, 6)}`,
+        organization_id: orgId,
+        created_at: new Date().toISOString(),
+      }));
+      db.expense_categories.push(...defaultExpCategories);
+      modified = true;
+    }
+
+    if (modified) {
+      this.setDB(db);
+    }
   }
 
   // --- ORGANIZATIONS & PROFILES ---
@@ -445,6 +555,7 @@ export class StorageEngine {
 
   // --- ACCOUNTS & TRANSFERS ---
   static getAccounts(orgId: string): PaymentAccount[] {
+    this.ensureOrganizationDefaults(orgId);
     return this.getDB().accounts.filter((a) => a.organization_id === orgId);
   }
 

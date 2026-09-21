@@ -15,16 +15,26 @@ import {
   Upload,
   RefreshCw,
   Database,
-  Cloud,
   Check,
   AlertTriangle,
   ShieldCheck,
   Lock,
+  User,
+  KeyRound,
+  Camera,
 } from "lucide-react";
 import { formatDateTime } from "../../lib/utils";
+import { UserAvatar } from "../common/UserAvatar";
 
 export const SettingsView: React.FC = () => {
-  const { organization, updateOrganization, updatePin } = useAuth();
+  const {
+    organization,
+    updateOrganization,
+    user,
+    updateProfilePhoto,
+    updatePassword,
+    updatePin,
+  } = useAuth();
   const { showToast, refreshData } = useApp();
 
   const [form, setForm] = useState({
@@ -46,6 +56,86 @@ export const SettingsView: React.FC = () => {
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [isChangingPin, setIsChangingPin] = useState(false);
+
+  // User Profile Photo state
+  const [photoUrl, setPhotoUrl] = useState(user?.avatar_url || "");
+  const [isSavingPhoto, setIsSavingPhoto] = useState(false);
+
+  // Account Password state
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  const handleSavePhoto = async (urlToSave?: string) => {
+    const targetUrl = urlToSave !== undefined ? urlToSave : photoUrl;
+    setIsSavingPhoto(true);
+    const res = await updateProfilePhoto(targetUrl);
+    setIsSavingPhoto(false);
+    if (res.success) {
+      showToast(
+        "success",
+        "Profile Photo Updated",
+        "Your profile image has been saved.",
+      );
+    } else {
+      showToast(
+        "error",
+        "Photo Update Failed",
+        res.error || "Could not update photo.",
+      );
+    }
+  };
+
+  const handlePhotoFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      showToast("error", "File Too Large", "Please select an image under 2MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setPhotoUrl(dataUrl);
+      void handleSavePhoto(dataUrl);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 8) {
+      showToast(
+        "error",
+        "Password Too Short",
+        "Password must be at least 8 characters long.",
+      );
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showToast("error", "Password Mismatch", "Passwords do not match.");
+      return;
+    }
+    setIsUpdatingPassword(true);
+    const res = await updatePassword(newPassword);
+    setIsUpdatingPassword(false);
+    if (res.success) {
+      showToast(
+        "success",
+        "Password Updated",
+        "Your account password has been updated.",
+      );
+      setNewPassword("");
+      setConfirmPassword("");
+    } else {
+      showToast(
+        "error",
+        "Password Update Failed",
+        res.error || "Could not update password.",
+      );
+    }
+  };
 
   // Backup restore validation modal state
   const [pendingRestore, setPendingRestore] = useState<{
@@ -327,17 +417,111 @@ export const SettingsView: React.FC = () => {
           </Card>
         </div>
 
-        {/* Right 5 cols: Database Backup and Restore */}
+        {/* Right 5 cols: Profile, PIN Security, and Data Backups */}
         <div className="lg:col-span-5 space-y-5">
-          {/* Counter Screen Lock PIN Security */}
+          {/* User Profile & Account Settings */}
+          <Card className="p-5 space-y-4 bg-white border border-[#e6e8ec]">
+            <div className="flex items-center gap-2">
+              <User className="h-5 w-5 text-[#4f46e5]" />
+              <CardTitle>Profile Photo & Account</CardTitle>
+            </div>
+            <p className="text-xs text-[#667085] leading-relaxed">
+              Manage your personal avatar and sign-in credentials.
+            </p>
+
+            {/* Profile Avatar Management */}
+            <div className="flex items-center gap-4 pt-1">
+              <div className="relative">
+                <UserAvatar
+                  src={photoUrl || user?.avatar_url}
+                  name={user?.full_name || organization.owner_name || "Owner"}
+                  size="lg"
+                />
+              </div>
+
+              <div className="flex-1 space-y-2">
+                <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#e6e8ec] bg-[#f8f9fb] hover:bg-[#f2f4f6] text-xs font-medium text-[#191c1e] cursor-pointer transition">
+                  <Camera className="h-3.5 w-3.5 text-[#4f46e5]" />
+                  <span>Upload Custom Photo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoFileUpload}
+                    className="hidden"
+                  />
+                </label>
+
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="url"
+                    placeholder="or paste image URL"
+                    value={photoUrl}
+                    onChange={(e) => setPhotoUrl(e.target.value)}
+                    className="w-full h-8 rounded-md border border-[#dfe3e8] bg-white px-2.5 text-xs outline-none focus:border-[#4f46e5]"
+                  />
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="h-8 px-2.5 text-xs shrink-0"
+                    onClick={() => handleSavePhoto()}
+                    isLoading={isSavingPhoto}
+                  >
+                    Save
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            {/* Change Account Password */}
+            <div className="pt-3 border-t border-[#f2f4f6] space-y-3">
+              <div className="flex items-center gap-1.5">
+                <ShieldCheck className="h-4 w-4 text-[#4f46e5]" />
+                <span className="text-xs font-semibold text-[#191c1e]">
+                  Change Account Password
+                </span>
+              </div>
+
+              <form onSubmit={handleUpdatePassword} className="space-y-2.5">
+                <Input
+                  label="New Password"
+                  type="password"
+                  minLength={8}
+                  placeholder="At least 8 characters"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+                <Input
+                  label="Confirm New Password"
+                  type="password"
+                  minLength={8}
+                  placeholder="Repeat new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                />
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  size="sm"
+                  className="w-full"
+                  disabled={!newPassword || !confirmPassword}
+                  isLoading={isUpdatingPassword}
+                >
+                  <Check className="h-4 w-4 mr-1.5" />
+                  <span>Update Account Password</span>
+                </Button>
+              </form>
+            </div>
+          </Card>
+
+          {/* Quick-Unlock Register PIN */}
           <Card className="p-5 space-y-4 bg-white border border-[#e6e8ec]">
             <div className="flex items-center gap-2">
               <Lock className="h-5 w-5 text-[#4f46e5]" />
-              <CardTitle>Counter Screen Lock PIN</CardTitle>
+              <CardTitle>Quick-Unlock Register PIN</CardTitle>
             </div>
             <p className="text-xs text-[#667085] leading-relaxed">
-              Set or update your counter terminal PIN. This physical security
-              gate prevents unauthorized counter access when stepping away.
+              Used to unlock the register quickly and secure the screen between
+              transactions without retyping full account credentials.
             </p>
 
             <form onSubmit={handleChangePin} className="space-y-3">
@@ -350,20 +534,24 @@ export const SettingsView: React.FC = () => {
                 onChange={(e) => setCurrentPin(e.target.value)}
               />
               <Input
-                label="New PIN / Password (min 4 digits)"
+                label="New 4-Digit PIN"
                 type="password"
                 required
                 minLength={4}
+                maxLength={4}
+                inputMode="numeric"
                 value={newPin}
-                onChange={(e) => setNewPin(e.target.value)}
+                onChange={(e) => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
               />
               <Input
                 label="Confirm New PIN"
                 type="password"
                 required
                 minLength={4}
+                maxLength={4}
+                inputMode="numeric"
                 value={confirmPin}
-                onChange={(e) => setConfirmPin(e.target.value)}
+                onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
               />
               <Button
                 type="submit"
@@ -373,7 +561,7 @@ export const SettingsView: React.FC = () => {
                 isLoading={isChangingPin}
               >
                 <Check className="h-4 w-4 mr-1.5" />
-                <span>Update Counter PIN</span>
+                <span>Update Quick-Unlock PIN</span>
               </Button>
             </form>
           </Card>

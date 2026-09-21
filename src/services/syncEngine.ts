@@ -27,7 +27,7 @@ export const TABLE_ALLOWED_COLUMNS: Record<string, string[]> = {
     'receipt_footer', 'invoice_prefix', 'next_invoice_number', 'created_at', 'updated_at'
   ],
   profiles: [
-    'id', 'email', 'full_name', 'role', 'organization_id', 'is_active', 'created_at', 'updated_at'
+    'id', 'email', 'full_name', 'role', 'organization_id', 'is_active', 'avatar_url', 'created_at', 'updated_at'
   ],
   categories: [
     'id', 'organization_id', 'name', 'type', 'color', 'created_at', 'updated_at'
@@ -234,9 +234,15 @@ class SyncEngineService {
     try {
       db = await getSqliteDatabase();
       const principal = getSecurityPrincipal();
-      if (!principal) throw new Error('Authentication required before synchronization');
+      if (!principal) {
+        this.isSyncing = false;
+        this.notify();
+        return { pushed: 0, pulled: 0, error: 'Authentication required before synchronization' };
+      }
       if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(principal.organizationId)) {
-        throw new Error('Cloud synchronization requires a UUID-backed organization');
+        this.isSyncing = false;
+        this.notify();
+        return { pushed: 0, pulled: 0, error: 'Cloud synchronization requires a UUID-backed organization' };
       }
 
       const queue = await db.select<{

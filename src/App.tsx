@@ -8,7 +8,7 @@ import { CommandPalette } from "./components/layout/CommandPalette";
 import { ShortcutsHelpModal } from "./components/layout/ShortcutsHelpModal";
 import { QuickExpenseModal } from "./components/expenses/QuickExpenseModal";
 import { PrintReceiptModal } from "./components/pos/PrintReceiptModal";
-import { AuthScreen, LockScreen } from "./components/auth/LockScreen";
+import { AuthScreen, LockScreen, PinSetupScreen } from "./components/auth/LockScreen";
 
 // Views
 import { DashboardView } from "./components/dashboard/DashboardView";
@@ -76,7 +76,7 @@ const MainShell: React.FC = () => {
 };
 
 const WorkspaceGate: React.FC = () => {
-  const { isLoading, isLocked, hasLocalAccount } = useAuth();
+  const { isLoading, isLocked, user, hasLocalAccount, hasPinSetup } = useAuth();
 
   if (isLoading) {
     return (
@@ -86,7 +86,20 @@ const WorkspaceGate: React.FC = () => {
     );
   }
 
-  if (isLocked) return hasLocalAccount ? <LockScreen /> : <AuthScreen />;
+  // If no user profile or local shop account is configured, show single unified AuthScreen
+  if (!user && !hasLocalAccount) {
+    return <AuthScreen />;
+  }
+
+  // If account is signed in but has not yet set up their 4-digit quick-unlock PIN
+  if (!hasPinSetup) {
+    return <PinSetupScreen />;
+  }
+
+  // If locked, show LockScreen with 4-digit quick-unlock
+  if (isLocked) {
+    return <LockScreen />;
+  }
 
   return <MainShell />;
 };

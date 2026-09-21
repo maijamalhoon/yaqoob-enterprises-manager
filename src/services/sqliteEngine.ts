@@ -304,6 +304,7 @@ export async function runSqliteMigrations(db: SqlDatabase): Promise<void> {
         role TEXT NOT NULL DEFAULT 'OWNER',
         organization_id TEXT NOT NULL,
         is_active INTEGER DEFAULT 1,
+        avatar_url TEXT,
         sync_status TEXT DEFAULT 'synced',
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL

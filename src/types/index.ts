@@ -28,9 +28,11 @@ export interface UserProfile {
   role: UserRole;
   organization_id: string;
   is_active: boolean;
+  avatar_url?: string;
   password_hash?: string;
   last_login?: string;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface LocalAuthAccount {

@@ -1,9 +1,21 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+export function normalizeSupabaseUrl(rawUrl?: string): string {
+  if (!rawUrl) return '';
+  let url = rawUrl.trim();
+  // Strip trailing /rest/v1 or /rest/v1/ if user pasted REST endpoint URL
+  url = url.replace(/\/rest\/v1\/?$/i, '');
+  // Strip trailing slashes
+  url = url.replace(/\/+$/, '');
+  return url;
+}
+
 export function getSupabaseConfig(): { url: string; anonKey: string } {
+  const rawUrl = (import.meta.env.VITE_SUPABASE_URL as string) || '';
+  const rawKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || '';
   return {
-    url: import.meta.env.VITE_SUPABASE_URL as string,
-    anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY as string,
+    url: normalizeSupabaseUrl(rawUrl),
+    anonKey: rawKey.trim(),
   };
 }
 

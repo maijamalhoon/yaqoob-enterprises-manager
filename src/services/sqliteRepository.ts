@@ -15,6 +15,12 @@ import {
   SplitPayment,
   StockMovement,
 } from '../types';
+import {
+  STARTER_CATEGORIES,
+  STARTER_EXPENSE_CATEGORIES,
+  STARTER_PRODUCTS,
+  STARTER_SERVICES,
+} from '../lib/mockData';
 import { getSqliteDatabase, SqlDatabase } from './sqliteEngine';
 import { requireOrganization, requirePermission } from '../lib/security';
 import { roundMoney } from '../lib/utils';
@@ -83,6 +89,106 @@ export class SQLiteRepository {
         id: id(), organization_id: organization.id, profile_id: profile.id,
         pin_hash: pinHash, pin_salt: pinSalt, created_at: now(), updated_at: now(),
       });
+
+      // Ensure default payment accounts exist for this organization so POS checkout works
+      const existingAccounts = await transactionDb.select<PaymentAccount>(
+        'SELECT id FROM payment_accounts WHERE organization_id = ?',
+        [organization.id],
+      );
+      if (!existingAccounts.length) {
+        const defaultAccounts = [
+          { name: 'Cash Drawer (Shop Till)', type: 'CASH', balance: 10000, is_default: 1 },
+          { name: 'Business Bank Account', type: 'BANK', balance: 0, is_default: 0 },
+          { name: 'JazzCash Merchant Wallet', type: 'DIGITAL_WALLET', balance: 0, is_default: 0 },
+          { name: 'Easypaisa Business Wallet', type: 'DIGITAL_WALLET', balance: 0, is_default: 0 },
+        ];
+        for (const acc of defaultAccounts) {
+          await this.insert(transactionDb, 'payment_accounts', {
+            id: id(),
+            organization_id: organization.id,
+            name: acc.name,
+            type: acc.type,
+            current_balance: acc.balance,
+            opening_balance: acc.balance,
+            is_active: 1,
+            is_default: acc.is_default,
+            created_at: now(),
+            updated_at: now(),
+          });
+        }
+      }
+
+      // Ensure starter categories and expense categories exist if none exist
+      const existingCats = await transactionDb.select<Category>(
+        'SELECT id FROM categories WHERE organization_id = ?',
+        [organization.id],
+      );
+      const categoryMap = new Map<string, string>();
+      if (!existingCats.length) {
+        for (const cat of STARTER_CATEGORIES) {
+          const catId = id();
+          categoryMap.set(cat.name, catId);
+          await this.insert(transactionDb, 'categories', {
+            ...cat,
+            id: catId,
+            organization_id: organization.id,
+            created_at: now(),
+            updated_at: now(),
+          });
+        }
+      }
+
+      const existingExpCats = await transactionDb.select<ExpenseCategory>(
+        'SELECT id FROM expense_categories WHERE organization_id = ?',
+        [organization.id],
+      );
+      if (!existingExpCats.length) {
+        for (const expCat of STARTER_EXPENSE_CATEGORIES) {
+          await this.insert(transactionDb, 'expense_categories', {
+            ...expCat,
+            id: id(),
+            organization_id: organization.id,
+            is_active: 1,
+            created_at: now(),
+          });
+        }
+      }
+
+      const existingProducts = await transactionDb.select<Product>(
+        'SELECT id FROM products WHERE organization_id = ?',
+        [organization.id],
+      );
+      if (!existingProducts.length) {
+        for (const prod of STARTER_PRODUCTS) {
+          const assignedCatId = categoryMap.get(prod.category_name) || prod.category_id;
+          await this.insert(transactionDb, 'products', {
+            ...prod,
+            id: id(),
+            organization_id: organization.id,
+            category_id: assignedCatId,
+            created_at: now(),
+            updated_at: now(),
+          });
+        }
+      }
+
+      const existingServices = await transactionDb.select<Service>(
+        'SELECT id FROM services WHERE organization_id = ?',
+        [organization.id],
+      );
+      if (!existingServices.length) {
+        for (const srv of STARTER_SERVICES) {
+          const assignedCatId = categoryMap.get(srv.category_name) || srv.category_id;
+          await this.insert(transactionDb, 'services', {
+            ...srv,
+            id: id(),
+            organization_id: organization.id,
+            category_id: assignedCatId,
+            created_at: now(),
+            updated_at: now(),
+          });
+        }
+      }
     });
   }
 
@@ -91,6 +197,33 @@ export class SQLiteRepository {
     await (await this.database()).execute(
       'UPDATE local_auth_accounts SET pin_hash = ?, pin_salt = ?, updated_at = ? WHERE id = ?',
       [pinHash, pinSalt, now(), accountId],
+    );
+  }
+
+  async upsertLocalAuthAccount(organizationId: string, profileId: string, pinHash: string, pinSalt: string): Promise<void> {
+    const existing = await this.getLocalAuthAccount(profileId);
+    if (existing) {
+      await this.updateLocalAuthAccount(existing.id, pinHash, pinSalt);
+    } else {
+      const nowStr = now();
+      const accountId = id();
+      await (await this.database()).execute(
+        'INSERT INTO local_auth_accounts (id, organization_id, profile_id, pin_hash, pin_salt, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [accountId, organizationId, profileId, pinHash, pinSalt, nowStr, nowStr],
+      );
+    }
+  }
+
+  async updateProfile(profile: Partial<UserProfile> & { id: string }): Promise<void> {
+    const fields = Object.entries(profile).filter(([key]) => key !== 'id' && key !== 'created_at');
+    if (!fields.length) return;
+    const assignments = fields.map(([key]) => `${key} = ?`).join(', ');
+    const values = fields.map(([, val]) => (typeof val === 'boolean' ? (val ? 1 : 0) : val));
+    values.push(new Date().toISOString());
+    values.push(profile.id);
+    await (await this.database()).execute(
+      `UPDATE profiles SET ${assignments}, updated_at = ? WHERE id = ?`,
+      values,
     );
   }
 
@@ -460,7 +593,41 @@ export class SQLiteRepository {
   async getCustomerById(organizationId: string, customerId: string): Promise<Customer | null> { return (await this.getCustomers(organizationId)).find((customer) => customer.id === customerId) || null; }
   async saveCustomer(organizationId: string, customer: Partial<Customer> & { name: string }): Promise<Customer> { requireOrganization(organizationId); const record: Customer = { id: customer.id || id(), organization_id: organizationId, name: customer.name, phone: customer.phone, email: customer.email, address: customer.address, notes: customer.notes, total_purchases: customer.total_purchases || 0, last_purchase_date: customer.last_purchase_date, outstanding_balance: customer.outstanding_balance || 0, created_at: customer.created_at || now() }; await this.transaction(async (db) => { await this.insert(db, 'customers', record as unknown as Record<string, unknown>); await this.queue(db, organizationId, 'customers', record.id, customer.id ? 'UPDATE' : 'INSERT', record as unknown as Record<string, unknown>); }); return record; }
 
-  async getAccounts(organizationId: string): Promise<PaymentAccount[]> { requireOrganization(organizationId); return (await (await this.database()).select<PaymentAccount>('SELECT * FROM payment_accounts WHERE organization_id = ? ORDER BY name', [organizationId])); }
+  async getAccounts(organizationId: string): Promise<PaymentAccount[]> {
+    requireOrganization(organizationId);
+    const db = await this.database();
+    let accounts = await db.select<PaymentAccount>(
+      'SELECT * FROM payment_accounts WHERE organization_id = ? ORDER BY name',
+      [organizationId]
+    );
+    if (!accounts.length) {
+      const defaultAccounts = [
+        { name: 'Cash Drawer (Shop Till)', type: 'CASH', balance: 10000, is_default: 1 },
+        { name: 'Business Bank Account', type: 'BANK', balance: 0, is_default: 0 },
+        { name: 'JazzCash Merchant Wallet', type: 'DIGITAL_WALLET', balance: 0, is_default: 0 },
+        { name: 'Easypaisa Business Wallet', type: 'DIGITAL_WALLET', balance: 0, is_default: 0 },
+      ];
+      for (const acc of defaultAccounts) {
+        await this.insert(db, 'payment_accounts', {
+          id: id(),
+          organization_id: organizationId,
+          name: acc.name,
+          type: acc.type,
+          current_balance: acc.balance,
+          opening_balance: acc.balance,
+          is_active: 1,
+          is_default: acc.is_default,
+          created_at: now(),
+          updated_at: now(),
+        });
+      }
+      accounts = await db.select<PaymentAccount>(
+        'SELECT * FROM payment_accounts WHERE organization_id = ? ORDER BY name',
+        [organizationId]
+      );
+    }
+    return accounts;
+  }
   async getAccountById(organizationId: string, accountId: string): Promise<PaymentAccount | null> { return (await this.getAccounts(organizationId)).find((account) => account.id === accountId) || null; }
   async saveAccount(organizationId: string, account: Partial<PaymentAccount> & { name: string; type: PaymentAccount['type'] }): Promise<PaymentAccount> { requirePermission(organizationId, 'MANAGE_BUSINESS_CONFIG'); const record: PaymentAccount = { id: account.id || id(), organization_id: organizationId, name: account.name, type: account.type, account_number: account.account_number, current_balance: account.current_balance ?? account.opening_balance ?? 0, opening_balance: account.opening_balance ?? 0, is_active: account.is_active ?? true, is_default: account.is_default ?? false, created_at: account.created_at || now() }; await this.transaction(async (db) => { await this.insert(db, 'payment_accounts', { ...record, is_active: record.is_active ? 1 : 0, is_default: record.is_default ? 1 : 0, updated_at: now() }); await this.queue(db, organizationId, 'payment_accounts', record.id, account.id ? 'UPDATE' : 'INSERT', record as unknown as Record<string, unknown>); }); return record; }
   async transferFunds(organizationId: string, payload: Parameters<IAccountRepository['transferFunds']>[1]): Promise<AccountTransfer> { const principal = requirePermission(organizationId, 'ACCOUNT_TRANSFER'); if (!Number.isFinite(payload.amount) || payload.amount <= 0 || payload.from_account_id === payload.to_account_id) throw new Error('Invalid transfer'); return this.transaction(async (db) => { const accounts = await db.select<any>('SELECT * FROM payment_accounts WHERE organization_id = ? AND id IN (?, ?)', [organizationId, payload.from_account_id, payload.to_account_id]); const from = accounts.find((account) => account.id === payload.from_account_id); const to = accounts.find((account) => account.id === payload.to_account_id); if (!from || !to || Number(from.current_balance) < payload.amount) throw new Error('Invalid accounts or insufficient funds'); const transfer: AccountTransfer = { id: id(), organization_id: organizationId, from_account_id: from.id, from_account_name: from.name, to_account_id: to.id, to_account_name: to.name, amount: payload.amount, date: payload.date, notes: payload.notes, created_by: principal.id, created_at: now() }; await db.execute('UPDATE payment_accounts SET current_balance = current_balance - ?, updated_at = ? WHERE organization_id = ? AND id = ?', [payload.amount, now(), organizationId, from.id]); await db.execute('UPDATE payment_accounts SET current_balance = current_balance + ?, updated_at = ? WHERE organization_id = ? AND id = ?', [payload.amount, now(), organizationId, to.id]); await this.insert(db, 'account_transfers', transfer as unknown as Record<string, unknown>); await this.audit(db, organizationId, 'ACCOUNT_TRANSFER', 'PAYMENT_ACCOUNT', transfer.id, `Transferred ${payload.amount}`); await this.queue(db, organizationId, 'account_transfers', transfer.id, 'INSERT', transfer as unknown as Record<string, unknown>); return transfer; }); }

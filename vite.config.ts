@@ -6,8 +6,8 @@ import { defineConfig, loadEnv } from 'vite';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   if (!env.VITE_SUPABASE_URL || !env.VITE_SUPABASE_ANON_KEY) {
-    throw new Error(
-      'Missing required Supabase configuration. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env before building.'
+    console.warn(
+      'Notice: Supabase configuration (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY) not provided. Running in local offline storage mode.'
     );
   }
 
