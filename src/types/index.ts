@@ -125,6 +125,8 @@ export interface StockMovement {
   quantity: number; // positive or negative
   unit_cost: number;
   total_cost: number;
+  account_id?: string;
+  account_name?: string;
   reference_id?: string;
   reference_type?: string;
   notes?: string;
@@ -180,12 +182,14 @@ export interface AccountTransaction {
   organization_id: string;
   account_id: string;
   account_name: string;
-  type: 'INCOME' | 'EXPENSE' | 'TRANSFER_IN' | 'TRANSFER_OUT' | 'ADJUSTMENT';
+  type: 'INCOME' | 'EXPENSE' | 'TRANSFER_IN' | 'TRANSFER_OUT' | 'ADJUSTMENT' | 'CAPITAL' | 'WITHDRAWAL' | 'KHATA_PAYMENT';
   amount: number;
   balance_after: number;
-  reference_type: 'SALE' | 'EXPENSE' | 'TRANSFER' | 'CLOSING';
+  reference_type: 'SALE' | 'EXPENSE' | 'TRANSFER' | 'CLOSING' | 'CAPITAL' | 'WITHDRAWAL' | 'KHATA' | 'PURCHASE';
   reference_id?: string;
   description: string;
+  category_id?: string;
+  category_name?: string;
   date: string;
   created_at: string;
 }
@@ -278,6 +282,9 @@ export interface DailyClosing {
   opening_cash: number;
   cash_sales: number;
   cash_expenses: number;
+  cash_capital?: number;
+  cash_withdrawals?: number;
+  cash_purchases?: number;
   cash_transfers_in: number;
   cash_transfers_out: number;
   expected_cash: number;
@@ -315,4 +322,78 @@ export interface CartItem {
   discount: number;
   current_stock?: number;
   track_stock?: boolean;
+}
+
+export interface CapitalTransaction {
+  id: string;
+  organization_id: string;
+  account_id: string;
+  account_name: string;
+  amount: number;
+  description: string;
+  date: string;
+  notes?: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface OwnerWithdrawal {
+  id: string;
+  organization_id: string;
+  account_id: string;
+  account_name: string;
+  amount: number;
+  description: string;
+  date: string;
+  notes?: string;
+  created_by: string;
+  created_at: string;
+}
+
+export interface CustomerPayment {
+  id: string;
+  organization_id: string;
+  customer_id: string;
+  customer_name: string;
+  account_id: string;
+  account_name: string;
+  amount: number;
+  date: string;
+  notes?: string;
+  created_by: string;
+  created_at: string;
+}
+
+export type ProposalType = 'INCOME' | 'EXPENSE' | 'CAPITAL' | 'WITHDRAWAL' | 'KHATA_PAYMENT';
+
+export interface TransactionProposal {
+  rawInput: string;
+  type: ProposalType;
+  amount: number;
+  categoryId?: string;
+  categoryName?: string;
+  description: string;
+  requiresConfirmation: boolean;
+  confidence: 'HIGH' | 'AMBIGUOUS' | 'TYPO';
+  suggestedCorrection?: string;
+  ambiguityOptions?: ProposalType[];
+  customerId?: string;
+  customerName?: string;
+}
+
+export interface ChatTransactionMessage {
+  id: string;
+  sender: 'user' | 'system';
+  text: string;
+  timestamp: string;
+  proposal?: TransactionProposal;
+  status: 'PENDING' | 'SAVED' | 'CANCELLED';
+  savedRecord?: {
+    type: ProposalType;
+    id: string;
+    amount: number;
+    title: string;
+    categoryName?: string;
+    time: string;
+  };
 }

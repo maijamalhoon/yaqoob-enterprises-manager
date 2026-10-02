@@ -139,7 +139,7 @@ class InMemorySqliteDatabase implements SqlDatabase {
               const lastParam = bindValues[bindValues.length - 1];
               if (row.id === lastParam) {
                 updated++;
-                return { ...row, ...this.parseSetClause(match[2], bindValues) };
+                return { ...row, ...this.parseSetClause(match[2], bindValues, row) };
               }
             }
             return row;
@@ -172,13 +172,29 @@ class InMemorySqliteDatabase implements SqlDatabase {
     return { rowsAffected: 0, lastInsertId: 0 };
   }
 
-  private parseSetClause(setStr: string, params: unknown[]): Record<string, any> {
+  private parseSetClause(setStr: string, params: unknown[], row?: Record<string, any>): Record<string, any> {
     const parts = setStr.split(',').map((p) => p.trim());
     const res: Record<string, any> = {};
-    parts.forEach((part, i) => {
-      const [col] = part.split('=').map((s) => s.trim().toLowerCase());
-      if (col && params[i] !== undefined) {
-        res[col] = params[i];
+    let paramIdx = 0;
+    parts.forEach((part) => {
+      const eqIdx = part.indexOf('=');
+      if (eqIdx === -1) return;
+      const col = part.slice(0, eqIdx).trim().toLowerCase();
+      const expr = part.slice(eqIdx + 1).trim();
+
+      if (expr.includes('?')) {
+        const val = params[paramIdx++];
+        if (new RegExp(`^${col}\\s*\\-\\s*\\?$`, 'i').test(expr)) {
+          res[col] = (Number(row?.[col]) || 0) - Number(val);
+        } else if (new RegExp(`^${col}\\s*\\+\\s*\\?$`, 'i').test(expr)) {
+          res[col] = (Number(row?.[col]) || 0) + Number(val);
+        } else {
+          res[col] = val;
+        }
+      } else {
+        const num = Number(expr);
+        if (!isNaN(num)) res[col] = num;
+        else if ((expr.startsWith("'") && expr.endsWith("'")) || (expr.startsWith('"') && expr.endsWith('"'))) res[col] = expr.slice(1, -1);
       }
     });
     return res;
@@ -192,29 +208,77 @@ class InMemorySqliteDatabase implements SqlDatabase {
 
     let filtered = [...rows];
 
-    // Filter WHERE status = 'pending'
+    // Filter static WHERE clauses
     if (/WHERE\s+status\s*=\s*'pending'/i.test(query)) {
       filtered = filtered.filter((r) => r.status === 'pending');
     }
-
-    // Parameterized equality conditions in query order.
-    if (bindValues.length > 0) {
-      const conditions = [...query.matchAll(/\b(record_id|organization_id|id|table_name|status)\s*=\s*\?/gi)];
-      conditions.forEach((condition, index) => {
-        const field = condition[1].toLowerCase();
-        const value = bindValues[index];
-        filtered = filtered.filter((row) => row[field] === value);
-      });
+    if (/WHERE\s+.*?\bis_active\s*=\s*1/i.test(query)) {
+      filtered = filtered.filter((r) => r.is_active === 1 || r.is_active === true);
     }
 
-    // Sort if ORDER BY created_at DESC
+    // Parameterized equality conditions in query order
+    if (bindValues.length > 0) {
+      const lowerConditions = [...query.matchAll(/lower\(([a-zA-Z0-9_]+)\)\s*=\s*lower\(\?\)/gi)];
+      const inConditions = [...query.matchAll(/([a-zA-Z0-9_]+)\s+IN\s*\(\?,\s*\?\)/gi)];
+      const standardConditions = [...query.matchAll(/\b([a-zA-Z0-9_]+)\s*=\s*\?/gi)];
+
+      if (lowerConditions.length > 0) {
+        let bIdx = 0;
+        lowerConditions.forEach((c) => {
+          const field = c[1].toLowerCase();
+          const target = String(bindValues[bIdx++] || '').toLowerCase();
+          filtered = filtered.filter((r) => String(r[field] || '').toLowerCase() === target);
+        });
+      } else if (inConditions.length > 0) {
+        const inField = inConditions[0][1].toLowerCase();
+        let orgVal: unknown = undefined;
+        let v1: unknown = undefined;
+        let v2: unknown = undefined;
+        if (bindValues.length >= 3) {
+          orgVal = bindValues[0];
+          v1 = bindValues[1];
+          v2 = bindValues[2];
+          filtered = filtered.filter((r) => r.organization_id === orgVal && (r[inField] === v1 || r[inField] === v2));
+        } else {
+          v1 = bindValues[0];
+          v2 = bindValues[1];
+          filtered = filtered.filter((r) => r[inField] === v1 || r[inField] === v2);
+        }
+      } else if (standardConditions.length > 0) {
+        standardConditions.forEach((condition, index) => {
+          const field = condition[1].toLowerCase();
+          const value = bindValues[index];
+          if (value !== undefined) {
+            filtered = filtered.filter((row) => {
+              if (row[field] === value) return true;
+              if (typeof value === 'string' && String(row[field]) === value) return true;
+              if (typeof value === 'number' && Number(row[field]) === value) return true;
+              return false;
+            });
+          }
+        });
+      }
+    }
+
+    // Sort ORDER BY
     if (query.toUpperCase().includes('ORDER BY CREATED_AT DESC')) {
       filtered.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+    } else if (query.toUpperCase().includes('ORDER BY CLOSING_DATE DESC')) {
+      filtered.sort((a, b) => (b.closing_date || '').localeCompare(a.closing_date || ''));
+    } else if (query.toUpperCase().includes('ORDER BY NAME')) {
+      filtered.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    } else if (query.toUpperCase().includes('ORDER BY FULL_NAME')) {
+      filtered.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
     }
 
     // Handle COUNT(*)
     if (/SELECT\s+COUNT\(\*\)\s+(?:as\s+count\s+)?FROM/i.test(query)) {
       return [{ count: filtered.length }] as T[];
+    }
+
+    // Handle LIMIT 1
+    if (/\bLIMIT\s+1\b/i.test(query)) {
+      return filtered.slice(0, 1) as T[];
     }
 
     return filtered as T[];

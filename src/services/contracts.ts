@@ -108,6 +108,28 @@ export interface IAccountRepository {
       created_by: string;
     }
   ): Promise<AccountTransfer>;
+  recordCapital(
+    organizationId: string,
+    payload: {
+      account_id?: string;
+      amount: number;
+      description?: string;
+      date?: string;
+      notes?: string;
+      created_by?: string;
+    }
+  ): Promise<AccountTransaction>;
+  recordWithdrawal(
+    organizationId: string,
+    payload: {
+      account_id?: string;
+      amount: number;
+      description?: string;
+      date?: string;
+      notes?: string;
+      created_by?: string;
+    }
+  ): Promise<AccountTransaction>;
   getTransactions(organizationId: string, accountId?: string): Promise<AccountTransaction[]>;
 }
 
@@ -117,6 +139,9 @@ export interface IClosingRepository {
     openingCash: number;
     cashSales: number;
     cashExpenses: number;
+    cashCapital: number;
+    cashWithdrawals: number;
+    cashPurchases?: number;
     cashTransfersIn: number;
     cashTransfersOut: number;
     expectedCash: number;

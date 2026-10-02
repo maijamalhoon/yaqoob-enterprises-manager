@@ -16,6 +16,7 @@ import {
   Service,
   Customer,
   PaymentAccount,
+  AccountTransaction,
   AccountTransfer,
   Expense,
   ExpenseCategory,
@@ -375,6 +376,36 @@ export class AccountRepository implements IAccountRepository {
       created_at: new Date().toISOString(),
     };
     return StorageEngine.transferFunds(transfer);
+  }
+
+  async recordCapital(
+    organizationId: string,
+    payload: {
+      account_id?: string;
+      amount: number;
+      description?: string;
+      date?: string;
+      notes?: string;
+      created_by?: string;
+    }
+  ): Promise<AccountTransaction> {
+    if (desktopRepository) return desktopRepository.recordCapital(organizationId, payload);
+    return StorageEngine.recordCapital(organizationId, payload);
+  }
+
+  async recordWithdrawal(
+    organizationId: string,
+    payload: {
+      account_id?: string;
+      amount: number;
+      description?: string;
+      date?: string;
+      notes?: string;
+      created_by?: string;
+    }
+  ): Promise<AccountTransaction> {
+    if (desktopRepository) return desktopRepository.recordWithdrawal(organizationId, payload);
+    return StorageEngine.recordWithdrawal(organizationId, payload);
   }
 
   async getTransactions(organizationId: string, accountId?: string) {

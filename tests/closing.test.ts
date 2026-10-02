@@ -118,4 +118,49 @@ describe('Daily Cash Closing & Drawer Reconciliation', () => {
 
     expect(closing.difference).toBe(0);
   });
+
+  it('correctly includes owner capital and owner withdrawal in expected cash closing', () => {
+    const summaryBefore = StorageEngine.getDailyClosingSummary(orgId, today);
+    const expectedBefore = summaryBefore.expectedCash;
+
+    // Inject Rs. 50,000 capital in Cash
+    StorageEngine.recordCapital(orgId, {
+      account_id: 'acc-cash',
+      amount: 50000,
+      date: today,
+      description: 'Capital test',
+      created_by: 'Owner Yaqoob',
+    });
+
+    // Withdraw Rs. 10,000 from Cash
+    StorageEngine.recordWithdrawal(orgId, {
+      account_id: 'acc-cash',
+      amount: 10000,
+      date: today,
+      description: 'Drawings test',
+      created_by: 'Owner Yaqoob',
+    });
+
+    const summaryAfter = StorageEngine.getDailyClosingSummary(orgId, today);
+    expect(summaryAfter.cashCapital).toBe(50000);
+    expect(summaryAfter.cashWithdrawals).toBe(10000);
+    expect(summaryAfter.expectedCash).toBe(expectedBefore + 50000 - 10000);
+  });
+
+  it('carries forward previous verified closing cash to the next day opening cash', () => {
+    const day1 = '2026-05-10';
+    const day2 = '2026-05-11';
+
+    // Day 1 closing with verified actual cash of 15,750
+    StorageEngine.recordDailyClosing(orgId, {
+      closing_date: day1,
+      actual_cash: 15750,
+      notes: 'Day 1 closed and verified',
+      closed_by: 'Muhammad Yaqoob',
+    });
+
+    // Day 2 summary must pick up 15,750 as opening cash, NOT static 10,000
+    const day2Summary = StorageEngine.getDailyClosingSummary(orgId, day2);
+    expect(day2Summary.openingCash).toBe(15750);
+  });
 });

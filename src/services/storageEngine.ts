@@ -479,33 +479,75 @@ export class StorageEngine {
     if (!Number.isFinite(movement.unit_cost) || movement.unit_cost < 0) {
       throw new Error('Stock movement cost is invalid');
     }
+    if (!movement.id) {
+      movement.id = `mov-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    }
+    if (!movement.created_at) {
+      movement.created_at = new Date().toISOString();
+    }
+    if (movement.total_cost === undefined || movement.total_cost === null) {
+      movement.total_cost = roundMoney(movement.quantity * movement.unit_cost);
+    }
     movement.created_by = principal.fullName;
     const db = this.getDB();
-    db.stock_movements.unshift(movement);
 
     // Apply change to product current stock and recalculate value
     const product = db.products.find(
       (p) => p.organization_id === movement.organization_id && p.id === movement.product_id
     );
     if (!product) throw new Error('Stock movement product does not belong to this organization');
-    if (product) {
-      if (movement.movement_type === 'PURCHASE') {
-        // Recalculate Weighted Average Cost
-        const wac = calculateWeightedAverageCost(
-          product.current_stock,
-          product.average_cost,
-          movement.quantity,
-          movement.unit_cost
-        );
-        product.current_stock = wac.newStock;
-        product.average_cost = wac.newAvgCost;
-        product.stock_value = wac.newStockValue;
-      } else {
-        product.current_stock = roundMoney(product.current_stock + movement.quantity);
-        product.stock_value = roundMoney(product.current_stock * product.average_cost);
+
+    // If purchase paid from a payment account, validate balance and record financial ledger transaction
+    if (movement.movement_type === 'PURCHASE' && movement.account_id) {
+      const paymentAccount = db.accounts.find(
+        (a) => a.organization_id === movement.organization_id && a.id === movement.account_id
+      );
+      if (!paymentAccount) throw new Error('Payment account not found for inventory purchase');
+      const totalCost = roundMoney(movement.quantity * movement.unit_cost);
+      if (paymentAccount.current_balance < totalCost) {
+        throw new Error('Insufficient funds in account for inventory purchase');
       }
-      syncEngine.enqueue('products', product.id, 'UPDATE', product as any);
+      paymentAccount.current_balance = roundMoney(paymentAccount.current_balance - totalCost);
+      movement.account_name = paymentAccount.name;
+
+      const txDate = movement.created_at ? movement.created_at.slice(0, 10) : new Date().toISOString().slice(0, 10);
+      const purchaseTx: AccountTransaction = {
+        id: `tx-purch-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        organization_id: movement.organization_id,
+        account_id: paymentAccount.id,
+        account_name: paymentAccount.name,
+        type: 'EXPENSE',
+        amount: totalCost,
+        balance_after: paymentAccount.current_balance,
+        reference_type: 'PURCHASE',
+        reference_id: movement.id,
+        description: `Inventory Purchase: ${movement.quantity} units of ${product.name}`,
+        date: txDate,
+        created_at: movement.created_at || new Date().toISOString(),
+      };
+      db.transactions.unshift(purchaseTx);
+      syncEngine.enqueue('transactions', purchaseTx.id, 'INSERT', purchaseTx as any);
+      syncEngine.enqueue('payment_accounts', paymentAccount.id, 'UPDATE', paymentAccount as any);
     }
+
+    db.stock_movements.unshift(movement);
+
+    if (movement.movement_type === 'PURCHASE') {
+      // Recalculate Weighted Average Cost
+      const wac = calculateWeightedAverageCost(
+        product.current_stock,
+        product.average_cost,
+        movement.quantity,
+        movement.unit_cost
+      );
+      product.current_stock = wac.newStock;
+      product.average_cost = wac.newAvgCost;
+      product.stock_value = wac.newStockValue;
+    } else {
+      product.current_stock = roundMoney(product.current_stock + movement.quantity);
+      product.stock_value = roundMoney(product.current_stock * product.average_cost);
+    }
+    syncEngine.enqueue('products', product.id, 'UPDATE', product as any);
 
     this.setDB(db);
     syncEngine.enqueue('stock_movements', movement.id, 'INSERT', movement as any);
@@ -662,6 +704,127 @@ export class StorageEngine {
       return list.filter((t) => t.account_id === accountId);
     }
     return list;
+  }
+
+  static recordCapital(
+    orgId: string,
+    payload: {
+      account_id?: string;
+      amount: number;
+      description?: string;
+      date?: string;
+      notes?: string;
+      created_by?: string;
+    }
+  ): AccountTransaction {
+    const principal = requirePermission(orgId, 'ACCOUNT_TRANSFER');
+    if (!Number.isFinite(payload.amount) || payload.amount <= 0) {
+      throw new Error('Capital amount must be a positive finite number');
+    }
+    const db = this.getDB();
+    const account = payload.account_id
+      ? db.accounts.find((a) => a.organization_id === orgId && a.id === payload.account_id)
+      : db.accounts.find((a) => a.organization_id === orgId && a.type === 'CASH') || db.accounts[0];
+
+    if (!account) throw new Error('Valid destination account required for capital injection');
+
+    account.current_balance = roundMoney(account.current_balance + payload.amount);
+
+    const txDate = payload.date || new Date().toISOString().slice(0, 10);
+    const tx: AccountTransaction = {
+      id: `tx-cap-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      organization_id: orgId,
+      account_id: account.id,
+      account_name: account.name,
+      type: 'CAPITAL',
+      amount: roundMoney(payload.amount),
+      balance_after: account.current_balance,
+      reference_type: 'CAPITAL',
+      description: payload.description || 'Owner Capital Contribution',
+      date: txDate,
+      created_at: new Date().toISOString(),
+    };
+
+    db.transactions.unshift(tx);
+
+    db.audit_logs.unshift({
+      id: `log-${Date.now()}`,
+      organization_id: orgId,
+      user_id: principal.id,
+      user_name: principal.fullName,
+      action: 'CAPITAL_DEPOSIT',
+      entity: 'PAYMENT_ACCOUNT',
+      entity_id: account.id,
+      details: `Added capital of Rs. ${payload.amount} to ${account.name}`,
+      created_at: new Date().toISOString(),
+    });
+
+    this.setDB(db);
+    syncEngine.enqueue('transactions', tx.id, 'INSERT', tx as any);
+    syncEngine.enqueue('payment_accounts', account.id, 'UPDATE', account as any);
+    return tx;
+  }
+
+  static recordWithdrawal(
+    orgId: string,
+    payload: {
+      account_id?: string;
+      amount: number;
+      description?: string;
+      date?: string;
+      notes?: string;
+      created_by?: string;
+    }
+  ): AccountTransaction {
+    const principal = requirePermission(orgId, 'ACCOUNT_TRANSFER');
+    if (!Number.isFinite(payload.amount) || payload.amount <= 0) {
+      throw new Error('Withdrawal amount must be a positive finite number');
+    }
+    const db = this.getDB();
+    const account = payload.account_id
+      ? db.accounts.find((a) => a.organization_id === orgId && a.id === payload.account_id)
+      : db.accounts.find((a) => a.organization_id === orgId && a.type === 'CASH') || db.accounts[0];
+
+    if (!account) throw new Error('Valid account required for owner withdrawal');
+    if (account.current_balance < payload.amount) {
+      throw new Error('Insufficient funds for owner withdrawal');
+    }
+
+    account.current_balance = roundMoney(account.current_balance - payload.amount);
+
+    const txDate = payload.date || new Date().toISOString().slice(0, 10);
+    const tx: AccountTransaction = {
+      id: `tx-wdr-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      organization_id: orgId,
+      account_id: account.id,
+      account_name: account.name,
+      type: 'WITHDRAWAL',
+      amount: roundMoney(payload.amount),
+      balance_after: account.current_balance,
+      reference_type: 'WITHDRAWAL',
+      description: payload.description || 'Owner Drawing / Withdrawal',
+      date: txDate,
+      created_at: new Date().toISOString(),
+    };
+
+    db.transactions.unshift(tx);
+
+    db.audit_logs.unshift({
+      id: `log-${Date.now()}`,
+      organization_id: orgId,
+      user_id: principal.id,
+      user_name: principal.fullName,
+      action: 'OWNER_WITHDRAWAL',
+      entity: 'PAYMENT_ACCOUNT',
+      entity_id: account.id,
+      details: `Owner withdrew Rs. ${payload.amount} from ${account.name}`,
+      created_at: new Date().toISOString(),
+    });
+
+    this.setDB(db);
+    syncEngine.enqueue('transactions', tx.id, 'INSERT', tx as any);
+    syncEngine.enqueue('payment_accounts', account.id, 'UPDATE', account as any);
+    return tx;
   }
 
   // --- EXPENSES ---
@@ -1310,8 +1473,17 @@ export class StorageEngine {
     const cashAccount =
       db.accounts.find((a) => a.organization_id === orgId && a.type === 'CASH') ||
       db.accounts[0];
+    const cashAccountId = cashAccount ? cashAccount.id : 'acc-cash';
 
-    const openingCash = cashAccount ? cashAccount.opening_balance : 10000;
+    // Find the most recent verified daily closing prior to this date for carry-forward
+    const previousClosings = db.daily_closings
+      .filter((c) => c.organization_id === orgId && c.closing_date < date)
+      .sort((a, b) => b.closing_date.localeCompare(a.closing_date));
+
+    const lastClosing = previousClosings[0];
+    const openingCash = lastClosing
+      ? lastClosing.actual_cash
+      : (cashAccount ? cashAccount.opening_balance : 0);
 
     // Sales made in cash today
     const daySales = db.sales.filter(
@@ -1325,7 +1497,7 @@ export class StorageEngine {
     for (const sale of daySales) {
       if (sale.split_payments && sale.split_payments.length > 0) {
         for (const sp of sale.split_payments) {
-          if (sp.account_name.toLowerCase().includes('cash')) {
+          if (sp.account_id === cashAccountId || sp.account_name.toLowerCase().includes('cash')) {
             cashSales = roundMoney(cashSales + sp.amount);
           }
         }
@@ -1340,10 +1512,49 @@ export class StorageEngine {
         e.organization_id === orgId &&
         e.status === 'ACTIVE' &&
         e.date === date &&
-        e.account_name.toLowerCase().includes('cash')
+        (e.account_id === cashAccountId || e.account_name.toLowerCase().includes('cash'))
     );
     const cashExpenses = roundMoney(
       dayExpenses.reduce((sum, e) => sum + e.amount, 0)
+    );
+
+    // Cash capital injected today
+    const cashCapital = roundMoney(
+      db.transactions
+        .filter(
+          (t) =>
+            t.organization_id === orgId &&
+            t.account_id === cashAccountId &&
+            t.date === date &&
+            t.type === 'CAPITAL'
+        )
+        .reduce((sum, t) => sum + t.amount, 0)
+    );
+
+    // Cash owner withdrawals today
+    const cashWithdrawals = roundMoney(
+      db.transactions
+        .filter(
+          (t) =>
+            t.organization_id === orgId &&
+            t.account_id === cashAccountId &&
+            t.date === date &&
+            t.type === 'WITHDRAWAL'
+        )
+        .reduce((sum, t) => sum + t.amount, 0)
+    );
+
+    // Cash inventory purchases today
+    const cashPurchases = roundMoney(
+      db.transactions
+        .filter(
+          (t) =>
+            t.organization_id === orgId &&
+            t.account_id === cashAccountId &&
+            t.date === date &&
+            t.reference_type === 'PURCHASE'
+        )
+        .reduce((sum, t) => sum + t.amount, 0)
     );
 
     // Cash transfers
@@ -1352,7 +1563,7 @@ export class StorageEngine {
         (t) =>
           t.organization_id === orgId &&
           t.date === date &&
-          t.to_account_name.toLowerCase().includes('cash')
+          (t.to_account_id === cashAccountId || t.to_account_name.toLowerCase().includes('cash'))
       )
       .reduce((sum, t) => sum + t.amount, 0);
 
@@ -1361,18 +1572,21 @@ export class StorageEngine {
         (t) =>
           t.organization_id === orgId &&
           t.date === date &&
-          t.from_account_name.toLowerCase().includes('cash')
+          (t.from_account_id === cashAccountId || t.from_account_name.toLowerCase().includes('cash'))
       )
       .reduce((sum, t) => sum + t.amount, 0);
 
     const expectedCash = roundMoney(
-      openingCash + cashSales - cashExpenses + transfersIn - transfersOut
+      openingCash + cashSales + cashCapital - cashExpenses - cashWithdrawals - cashPurchases + transfersIn - transfersOut
     );
 
     return {
       openingCash,
       cashSales,
       cashExpenses,
+      cashCapital,
+      cashWithdrawals,
+      cashPurchases,
       cashTransfersIn: transfersIn,
       cashTransfersOut: transfersOut,
       expectedCash,
@@ -1406,6 +1620,9 @@ export class StorageEngine {
       opening_cash: summary.openingCash,
       cash_sales: summary.cashSales,
       cash_expenses: summary.cashExpenses,
+      cash_capital: summary.cashCapital,
+      cash_withdrawals: summary.cashWithdrawals,
+      cash_purchases: summary.cashPurchases,
       cash_transfers_in: summary.cashTransfersIn,
       cash_transfers_out: summary.cashTransfersOut,
       expected_cash: summary.expectedCash,

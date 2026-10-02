@@ -55,6 +55,26 @@ export const AccountsView: React.FC = () => {
     opening_balance: 0,
   });
 
+  // Capital Injection Modal State
+  const [isCapitalModalOpen, setIsCapitalModalOpen] = useState(false);
+  const [capitalForm, setCapitalForm] = useState({
+    accountId: '',
+    amount: '',
+    description: 'Owner Capital Contribution',
+    notes: '',
+    date: new Date().toISOString().slice(0, 10),
+  });
+
+  // Owner Withdrawal Modal State
+  const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
+  const [withdrawalForm, setWithdrawalForm] = useState({
+    accountId: '',
+    amount: '',
+    description: 'Owner Personal Drawing',
+    notes: '',
+    date: new Date().toISOString().slice(0, 10),
+  });
+
   useEffect(() => {
     async function loadAccounts() {
       const [accList, txList] = await Promise.all([
@@ -147,6 +167,90 @@ export const AccountsView: React.FC = () => {
     }
   };
 
+  const handleRecordCapital = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amt = parseFloat(capitalForm.amount);
+    if (!amt || amt <= 0) {
+      showToast('error', 'Invalid Amount', 'Enter a positive capital amount');
+      return;
+    }
+    const accId = capitalForm.accountId || accounts[0]?.id;
+    if (!accId) {
+      showToast('error', 'No Account', 'Select an account for capital deposit');
+      return;
+    }
+
+    try {
+      await accountRepo.recordCapital(organization.id, {
+        account_id: accId,
+        amount: amt,
+        description: capitalForm.description.trim() || 'Owner Capital Contribution',
+        notes: capitalForm.notes.trim() || undefined,
+        date: capitalForm.date || new Date().toISOString().slice(0, 10),
+        created_by: user?.full_name || 'Owner',
+      });
+
+      showToast(
+        'success',
+        'Owner Capital Added',
+        `${formatCurrency(amt, organization.currency_symbol)} added to capital equity`
+      );
+      setIsCapitalModalOpen(false);
+      setCapitalForm({
+        accountId: '',
+        amount: '',
+        description: 'Owner Capital Contribution',
+        notes: '',
+        date: new Date().toISOString().slice(0, 10),
+      });
+      refreshData();
+    } catch (err: any) {
+      showToast('error', 'Failed to Record Capital', err.message);
+    }
+  };
+
+  const handleRecordWithdrawal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amt = parseFloat(withdrawalForm.amount);
+    if (!amt || amt <= 0) {
+      showToast('error', 'Invalid Amount', 'Enter a positive withdrawal amount');
+      return;
+    }
+    const accId = withdrawalForm.accountId || accounts[0]?.id;
+    if (!accId) {
+      showToast('error', 'No Account', 'Select an account for withdrawal');
+      return;
+    }
+
+    try {
+      await accountRepo.recordWithdrawal(organization.id, {
+        account_id: accId,
+        amount: amt,
+        description: withdrawalForm.description.trim() || 'Owner Personal Drawing',
+        notes: withdrawalForm.notes.trim() || undefined,
+        date: withdrawalForm.date || new Date().toISOString().slice(0, 10),
+        created_by: user?.full_name || 'Owner',
+      });
+
+      showToast(
+        'success',
+        'Owner Withdrawal Recorded',
+        `${formatCurrency(amt, organization.currency_symbol)} recorded as owner drawing`
+      );
+      setIsWithdrawalModalOpen(false);
+      setWithdrawalForm({
+        accountId: '',
+        amount: '',
+        description: 'Owner Personal Drawing',
+        notes: '',
+        date: new Date().toISOString().slice(0, 10),
+      });
+      refreshData();
+    } catch (err: any) {
+      showToast('error', 'Failed to Record Withdrawal', err.message);
+    }
+  };
+
   const filteredTransactions =
     selectedAccountId === 'ALL'
       ? transactions
@@ -178,6 +282,44 @@ export const AccountsView: React.FC = () => {
               </span>
             </div>
           </div>
+
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={() => {
+              setCapitalForm({
+                accountId: accounts[0]?.id || '',
+                amount: '',
+                description: 'Owner Capital Contribution',
+                notes: '',
+                date: new Date().toISOString().slice(0, 10),
+              });
+              setIsCapitalModalOpen(true);
+            }}
+            className="border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+          >
+            <TrendingUp className="h-4 w-4 text-emerald-600" />
+            <span>Add Capital (+)</span>
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={() => {
+              setWithdrawalForm({
+                accountId: accounts[0]?.id || '',
+                amount: '',
+                description: 'Owner Personal Drawing',
+                notes: '',
+                date: new Date().toISOString().slice(0, 10),
+              });
+              setIsWithdrawalModalOpen(true);
+            }}
+            className="border-purple-200 text-purple-700 hover:bg-purple-50"
+          >
+            <ArrowDown className="h-4 w-4 text-purple-600" />
+            <span>Owner Withdrawal (-)</span>
+          </Button>
 
           <Button
             variant="secondary"
@@ -312,8 +454,20 @@ export const AccountsView: React.FC = () => {
                   </tr>
                 ) : (
                   filteredTransactions.slice(0, 15).map((tx) => {
-                    const isPositive = ['INCOME', 'TRANSFER_IN', 'ADJUSTMENT'].includes(tx.type);
+                    const isPositive = ['INCOME', 'TRANSFER_IN', 'ADJUSTMENT', 'CAPITAL'].includes(tx.type);
                     const acc = accounts.find((a) => a.id === tx.account_id);
+                    let badgeClass = 'text-[#667085] bg-[#f8f9fb] border-[#e6e8ec]';
+                    if (tx.type === 'CAPITAL') {
+                      badgeClass = 'text-[#16a34a] bg-[#f0fdf4] border-[#dcfce7] font-bold';
+                    } else if (tx.type === 'WITHDRAWAL') {
+                      badgeClass = 'text-[#9333ea] bg-[#faf5ff] border-[#f3e8ff] font-bold';
+                    } else if (tx.reference_type === 'PURCHASE') {
+                      badgeClass = 'text-[#2563eb] bg-[#eff6ff] border-[#dbeafe] font-bold';
+                    } else if (tx.type === 'INCOME') {
+                      badgeClass = 'text-[#16a34a] bg-[#f0fdf4] border-[#dcfce7]';
+                    } else if (tx.type === 'EXPENSE') {
+                      badgeClass = 'text-[#dc2626] bg-[#fef2f2] border-[#fee2e2]';
+                    }
 
                     return (
                       <tr key={tx.id} className="hover:bg-[#f8f9fb] transition-colors">
@@ -327,8 +481,8 @@ export const AccountsView: React.FC = () => {
                           <div className="truncate max-w-[220px]">{tx.description}</div>
                         </td>
                         <td className="py-3 px-3 whitespace-nowrap">
-                          <span className="text-[11px] text-[#667085] bg-[#f8f9fb] px-2 py-0.5 rounded border border-[#e6e8ec]">
-                            {tx.type}
+                          <span className={`text-[11px] px-2 py-0.5 rounded border ${badgeClass}`}>
+                            {tx.reference_type === 'PURCHASE' ? 'PURCHASE' : tx.type}
                           </span>
                         </td>
                         <td className="py-3 px-3 font-mono font-bold text-right whitespace-nowrap">
@@ -548,6 +702,156 @@ export const AccountsView: React.FC = () => {
             <Button type="submit" variant="primary">
               <Check className="h-4 w-4" />
               <span>Create Account</span>
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Capital Injection Modal */}
+      <Modal
+        isOpen={isCapitalModalOpen}
+        onClose={() => setIsCapitalModalOpen(false)}
+        title="Deposit Owner Capital"
+        description="Inject personal equity into the business. Increases cash/account liquidity without affecting sales revenue or profit."
+        maxWidth="md"
+      >
+        <form onSubmit={handleRecordCapital} className="space-y-4 py-1">
+          <div>
+            <label className="block text-xs font-semibold text-[#14181f] mb-1.5">
+              Deposit Into Account
+            </label>
+            <select
+              value={capitalForm.accountId || accounts[0]?.id || ''}
+              onChange={(e) => setCapitalForm({ ...capitalForm, accountId: e.target.value })}
+              className="w-full h-10 rounded-lg bg-white border border-[#e6e8ec] px-3 text-xs text-[#14181f] focus:border-[#4f46e5] focus:outline-none"
+            >
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.name} ({formatCurrency(acc.current_balance, organization.currency_symbol)})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label={`Capital Amount (${organization.currency_symbol})`}
+              type="number"
+              step="any"
+              required
+              placeholder="e.g. 50000"
+              value={capitalForm.amount}
+              onChange={(e) => setCapitalForm({ ...capitalForm, amount: e.target.value })}
+            />
+            <Input
+              label="Date"
+              type="date"
+              required
+              value={capitalForm.date}
+              onChange={(e) => setCapitalForm({ ...capitalForm, date: e.target.value })}
+            />
+          </div>
+
+          <Input
+            label="Description / Source of Capital"
+            placeholder="e.g. Owner Capital Contribution, Personal Savings"
+            value={capitalForm.description}
+            onChange={(e) => setCapitalForm({ ...capitalForm, description: e.target.value })}
+          />
+
+          <Input
+            label="Notes (Optional)"
+            placeholder="e.g. Cash injected for shop machinery and initial till float"
+            value={capitalForm.notes}
+            onChange={(e) => setCapitalForm({ ...capitalForm, notes: e.target.value })}
+          />
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#e6e8ec]">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsCapitalModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary">
+              <Check className="h-4 w-4" />
+              <span>Record Capital</span>
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Owner Withdrawal / Drawings Modal */}
+      <Modal
+        isOpen={isWithdrawalModalOpen}
+        onClose={() => setIsWithdrawalModalOpen(false)}
+        title="Record Owner Withdrawal / Drawing"
+        description="Withdraw funds for personal owner drawings. Decreases cash/account liquidity without counting as an operating expense or altering profit."
+        maxWidth="md"
+      >
+        <form onSubmit={handleRecordWithdrawal} className="space-y-4 py-1">
+          <div>
+            <label className="block text-xs font-semibold text-[#14181f] mb-1.5">
+              Withdraw From Account
+            </label>
+            <select
+              value={withdrawalForm.accountId || accounts[0]?.id || ''}
+              onChange={(e) => setWithdrawalForm({ ...withdrawalForm, accountId: e.target.value })}
+              className="w-full h-10 rounded-lg bg-white border border-[#e6e8ec] px-3 text-xs text-[#14181f] focus:border-[#4f46e5] focus:outline-none"
+            >
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.name} (Available: {formatCurrency(acc.current_balance, organization.currency_symbol)})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Input
+              label={`Withdrawal Amount (${organization.currency_symbol})`}
+              type="number"
+              step="any"
+              required
+              placeholder="e.g. 10000"
+              value={withdrawalForm.amount}
+              onChange={(e) => setWithdrawalForm({ ...withdrawalForm, amount: e.target.value })}
+            />
+            <Input
+              label="Date"
+              type="date"
+              required
+              value={withdrawalForm.date}
+              onChange={(e) => setWithdrawalForm({ ...withdrawalForm, date: e.target.value })}
+            />
+          </div>
+
+          <Input
+            label="Description / Purpose of Drawing"
+            placeholder="e.g. Owner Personal Drawing, Household Expenses"
+            value={withdrawalForm.description}
+            onChange={(e) => setWithdrawalForm({ ...withdrawalForm, description: e.target.value })}
+          />
+
+          <Input
+            label="Notes (Optional)"
+            placeholder="e.g. Cash taken home by Muhammad Yaqoob"
+            value={withdrawalForm.notes}
+            onChange={(e) => setWithdrawalForm({ ...withdrawalForm, notes: e.target.value })}
+          />
+
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#e6e8ec]">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsWithdrawalModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary">
+              <Check className="h-4 w-4" />
+              <span>Record Withdrawal</span>
             </Button>
           </div>
         </form>

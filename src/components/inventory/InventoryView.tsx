@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useApp } from "../../context/AppContext";
-import { inventoryRepo } from "../../services";
+import { inventoryRepo, accountRepo } from "../../services";
 import {
   Product,
   Service,
   Category,
   StockMovement,
   ServiceRecipeComponent,
+  PaymentAccount,
 } from "../../types";
 import { Card } from "../common/Card";
 import { Button } from "../common/Button";
@@ -83,32 +84,37 @@ export const InventoryView: React.FC = () => {
   >([]);
 
   // Stock Adjustment / Purchase Movement Modal
+  const [accounts, setAccounts] = useState<PaymentAccount[]>([]);
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
   const [movementProduct, setMovementProduct] = useState<Product | null>(null);
   const [movementForm, setMovementForm] = useState<{
     movement_type: StockMovement["movement_type"];
     quantity: number;
     unit_cost: number;
+    account_id: string;
     notes: string;
   }>({
     movement_type: "PURCHASE",
     quantity: 10,
     unit_cost: 0,
+    account_id: "",
     notes: "",
   });
 
   useEffect(() => {
     async function loadData() {
-      const [prods, servs, cats, movs] = await Promise.all([
+      const [prods, servs, cats, movs, accs] = await Promise.all([
         inventoryRepo.getProducts(organization.id),
         inventoryRepo.getServices(organization.id),
         inventoryRepo.getCategories(organization.id),
         inventoryRepo.getStockMovements(organization.id),
+        accountRepo.getAccounts(organization.id),
       ]);
       setProducts(prods);
       setServices(servs);
       setCategories(cats);
       setMovements(movs);
+      setAccounts(accs);
     }
     loadData();
   }, [organization.id, dataVersion]);
@@ -339,6 +345,7 @@ export const InventoryView: React.FC = () => {
       movement_type: "PURCHASE",
       quantity: 10,
       unit_cost: product.average_cost || product.purchase_price,
+      account_id: accounts.find((a) => a.type === "CASH")?.id || accounts[0]?.id || "",
       notes: "",
     });
     setIsMovementModalOpen(true);
@@ -359,6 +366,10 @@ export const InventoryView: React.FC = () => {
         quantity: movementForm.quantity,
         unit_cost: movementForm.unit_cost,
         total_cost: totalCost,
+        account_id:
+          movementForm.movement_type === "PURCHASE" && movementForm.account_id ?
+            movementForm.account_id
+          : undefined,
         notes: movementForm.notes,
         created_by: "Inventory Manager",
       });
@@ -1311,6 +1322,31 @@ export const InventoryView: React.FC = () => {
               }
             />
           </div>
+
+          {movementForm.movement_type === "PURCHASE" && (
+            <div>
+              <label className="block text-xs font-semibold text-[#14181f] mb-1.5">
+                Pay from Account / Register
+              </label>
+              <select
+                value={movementForm.account_id}
+                onChange={(e) =>
+                  setMovementForm({ ...movementForm, account_id: e.target.value })
+                }
+                className="w-full h-10 rounded-lg bg-white border border-[#e6e8ec] px-3 text-xs text-[#14181f] focus:border-[#4f46e5] focus:outline-none"
+              >
+                <option value="">Do not deduct money (Credit / Unpaid)</option>
+                {accounts.map((acc) => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name} ({formatCurrency(acc.current_balance, organization.currency_symbol)})
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-[11px] text-[#667085]">
+                Deducts cash/bank liquidity and logs a purchase transaction. Does NOT increase operating expenses to avoid COGS double counting.
+              </p>
+            </div>
+          )}
 
           <div className="p-3 rounded-lg bg-[#f8f9fb] border border-[#e6e8ec] text-xs flex justify-between font-mono">
             <span className="text-[#667085]">Total Valuation Impact:</span>

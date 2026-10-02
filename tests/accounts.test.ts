@@ -122,4 +122,68 @@ describe('Payment Accounts & Fund Transfers', () => {
       });
     }).toThrow('Invalid from/to account for fund transfer');
   });
+
+  it('records owner capital injection without contaminating sales revenue or profit', () => {
+    const cashAcc = StorageEngine.getAccountById(orgId, 'acc-cash')!;
+    const initialBalance = cashAcc.current_balance;
+    const initialSales = StorageEngine.getSales(orgId).length;
+    const initialExpenses = StorageEngine.getExpenses(orgId).length;
+
+    const capitalTx = StorageEngine.recordCapital(orgId, {
+      account_id: 'acc-cash',
+      amount: 50000,
+      description: 'Owner injection for new printer investment',
+      created_by: 'Muhammad Yaqoob',
+    });
+
+    expect(capitalTx.type).toBe('CAPITAL');
+    expect(capitalTx.amount).toBe(50000);
+    expect(capitalTx.reference_type).toBe('CAPITAL');
+
+    const updatedAcc = StorageEngine.getAccountById(orgId, 'acc-cash')!;
+    expect(updatedAcc.current_balance).toBe(initialBalance + 50000);
+
+    // Sales & expenses count must remain identical (no revenue distortion)
+    expect(StorageEngine.getSales(orgId).length).toBe(initialSales);
+    expect(StorageEngine.getExpenses(orgId).length).toBe(initialExpenses);
+  });
+
+  it('records owner withdrawal/drawings without contaminating operating expenses', () => {
+    const cashAcc = StorageEngine.getAccountById(orgId, 'acc-cash')!;
+    const initialBalance = cashAcc.current_balance;
+    const initialSales = StorageEngine.getSales(orgId).length;
+    const initialExpenses = StorageEngine.getExpenses(orgId).length;
+
+    const withdrawalTx = StorageEngine.recordWithdrawal(orgId, {
+      account_id: 'acc-cash',
+      amount: 10000,
+      description: 'Personal drawing for household expense',
+      created_by: 'Muhammad Yaqoob',
+    });
+
+    expect(withdrawalTx.type).toBe('WITHDRAWAL');
+    expect(withdrawalTx.amount).toBe(10000);
+    expect(withdrawalTx.reference_type).toBe('WITHDRAWAL');
+
+    const updatedAcc = StorageEngine.getAccountById(orgId, 'acc-cash')!;
+    expect(updatedAcc.current_balance).toBe(initialBalance - 10000);
+
+    // Expenses count must remain unchanged (no operating expense distortion)
+    expect(StorageEngine.getExpenses(orgId).length).toBe(initialExpenses);
+    expect(StorageEngine.getSales(orgId).length).toBe(initialSales);
+  });
+
+  it('prevents owner withdrawal exceeding account balance', () => {
+    const cashAcc = StorageEngine.getAccountById(orgId, 'acc-cash')!;
+    const excessiveAmount = cashAcc.current_balance + 100000;
+
+    expect(() => {
+      StorageEngine.recordWithdrawal(orgId, {
+        account_id: 'acc-cash',
+        amount: excessiveAmount,
+        description: 'Excessive withdrawal',
+        created_by: 'Muhammad Yaqoob',
+      });
+    }).toThrow('Insufficient funds');
+  });
 });

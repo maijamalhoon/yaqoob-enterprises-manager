@@ -1,7 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { calculateWeightedAverageCost, roundMoney } from '@/lib/utils';
+import { StorageEngine } from '@/services/storageEngine';
+import { DEFAULT_ORGANIZATION } from '@/lib/mockData';
 
 describe('Weighted Average Costing (WAC) Logic', () => {
+  const orgId = DEFAULT_ORGANIZATION.id;
+
+  beforeEach(() => {
+    StorageEngine.resetToDefaults();
+  });
   it('correctly calculates new average cost when adding stock at a higher unit cost', () => {
     // Current: 10 units @ Rs. 100 = Rs. 1,000
     // Incoming: 10 units @ Rs. 150 = Rs. 1,500
@@ -54,5 +61,51 @@ describe('Weighted Average Costing (WAC) Logic', () => {
     expect(roundMoney(1234.564)).toBe(1234.56);
     expect(roundMoney(0)).toBe(0);
     expect(roundMoney(NaN)).toBe(0);
+  });
+
+  it('updates product stock and debits payment account when recording inventory PURCHASE', () => {
+    const products = StorageEngine.getProducts(orgId);
+    const paperProduct = products.find((p) => p.name.includes('Paper')) || products[0];
+    const initialStock = paperProduct.current_stock;
+    const initialAvgCost = paperProduct.average_cost;
+
+    const cashAcc = StorageEngine.getAccountById(orgId, 'acc-cash')!;
+    const initialCash = cashAcc.current_balance;
+
+    const purchaseQty = 10;
+    const unitCost = 500;
+    const totalCost = purchaseQty * unitCost; // 5000
+
+    const movement = StorageEngine.recordStockMovement({
+      organization_id: orgId,
+      product_id: paperProduct.id,
+      movement_type: 'PURCHASE',
+      quantity: purchaseQty,
+      unit_cost: unitCost,
+      total_cost: totalCost,
+      account_id: 'acc-cash',
+      account_name: 'Cash Drawer',
+      notes: 'Purchased 10 reams from wholesaler',
+      created_by: 'Muhammad Yaqoob',
+    });
+
+    expect(movement.id).toBeDefined();
+    expect(movement.movement_type).toBe('PURCHASE');
+    expect(movement.quantity).toBe(purchaseQty);
+
+    // Product stock increased
+    const updatedProduct = StorageEngine.getProductById(orgId, paperProduct.id)!;
+    expect(updatedProduct.current_stock).toBe(initialStock + purchaseQty);
+
+    // Account balance debited
+    const updatedAcc = StorageEngine.getAccountById(orgId, 'acc-cash')!;
+    expect(updatedAcc.current_balance).toBe(initialCash - totalCost);
+
+    // Ledger transaction created
+    const transactions = StorageEngine.getTransactions(orgId, 'acc-cash');
+    const purchaseTx = transactions.find((t) => t.reference_id === movement.id);
+    expect(purchaseTx).toBeDefined();
+    expect(purchaseTx?.amount).toBe(totalCost);
+    expect(purchaseTx?.reference_type).toBe('PURCHASE');
   });
 });

@@ -581,16 +581,6 @@ export const LockScreen: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-xs text-[#667085]">
-            <span>Default PIN: <strong className="text-[#191c1e]">1234</strong></span>
-            <button
-              type="button"
-              onClick={() => handleUnlock("1234")}
-              className="font-medium text-[#4f46e5] hover:underline cursor-pointer"
-            >
-              Quick Unlock (1234)
-            </button>
-          </div>
 
           {error && (
             <p role="alert" className="p-2.5 rounded-lg bg-red-50 border border-red-200 text-xs text-[#b91c1c] text-center">

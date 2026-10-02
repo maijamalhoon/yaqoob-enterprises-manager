@@ -212,6 +212,32 @@ export const ReportsView: React.FC = () => {
   const netMargin =
     grossRevenue > 0 ? Math.round((netProfit / grossRevenue) * 100) : 0;
 
+  const totalCapital = useMemo(() => {
+    return roundMoney(
+      transactions
+        .filter(
+          (t) =>
+            t.type === "CAPITAL" &&
+            t.date >= dateRange.start &&
+            t.date <= dateRange.end,
+        )
+        .reduce((sum, t) => sum + t.amount, 0),
+    );
+  }, [transactions, dateRange]);
+
+  const totalWithdrawals = useMemo(() => {
+    return roundMoney(
+      transactions
+        .filter(
+          (t) =>
+            t.type === "WITHDRAWAL" &&
+            t.date >= dateRange.start &&
+            t.date <= dateRange.end,
+        )
+        .reduce((sum, t) => sum + t.amount, 0),
+    );
+  }, [transactions, dateRange]);
+
   // Pace & Volume Metrics
   const daysInPeriod = useMemo(() => {
     if (period === "TODAY") return 1;
@@ -510,8 +536,8 @@ export const ReportsView: React.FC = () => {
       {/* ========================================================================= */}
       {activeTab === "ANALYTICS" && (
         <div className="space-y-5">
-          {/* Primary Metric Cards (3 Cards Row) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Primary Metric Cards (4 Cards Row) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Gross Revenue */}
             <div className="bg-white p-5 rounded-xl border border-[#e6e8ec] shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between">
@@ -610,6 +636,34 @@ export const ReportsView: React.FC = () => {
                 <span>Peak Hours</span>
                 <span className="text-[#14181f] font-medium">
                   11:00 AM – 3:30 PM
+                </span>
+              </div>
+            </div>
+
+            {/* Owner Equity / Capital & Drawings */}
+            <div className="bg-white p-5 rounded-xl border border-[#e6e8ec] shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#667085]">
+                  Owner Equity
+                </span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#faf5ff] text-[#9333ea] text-[11px] font-semibold">
+                  Capital / Drawings
+                </span>
+              </div>
+              <div className="mt-4">
+                <div className="text-2xl font-mono font-bold text-[#16a34a]">
+                  +{formatCurrency(totalCapital, organization.currency_symbol)}
+                </div>
+                <div className="flex items-center gap-1 mt-1 text-xs text-[#667085]">
+                  <span>
+                    Drawings: -{formatCurrency(totalWithdrawals, organization.currency_symbol)}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-[#e6e8ec] flex items-center justify-between text-xs text-[#667085]">
+                <span>Net Injected:</span>
+                <span className="font-mono font-semibold text-[#14181f]">
+                  {formatCurrency(roundMoney(totalCapital - totalWithdrawals), organization.currency_symbol)}
                 </span>
               </div>
             </div>

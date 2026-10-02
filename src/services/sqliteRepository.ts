@@ -23,7 +23,7 @@ import {
 } from '../lib/mockData';
 import { getSqliteDatabase, SqlDatabase } from './sqliteEngine';
 import { requireOrganization, requirePermission } from '../lib/security';
-import { roundMoney } from '../lib/utils';
+import { roundMoney, calculateWeightedAverageCost } from '../lib/utils';
 import { LocalAuthAccount, Organization, UserProfile } from '../types';
 import type {
   IAccountRepository,
@@ -578,7 +578,61 @@ export class SQLiteRepository {
   async getServices(organizationId: string): Promise<Service[]> { requireOrganization(organizationId); const rows = await (await this.database()).select<any>('SELECT * FROM services WHERE organization_id = ? ORDER BY name', [organizationId]); return rows.filter((service) => service.is_active !== false && service.is_active !== 0); }
   async saveService(organizationId: string, service: Partial<Service> & { name: string; selling_price: number }): Promise<Service> { requirePermission(organizationId, 'MANAGE_INVENTORY'); const record: Service = { id: service.id || id(), organization_id: organizationId, name: service.name, sku: service.sku, category_id: service.category_id, category_name: service.category_name, selling_price: service.selling_price, estimated_cost: service.estimated_cost || 0, is_active: service.is_active ?? true, notes: service.notes, components: service.components || [], created_at: service.created_at || now() }; await this.transaction(async (db) => { const { components: _components, ...serviceRow } = record; await this.insert(db, 'services', { ...serviceRow, is_active: record.is_active ? 1 : 0, updated_at: now() }); for (const component of record.components || []) { const { product_name: _productName, unit: _unit, ...componentRow } = component; await this.insert(db, 'service_components', { ...componentRow, created_at: now() }); } await this.queue(db, organizationId, 'services', record.id, service.id ? 'UPDATE' : 'INSERT', record as unknown as Record<string, unknown>); }); return record; }
   async deleteService(organizationId: string, serviceId: string): Promise<boolean> { requirePermission(organizationId, 'MANAGE_INVENTORY'); return this.transaction(async (db) => (await db.execute('UPDATE services SET is_active = 0, updated_at = ? WHERE organization_id = ? AND id = ?', [now(), organizationId, serviceId])).rowsAffected > 0); }
-  async recordStockMovement(organizationId: string, movement: Omit<StockMovement, 'id' | 'created_at'>): Promise<StockMovement> { const principal = requirePermission(organizationId, 'MANAGE_INVENTORY'); if (!Number.isFinite(movement.quantity) || movement.quantity === 0) throw new Error('Stock movement quantity must be non-zero'); const record: StockMovement = { ...movement, id: id(), created_at: now(), organization_id: organizationId, created_by: principal.fullName }; return this.transaction(async (db) => { const product = (await db.select<any>('SELECT * FROM products WHERE organization_id = ? AND id = ?', [organizationId, record.product_id]))[0]; if (!product) throw new Error('Product not found'); await db.execute('UPDATE products SET current_stock = current_stock + ?, stock_value = (current_stock + ?) * average_cost, updated_at = ? WHERE organization_id = ? AND id = ?', [record.quantity, record.quantity, now(), organizationId, record.product_id]); await this.insert(db, 'stock_movements', record as unknown as Record<string, unknown>); await this.queue(db, organizationId, 'stock_movements', record.id, 'INSERT', record as unknown as Record<string, unknown>); return record; }); }
+  async recordStockMovement(organizationId: string, movement: Omit<StockMovement, 'id' | 'created_at'>): Promise<StockMovement> {
+    const principal = requirePermission(organizationId, 'MANAGE_INVENTORY');
+    if (!Number.isFinite(movement.quantity) || movement.quantity === 0) throw new Error('Stock movement quantity must be non-zero');
+    const record: StockMovement = { ...movement, id: id(), created_at: now(), organization_id: organizationId, created_by: principal.fullName };
+    return this.transaction(async (db) => {
+      const product = (await db.select<any>('SELECT * FROM products WHERE organization_id = ? AND id = ?', [organizationId, record.product_id]))[0];
+      if (!product) throw new Error('Product not found');
+
+      if (record.movement_type === 'PURCHASE' && record.account_id) {
+        const accounts = await db.select<any>('SELECT * FROM payment_accounts WHERE organization_id = ? AND id = ?', [organizationId, record.account_id]);
+        const account = accounts[0];
+        if (!account) throw new Error('Payment account not found for inventory purchase');
+        const totalCost = roundMoney(record.quantity * record.unit_cost);
+        if (Number(account.current_balance) < totalCost) throw new Error('Insufficient funds in account for inventory purchase');
+        const updatedBal = roundMoney(Number(account.current_balance) - totalCost);
+        await db.execute('UPDATE payment_accounts SET current_balance = current_balance - ?, updated_at = ? WHERE organization_id = ? AND id = ?', [totalCost, now(), organizationId, account.id]);
+        record.account_name = account.name;
+
+        const txDate = record.created_at ? record.created_at.slice(0, 10) : now().slice(0, 10);
+        const purchaseTx: AccountTransaction = {
+          id: id(),
+          organization_id: organizationId,
+          account_id: account.id,
+          account_name: account.name,
+          type: 'EXPENSE',
+          amount: totalCost,
+          balance_after: updatedBal,
+          reference_type: 'PURCHASE',
+          reference_id: record.id,
+          description: `Inventory Purchase: ${record.quantity} units of ${product.name}`,
+          date: txDate,
+          created_at: now(),
+        };
+        await this.insert(db, 'account_transactions', purchaseTx as unknown as Record<string, unknown>);
+        await this.queue(db, organizationId, 'account_transactions', purchaseTx.id, 'INSERT', purchaseTx as unknown as Record<string, unknown>);
+        await this.queue(db, organizationId, 'payment_accounts', account.id, 'UPDATE', { ...account, current_balance: updatedBal });
+      }
+
+      if (record.movement_type === 'PURCHASE') {
+        const wac = calculateWeightedAverageCost(
+          Number(product.current_stock) || 0,
+          Number(product.average_cost) || 0,
+          record.quantity,
+          record.unit_cost
+        );
+        await db.execute('UPDATE products SET current_stock = ?, average_cost = ?, stock_value = ?, updated_at = ? WHERE organization_id = ? AND id = ?', [wac.newStock, wac.newAvgCost, wac.newStockValue, now(), organizationId, record.product_id]);
+      } else {
+        await db.execute('UPDATE products SET current_stock = current_stock + ?, stock_value = (current_stock + ?) * average_cost, updated_at = ? WHERE organization_id = ? AND id = ?', [record.quantity, record.quantity, now(), organizationId, record.product_id]);
+      }
+
+      await this.insert(db, 'stock_movements', record as unknown as Record<string, unknown>);
+      await this.queue(db, organizationId, 'stock_movements', record.id, 'INSERT', record as unknown as Record<string, unknown>);
+      return record;
+    });
+  }
   async getStockMovements(organizationId: string, productId?: string): Promise<StockMovement[]> { requireOrganization(organizationId); const db = await this.database(); return productId ? db.select<StockMovement>('SELECT * FROM stock_movements WHERE organization_id = ? AND product_id = ? ORDER BY created_at DESC', [organizationId, productId]) : db.select<StockMovement>('SELECT * FROM stock_movements WHERE organization_id = ? ORDER BY created_at DESC', [organizationId]); }
   async getCategories(organizationId: string): Promise<Category[]> { requireOrganization(organizationId); return (await (await this.database()).select<Category>('SELECT * FROM categories WHERE organization_id = ? ORDER BY name', [organizationId])); }
   async saveCategory(organizationId: string, category: Partial<Category> & { name: string; type: Category['type'] }): Promise<Category> { requirePermission(organizationId, 'MANAGE_INVENTORY'); const record: Category = { id: category.id || id(), organization_id: organizationId, name: category.name, type: category.type, color: category.color, created_at: category.created_at || now() }; await this.transaction(async (db) => { await this.insert(db, 'categories', record as unknown as Record<string, unknown>); await this.queue(db, organizationId, 'categories', record.id, category.id ? 'UPDATE' : 'INSERT', record as unknown as Record<string, unknown>); }); return record; }
@@ -631,11 +685,110 @@ export class SQLiteRepository {
   async getAccountById(organizationId: string, accountId: string): Promise<PaymentAccount | null> { return (await this.getAccounts(organizationId)).find((account) => account.id === accountId) || null; }
   async saveAccount(organizationId: string, account: Partial<PaymentAccount> & { name: string; type: PaymentAccount['type'] }): Promise<PaymentAccount> { requirePermission(organizationId, 'MANAGE_BUSINESS_CONFIG'); const record: PaymentAccount = { id: account.id || id(), organization_id: organizationId, name: account.name, type: account.type, account_number: account.account_number, current_balance: account.current_balance ?? account.opening_balance ?? 0, opening_balance: account.opening_balance ?? 0, is_active: account.is_active ?? true, is_default: account.is_default ?? false, created_at: account.created_at || now() }; await this.transaction(async (db) => { await this.insert(db, 'payment_accounts', { ...record, is_active: record.is_active ? 1 : 0, is_default: record.is_default ? 1 : 0, updated_at: now() }); await this.queue(db, organizationId, 'payment_accounts', record.id, account.id ? 'UPDATE' : 'INSERT', record as unknown as Record<string, unknown>); }); return record; }
   async transferFunds(organizationId: string, payload: Parameters<IAccountRepository['transferFunds']>[1]): Promise<AccountTransfer> { const principal = requirePermission(organizationId, 'ACCOUNT_TRANSFER'); if (!Number.isFinite(payload.amount) || payload.amount <= 0 || payload.from_account_id === payload.to_account_id) throw new Error('Invalid transfer'); return this.transaction(async (db) => { const accounts = await db.select<any>('SELECT * FROM payment_accounts WHERE organization_id = ? AND id IN (?, ?)', [organizationId, payload.from_account_id, payload.to_account_id]); const from = accounts.find((account) => account.id === payload.from_account_id); const to = accounts.find((account) => account.id === payload.to_account_id); if (!from || !to || Number(from.current_balance) < payload.amount) throw new Error('Invalid accounts or insufficient funds'); const transfer: AccountTransfer = { id: id(), organization_id: organizationId, from_account_id: from.id, from_account_name: from.name, to_account_id: to.id, to_account_name: to.name, amount: payload.amount, date: payload.date, notes: payload.notes, created_by: principal.id, created_at: now() }; await db.execute('UPDATE payment_accounts SET current_balance = current_balance - ?, updated_at = ? WHERE organization_id = ? AND id = ?', [payload.amount, now(), organizationId, from.id]); await db.execute('UPDATE payment_accounts SET current_balance = current_balance + ?, updated_at = ? WHERE organization_id = ? AND id = ?', [payload.amount, now(), organizationId, to.id]); await this.insert(db, 'account_transfers', transfer as unknown as Record<string, unknown>); await this.audit(db, organizationId, 'ACCOUNT_TRANSFER', 'PAYMENT_ACCOUNT', transfer.id, `Transferred ${payload.amount}`); await this.queue(db, organizationId, 'account_transfers', transfer.id, 'INSERT', transfer as unknown as Record<string, unknown>); return transfer; }); }
+  async recordCapital(organizationId: string, payload: Parameters<IAccountRepository['recordCapital']>[1]): Promise<AccountTransaction> {
+    const principal = requirePermission(organizationId, 'ACCOUNT_TRANSFER');
+    if (!Number.isFinite(payload.amount) || payload.amount <= 0) throw new Error('Capital amount must be greater than zero');
+    return this.transaction(async (db) => {
+      const accounts = await db.select<PaymentAccount>('SELECT * FROM payment_accounts WHERE organization_id = ?', [organizationId]);
+      const account = payload.account_id ? accounts.find((a) => a.id === payload.account_id) : (accounts.find((a) => a.type === 'CASH') || accounts[0]);
+      if (!account) throw new Error('Valid destination account required for capital injection');
+      const newBalance = roundMoney(Number(account.current_balance) + payload.amount);
+      await db.execute('UPDATE payment_accounts SET current_balance = current_balance + ?, updated_at = ? WHERE organization_id = ? AND id = ?', [payload.amount, now(), organizationId, account.id]);
+      const tx: AccountTransaction = {
+        id: id(),
+        organization_id: organizationId,
+        account_id: account.id,
+        account_name: account.name,
+        type: 'CAPITAL',
+        amount: roundMoney(payload.amount),
+        balance_after: newBalance,
+        reference_type: 'CAPITAL',
+        description: payload.description || 'Owner Capital Contribution',
+        date: payload.date || now().slice(0, 10),
+        created_at: now(),
+      };
+      await this.insert(db, 'account_transactions', tx as unknown as Record<string, unknown>);
+      await this.audit(db, organizationId, 'CAPITAL_DEPOSIT', 'PAYMENT_ACCOUNT', account.id, `Owner capital +${payload.amount} to ${account.name}`);
+      await this.queue(db, organizationId, 'account_transactions', tx.id, 'INSERT', tx as unknown as Record<string, unknown>);
+      await this.queue(db, organizationId, 'payment_accounts', account.id, 'UPDATE', { ...account, current_balance: newBalance });
+      return tx;
+    });
+  }
+  async recordWithdrawal(organizationId: string, payload: Parameters<IAccountRepository['recordWithdrawal']>[1]): Promise<AccountTransaction> {
+    const principal = requirePermission(organizationId, 'ACCOUNT_TRANSFER');
+    if (!Number.isFinite(payload.amount) || payload.amount <= 0) throw new Error('Withdrawal amount must be greater than zero');
+    return this.transaction(async (db) => {
+      const accounts = await db.select<PaymentAccount>('SELECT * FROM payment_accounts WHERE organization_id = ?', [organizationId]);
+      const account = payload.account_id ? accounts.find((a) => a.id === payload.account_id) : (accounts.find((a) => a.type === 'CASH') || accounts[0]);
+      if (!account) throw new Error('Valid account required for owner withdrawal');
+      if (Number(account.current_balance) < payload.amount) throw new Error('Insufficient funds for owner withdrawal');
+      const newBalance = roundMoney(Number(account.current_balance) - payload.amount);
+      await db.execute('UPDATE payment_accounts SET current_balance = current_balance - ?, updated_at = ? WHERE organization_id = ? AND id = ?', [payload.amount, now(), organizationId, account.id]);
+      const tx: AccountTransaction = {
+        id: id(),
+        organization_id: organizationId,
+        account_id: account.id,
+        account_name: account.name,
+        type: 'WITHDRAWAL',
+        amount: roundMoney(payload.amount),
+        balance_after: newBalance,
+        reference_type: 'WITHDRAWAL',
+        description: payload.description || 'Owner Drawing / Withdrawal',
+        date: payload.date || now().slice(0, 10),
+        created_at: now(),
+      };
+      await this.insert(db, 'account_transactions', tx as unknown as Record<string, unknown>);
+      await this.audit(db, organizationId, 'OWNER_WITHDRAWAL', 'PAYMENT_ACCOUNT', account.id, `Owner withdrew -${payload.amount} from ${account.name}`);
+      await this.queue(db, organizationId, 'account_transactions', tx.id, 'INSERT', tx as unknown as Record<string, unknown>);
+      await this.queue(db, organizationId, 'payment_accounts', account.id, 'UPDATE', { ...account, current_balance: newBalance });
+      return tx;
+    });
+  }
   async getTransactions(organizationId: string, accountId?: string): Promise<AccountTransaction[]> { requireOrganization(organizationId); const db = await this.database(); return accountId ? db.select<AccountTransaction>('SELECT * FROM account_transactions WHERE organization_id = ? AND account_id = ? ORDER BY created_at DESC', [organizationId, accountId]) : db.select<AccountTransaction>('SELECT * FROM account_transactions WHERE organization_id = ? ORDER BY created_at DESC', [organizationId]); }
 
   async getClosings(organizationId: string): Promise<DailyClosing[]> { requireOrganization(organizationId); return (await (await this.database()).select<DailyClosing>('SELECT * FROM daily_closings WHERE organization_id = ? ORDER BY closing_date DESC', [organizationId])); }
-  async getDailyClosingSummary(organizationId: string, date: string) { requireOrganization(organizationId); const [accounts, sales, expenses, transfers] = await Promise.all([this.getAccounts(organizationId), this.getSales(organizationId, { startDate: date, endDate: date }), this.getExpenses(organizationId, { startDate: date, endDate: date }), (await this.database()).select<any>('SELECT * FROM account_transfers WHERE organization_id = ? AND date = ?', [organizationId, date])]); const cash = accounts.find((account) => account.type === 'CASH'); const cashSales = sales.filter((sale) => sale.status === 'COMPLETED').reduce((sum, sale) => sum + (sale.split_payments.length ? sale.split_payments.filter((payment) => payment.account_id === cash?.id).reduce((s, p) => s + p.amount, 0) : sale.payment_method.toLowerCase().includes('cash') ? sale.amount_paid - sale.change_due : 0), 0); const cashExpenses = expenses.filter((expense) => expense.account_id === cash?.id && expense.status === 'ACTIVE').reduce((sum, expense) => sum + expense.amount, 0); const cashTransfersIn = transfers.filter((transfer) => transfer.to_account_id === cash?.id).reduce((sum, transfer) => sum + transfer.amount, 0); const cashTransfersOut = transfers.filter((transfer) => transfer.from_account_id === cash?.id).reduce((sum, transfer) => sum + transfer.amount, 0); const openingCash = cash?.opening_balance || 0; return { openingCash, cashSales: roundMoney(cashSales), cashExpenses: roundMoney(cashExpenses), cashTransfersIn: roundMoney(cashTransfersIn), cashTransfersOut: roundMoney(cashTransfersOut), expectedCash: roundMoney(openingCash + cashSales - cashExpenses + cashTransfersIn - cashTransfersOut) }; }
-  async recordDailyClosing(organizationId: string, payload: Parameters<IClosingRepository['recordDailyClosing']>[1]): Promise<DailyClosing> { const principal = requirePermission(organizationId, 'SUBMIT_DAILY_CLOSING'); return this.transaction(async (db) => { const duplicate = await db.select<any>('SELECT id FROM daily_closings WHERE organization_id = ? AND closing_date = ?', [organizationId, payload.closing_date]); if (duplicate.length) throw new Error('Daily closing already exists for this date'); const summary = await this.getDailyClosingSummary(organizationId, payload.closing_date); const closing: DailyClosing = { id: id(), organization_id: organizationId, closing_date: payload.closing_date, opening_cash: summary.openingCash, cash_sales: summary.cashSales, cash_expenses: summary.cashExpenses, cash_transfers_in: summary.cashTransfersIn, cash_transfers_out: summary.cashTransfersOut, expected_cash: summary.expectedCash, actual_cash: payload.actual_cash, difference: roundMoney(payload.actual_cash - summary.expectedCash), notes: payload.notes, closed_by: principal.id, closed_at: now() }; await this.insert(db, 'daily_closings', closing as unknown as Record<string, unknown>); await this.audit(db, organizationId, 'DAILY_CLOSING_RECORDED', 'DAILY_CLOSING', closing.id, `Closed ${closing.closing_date}`); await this.queue(db, organizationId, 'daily_closings', closing.id, 'INSERT', closing as unknown as Record<string, unknown>); return closing; }); }
+  async getDailyClosingSummary(organizationId: string, date: string) {
+    requireOrganization(organizationId);
+    const [accounts, sales, expenses, transfers, closings, allTx] = await Promise.all([
+      this.getAccounts(organizationId),
+      this.getSales(organizationId, { startDate: date, endDate: date }),
+      this.getExpenses(organizationId, { startDate: date, endDate: date }),
+      (await this.database()).select<any>('SELECT * FROM account_transfers WHERE organization_id = ? AND date = ?', [organizationId, date]),
+      this.getClosings(organizationId),
+      this.getTransactions(organizationId),
+    ]);
+    const cash = accounts.find((account) => account.type === 'CASH') || accounts[0];
+    const cashId = cash?.id;
+
+    // Previous verified closing carry-forward
+    const previousClosings = closings
+      .filter((c) => c.closing_date < date)
+      .sort((a, b) => b.closing_date.localeCompare(a.closing_date));
+    const openingCash = previousClosings.length > 0 ? Number(previousClosings[0].actual_cash) : (cash?.opening_balance || 0);
+
+    const cashSales = sales.filter((sale) => sale.status === 'COMPLETED').reduce((sum, sale) => sum + (sale.split_payments.length ? sale.split_payments.filter((payment) => payment.account_id === cashId || payment.account_name.toLowerCase().includes('cash')).reduce((s, p) => s + p.amount, 0) : sale.payment_method.toLowerCase().includes('cash') ? sale.amount_paid - sale.change_due : 0), 0);
+    const cashExpenses = expenses.filter((expense) => (expense.account_id === cashId || expense.account_name.toLowerCase().includes('cash')) && expense.status === 'ACTIVE').reduce((sum, expense) => sum + expense.amount, 0);
+    const cashCapital = allTx.filter((t) => t.account_id === cashId && t.date === date && t.type === 'CAPITAL').reduce((sum, t) => sum + t.amount, 0);
+    const cashWithdrawals = allTx.filter((t) => t.account_id === cashId && t.date === date && t.type === 'WITHDRAWAL').reduce((sum, t) => sum + t.amount, 0);
+    const cashPurchases = allTx.filter((t) => t.account_id === cashId && t.date === date && t.reference_type === 'PURCHASE').reduce((sum, t) => sum + t.amount, 0);
+    const cashTransfersIn = transfers.filter((transfer) => transfer.to_account_id === cashId || transfer.to_account_name.toLowerCase().includes('cash')).reduce((sum, transfer) => sum + transfer.amount, 0);
+    const cashTransfersOut = transfers.filter((transfer) => transfer.from_account_id === cashId || transfer.from_account_name.toLowerCase().includes('cash')).reduce((sum, transfer) => sum + transfer.amount, 0);
+
+    const expectedCash = roundMoney(openingCash + cashSales + cashCapital - cashExpenses - cashWithdrawals - cashPurchases + cashTransfersIn - cashTransfersOut);
+
+    return {
+      openingCash,
+      cashSales: roundMoney(cashSales),
+      cashExpenses: roundMoney(cashExpenses),
+      cashCapital: roundMoney(cashCapital),
+      cashWithdrawals: roundMoney(cashWithdrawals),
+      cashPurchases: roundMoney(cashPurchases),
+      cashTransfersIn: roundMoney(cashTransfersIn),
+      cashTransfersOut: roundMoney(cashTransfersOut),
+      expectedCash,
+    };
+  }
+  async recordDailyClosing(organizationId: string, payload: Parameters<IClosingRepository['recordDailyClosing']>[1]): Promise<DailyClosing> { const principal = requirePermission(organizationId, 'SUBMIT_DAILY_CLOSING'); return this.transaction(async (db) => { const duplicate = await db.select<any>('SELECT id FROM daily_closings WHERE organization_id = ? AND closing_date = ?', [organizationId, payload.closing_date]); if (duplicate.length) throw new Error('Daily closing already exists for this date'); const summary = await this.getDailyClosingSummary(organizationId, payload.closing_date); const closing: DailyClosing = { id: id(), organization_id: organizationId, closing_date: payload.closing_date, opening_cash: summary.openingCash, cash_sales: summary.cashSales, cash_expenses: summary.cashExpenses, cash_capital: summary.cashCapital, cash_withdrawals: summary.cashWithdrawals, cash_purchases: summary.cashPurchases, cash_transfers_in: summary.cashTransfersIn, cash_transfers_out: summary.cashTransfersOut, expected_cash: summary.expectedCash, actual_cash: payload.actual_cash, difference: roundMoney(payload.actual_cash - summary.expectedCash), notes: payload.notes, closed_by: principal.id, closed_at: now() }; await this.insert(db, 'daily_closings', closing as unknown as Record<string, unknown>); await this.audit(db, organizationId, 'DAILY_CLOSING_RECORDED', 'DAILY_CLOSING', closing.id, `Closed ${closing.closing_date}`); await this.queue(db, organizationId, 'daily_closings', closing.id, 'INSERT', closing as unknown as Record<string, unknown>); return closing; }); }
   async getLogs(organizationId: string, limit = 100): Promise<AuditLog[]> { requireOrganization(organizationId); return (await (await this.database()).select<AuditLog>('SELECT * FROM audit_logs WHERE organization_id = ? ORDER BY created_at DESC', [organizationId])).slice(0, limit); }
   async log(organizationId: string, log: Omit<AuditLog, 'id' | 'created_at'>): Promise<AuditLog> { requireOrganization(organizationId); return this.transaction(async (db) => { const principal = requireOrganization(organizationId); const record: AuditLog = { ...log, id: id(), organization_id: organizationId, user_id: principal.id, user_name: principal.fullName, created_at: now() }; await this.insert(db, 'audit_logs', record as unknown as Record<string, unknown>); await this.queue(db, organizationId, 'audit_logs', record.id, 'INSERT', record as unknown as Record<string, unknown>); return record; }); }
 }

@@ -30,6 +30,9 @@ export const DailyClosingView: React.FC = () => {
     opening_cash: number;
     cash_sales: number;
     cash_expenses: number;
+    cash_capital: number;
+    cash_withdrawals: number;
+    cash_purchases: number;
     cash_transfers_in: number;
     cash_transfers_out: number;
     expected_cash: number;
@@ -37,6 +40,9 @@ export const DailyClosingView: React.FC = () => {
     opening_cash: 0,
     cash_sales: 0,
     cash_expenses: 0,
+    cash_capital: 0,
+    cash_withdrawals: 0,
+    cash_purchases: 0,
     cash_transfers_in: 0,
     cash_transfers_out: 0,
     expected_cash: 0,
@@ -55,6 +61,9 @@ export const DailyClosingView: React.FC = () => {
         opening_cash: summ.openingCash,
         cash_sales: summ.cashSales,
         cash_expenses: summ.cashExpenses,
+        cash_capital: summ.cashCapital || 0,
+        cash_withdrawals: summ.cashWithdrawals || 0,
+        cash_purchases: summ.cashPurchases || 0,
         cash_transfers_in: summ.cashTransfersIn,
         cash_transfers_out: summ.cashTransfersOut,
         expected_cash: summ.expectedCash,
@@ -157,12 +166,39 @@ export const DailyClosingView: React.FC = () => {
                 </span>
               </div>
 
+              {summary.cash_capital > 0 && (
+                <div className="flex justify-between p-2.5 rounded-lg bg-emerald-50/70 border border-emerald-200">
+                  <span className="text-emerald-700 font-medium">(+) Cash Capital Deposited:</span>
+                  <span className="font-mono font-bold text-emerald-700">
+                    +{formatCurrency(summary.cash_capital, organization.currency_symbol)}
+                  </span>
+                </div>
+              )}
+
               <div className="flex justify-between p-2.5 rounded-lg bg-[#fffbeb] border border-[#fef3c7]">
-                <span className="text-[#d97706] font-medium">(-) Cash Expenses Paid Out:</span>
+                <span className="text-[#d97706] font-medium">(-) Cash Operating Expenses Paid:</span>
                 <span className="font-mono font-bold text-[#d97706]">
                   -{formatCurrency(summary.cash_expenses, organization.currency_symbol)}
                 </span>
               </div>
+
+              {summary.cash_withdrawals > 0 && (
+                <div className="flex justify-between p-2.5 rounded-lg bg-purple-50/70 border border-purple-200">
+                  <span className="text-purple-700 font-medium">(-) Cash Owner Withdrawals:</span>
+                  <span className="font-mono font-bold text-purple-700">
+                    -{formatCurrency(summary.cash_withdrawals, organization.currency_symbol)}
+                  </span>
+                </div>
+              )}
+
+              {summary.cash_purchases > 0 && (
+                <div className="flex justify-between p-2.5 rounded-lg bg-blue-50/70 border border-blue-200">
+                  <span className="text-blue-700 font-medium">(-) Cash Inventory Purchases:</span>
+                  <span className="font-mono font-bold text-blue-700">
+                    -{formatCurrency(summary.cash_purchases, organization.currency_symbol)}
+                  </span>
+                </div>
+              )}
 
               <div className="flex justify-between p-2.5 rounded-lg bg-[#f2f4f6] border border-[#e6e8ec]">
                 <span className="text-[#4f46e5] font-medium">(+) Cash Transferred In:</span>
