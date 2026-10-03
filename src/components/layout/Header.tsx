@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useApp } from "../../context/AppContext";
 import { Search, Receipt, HelpCircle, LockKeyhole, Settings, LogOut, ChevronDown } from "lucide-react";
 import { UserAvatar } from "../common/UserAvatar";
+import { QuickEntryBar } from "../chat/QuickEntryBar";
 
 export const Header: React.FC = () => {
   const { organization, user, lock, signOut } = useAuth();
@@ -28,18 +29,9 @@ export const Header: React.FC = () => {
 
   return (
     <header className="h-16 border-b border-[#e6e8ec] bg-white/95 backdrop-blur-md px-6 flex items-center justify-between z-30 select-none shrink-0">
-      {/* Search Bar / Command Palette trigger */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => setIsCommandPaletteOpen(true)}
-          className="relative flex items-center w-72 sm:w-80 h-10 pl-9 pr-4 bg-[#f2f4f6] hover:bg-[#edeef0] border border-[#e6e8ec] rounded-lg text-sm text-[#777587] transition-all cursor-pointer text-left"
-        >
-          <Search className="absolute left-3 h-4 w-4 text-[#777587]" />
-          <span className="truncate">Search items, invoices, customers...</span>
-          <kbd className="ml-auto text-[10px] font-mono bg-white border border-[#e6e8ec] px-1.5 py-0.5 rounded text-[#555f73]">
-            /
-          </kbd>
-        </button>
+      {/* Center Desktop Quick-Entry Bar ("/" shortcut) */}
+      <div className="flex-1 max-w-xl mx-4">
+        <QuickEntryBar />
       </div>
 
       {/* Right Utility & Profile Controls */}

@@ -1,0 +1,18 @@
+{
+  "short_name": "Yaqoob Ledger",
+  "name": "Yaqoob Enterprises Shop Ledger",
+  "description": "Fast deterministic shop ledger for printing, stamp papers, and physical services",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#059669",
+  "background_color": "#f8f9fb",
+  "icons": [
+    {
+      "src": "/assets/logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "any 192x192 512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}

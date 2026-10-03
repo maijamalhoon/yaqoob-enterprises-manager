@@ -1,0 +1,92 @@
+name: CI Tests & Daily Ledger Backup
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Runs daily at 23:00 UTC (04:00 AM Asia/Karachi next day)
+    - cron: '0 23 * * *'
+  workflow_dispatch:
+
+# Free-Tier Risks & Mitigations Strategy:
+# 1. Project Pausing (Supabase pauses inactive free projects after 7 days):
+#    -> Mitigated by this scheduled daily workflow which pings the database every 24 hours,
+#       preventing auto-pause.
+# 2. No Built-in Point-in-Time Backups on Free Tier:
+#    -> Mitigated by paginating beyond 1,000 rows and saving full JSON dumps as GitHub workflow artifacts (90-day retention).
+# 3. Scheduled Workflow Inactivity (GitHub disables cron if repo has no commits for 60 days):
+#    -> Documented in README: shop activity/pushes or workflow_dispatch keeps it permanently active.
+
+jobs:
+  test:
+    name: Run Automated Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Vitest Suite (Unit, Deterministic Parser Corpus, WASM PGlite DB Tests)
+        run: npx vitest run
+
+  daily_backup:
+    name: Daily Database Backup & Row Verification
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Execute Paginated Backup & Row Integrity Verification
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY secrets are not configured in this repository."
+            exit 1
+          fi
+          npx tsx scripts/backup_database.ts
+
+      - name: Push Backup to Separate PRIVATE Repository
+        env:
+          BACKUP_REPO_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
+          BACKUP_REPO_NAME: ${{ secrets.BACKUP_REPO_NAME }} # e.g. maijamalhoon/yaqoob-ledger-backups-private
+        run: |
+          if [ -n "$BACKUP_REPO_TOKEN" ] && [ -n "$BACKUP_REPO_NAME" ]; then
+            echo "Configuring git to commit backup to private repository: $BACKUP_REPO_NAME"
+            git config --global user.name "Yaqoob Ledger Backup Bot"
+            git config --global user.email "backup-bot@yaqoob.shop"
+            git clone "https://x-access-token:${BACKUP_REPO_TOKEN}@github.com/${BACKUP_REPO_NAME}.git" /tmp/private-backups
+            cp -r backups/* /tmp/private-backups/
+            cd /tmp/private-backups
+            git add .
+            if git diff --staged --quiet; then
+              echo "No backup changes to commit."
+            else
+              git commit -m "Automated nightly backup: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+              git push origin main
+              echo "Backup successfully committed and pushed to private repository $BACKUP_REPO_NAME"
+            fi
+          else
+            echo "::notice::BACKUP_REPO_TOKEN not configured. Note: maijamalhoon/yaqoob-enterprises-manager is PUBLIC, so artifacts are intentionally not published publicly to prevent data exposure. Use 1-click manual export in the Settings UI or configure BACKUP_REPO_TOKEN."
+          fi

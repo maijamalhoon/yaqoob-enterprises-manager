@@ -10,7 +10,15 @@ import { QuickExpenseModal } from "./components/expenses/QuickExpenseModal";
 import { PrintReceiptModal } from "./components/pos/PrintReceiptModal";
 import { AuthScreen, LockScreen, PinSetupScreen } from "./components/auth/LockScreen";
 
-// Views
+// Modern Shop Ledger Views
+import { ChatView } from "./components/chat/ChatView";
+import { LedgerDashboardView } from "./components/dashboard/LedgerDashboardView";
+import { TransactionsExplorerView } from "./components/sales/TransactionsExplorerView";
+import { LedgerReportsView } from "./components/reports/LedgerReportsView";
+import { ReviewQueueView } from "./components/closings/ReviewQueueView";
+import { LedgerSettingsView } from "./components/settings/LedgerSettingsView";
+
+// Legacy Views (Preserved for compatibility)
 import { DashboardView } from "./components/dashboard/DashboardView";
 import { QuickSaleView } from "./components/pos/QuickSaleView";
 import { InventoryView } from "./components/inventory/InventoryView";
@@ -27,28 +35,30 @@ const MainShell: React.FC = () => {
 
   const renderActiveView = () => {
     switch (currentView) {
+      case "chat":
+        return <ChatView />;
       case "dashboard":
-        return <DashboardView />;
+        return <LedgerDashboardView />;
+      case "sales":
+        return <TransactionsExplorerView />;
+      case "reports":
+        return <LedgerReportsView />;
+      case "closings":
+        return <ReviewQueueView />;
+      case "settings":
+        return <LedgerSettingsView />;
       case "pos":
         return <QuickSaleView />;
       case "inventory":
         return <InventoryView />;
-      case "sales":
-        return <SalesHistoryView />;
       case "expenses":
         return <ExpensesView />;
       case "accounts":
         return <AccountsView />;
       case "customers":
         return <CustomersView />;
-      case "closings":
-        return <DailyClosingView />;
-      case "reports":
-        return <ReportsView />;
-      case "settings":
-        return <SettingsView />;
       default:
-        return <DashboardView />;
+        return <ChatView />;
     }
   };
 

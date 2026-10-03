@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useApp, AppView } from "../../context/AppContext";
 import { useAuth } from "../../context/AuthContext";
-import { ShoppingCart, Package, Receipt, BarChart3, Lock } from "lucide-react";
+import { MessageSquare, LayoutDashboard, Receipt, BarChart3, Inbox, Settings, Lock } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 export const Sidebar: React.FC = () => {
@@ -28,10 +28,12 @@ export const Sidebar: React.FC = () => {
   }
 
   const navItems: NavItem[] = [
-    { id: "pos", label: "Sales", icon: ShoppingCart },
-    { id: "inventory", label: "Inventory", icon: Package },
-    { id: "expenses", label: "Expenses", icon: Receipt },
+    { id: "chat", label: "Shop Ledger", icon: MessageSquare },
+    { id: "dashboard", label: "Overview", icon: LayoutDashboard },
+    { id: "sales", label: "Transactions", icon: Receipt },
     { id: "reports", label: "Reports", icon: BarChart3 },
+    { id: "closings", label: "Review Queue", icon: Inbox },
+    { id: "settings", label: "Settings & Export", icon: Settings },
   ];
 
   return (

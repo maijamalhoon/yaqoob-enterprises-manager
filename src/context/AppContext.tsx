@@ -8,8 +8,9 @@ import React, {
 import { Sale } from "../types";
 
 export type AppView =
-  | "pos"
+  | "chat"
   | "dashboard"
+  | "pos"
   | "inventory"
   | "sales"
   | "expenses"
@@ -53,7 +54,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [currentView, setCurrentView] = useState<AppView>("pos"); // Default to Quick Sale as highest priority
+  const [currentView, setCurrentView] = useState<AppView>("chat"); // Default to Modern Shop Ledger Chat
   const [dataVersion, setDataVersion] = useState<number>(1);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [isQuickExpenseOpen, setIsQuickExpenseOpen] = useState<boolean>(false);
