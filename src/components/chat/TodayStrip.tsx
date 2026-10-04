@@ -8,7 +8,6 @@ import {
   CloudUpload,
   Download,
   TrendingUp,
-  Wifi,
   WifiOff,
 } from "lucide-react";
 
@@ -33,14 +32,14 @@ export const TodayStrip: React.FC<TodayStripProps> = ({
   const displayDate = formatDisplayDate(todayStr);
 
   return (
-    <div className="border-b border-border-standard bg-white px-4 py-3 shadow-xs">
+    <div className="border-b border-border-standard bg-white px-3 py-3 sm:px-5">
       {/* Top Meta Bar */}
-      <div className="mb-2 flex items-center justify-between text-xs text-text-muted">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-on-surface">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-text-muted">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="text-[13px] font-semibold text-on-surface">
             Today ({displayDate})
           </span>
-          <span className="flex items-center gap-1 rounded-full bg-surface-container-low px-2 py-0.5 text-[10px] font-medium text-secondary">
+          <span className="flex items-center gap-1.5 rounded-full bg-surface-container-low px-2.5 py-1 text-[10px] font-semibold text-secondary">
             {isOnline ?
               queuedCount > 0 ?
                 <>
@@ -49,7 +48,6 @@ export const TodayStrip: React.FC<TodayStripProps> = ({
                 </>
               : <>
                   <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                  <Wifi className="h-3 w-3 text-primary" />
                   Online
                 </>
 
@@ -82,38 +80,38 @@ export const TodayStrip: React.FC<TodayStripProps> = ({
       </div>
 
       {/* 3 Metric Cards: Income, Expense, Net Profit */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {/* Income Card */}
-        <div className="bg-emerald-50/70 border border-emerald-100 rounded-xl p-2.5 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-emerald-700 text-xs font-medium">
+        <div className="summary-metric flex flex-col justify-between">
+          <div className="summary-metric__label flex items-center justify-between">
             <span>Income</span>
             <ArrowDownLeft className="w-3.5 h-3.5" />
           </div>
-          <div className="mt-1 font-mono text-base font-bold text-emerald-900 tabular-nums sm:text-lg">
+          <div className="summary-metric__value font-mono tabular-nums">
             {formatPaisa(summary.income_paisa)}
           </div>
         </div>
 
         {/* Expense Card */}
-        <div className="bg-rose-50/70 border border-rose-100 rounded-xl p-2.5 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-rose-700 text-xs font-medium">
+        <div className="summary-metric flex flex-col justify-between">
+          <div className="summary-metric__label flex items-center justify-between">
             <span>Expenses</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
           </div>
-          <div className="mt-1 font-mono text-base font-bold text-rose-900 tabular-nums sm:text-lg">
+          <div className="summary-metric__value font-mono tabular-nums">
             {formatPaisa(summary.expense_paisa)}
           </div>
         </div>
 
         {/* Net Profit Card */}
-        <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-2.5 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-blue-700 text-xs font-medium">
+        <div className="summary-metric flex flex-col justify-between">
+          <div className="summary-metric__label flex items-center justify-between">
             <span>Net Profit</span>
             <TrendingUp className="w-3.5 h-3.5" />
           </div>
           <div
-            className={`mt-1 font-mono text-base font-bold tabular-nums sm:text-lg ${
-              summary.net_profit_paisa >= 0 ? "text-blue-900" : "text-rose-900"
+            className={`summary-metric__value font-mono tabular-nums ${
+              summary.net_profit_paisa < 0 ? "text-danger" : ""
             }`}
           >
             {formatPaisa(summary.net_profit_paisa)}

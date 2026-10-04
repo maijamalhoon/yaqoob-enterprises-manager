@@ -145,14 +145,14 @@ export const TransactionsExplorerView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 max-w-7xl mx-auto w-full">
+    <div className="workspace-page flex-1 overflow-y-auto space-y-4 max-w-7xl mx-auto w-full">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-xs">
+      <div className="workspace-header flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 tracking-tight">
-            Transactions Explorer
-          </h2>
-          <p className="mt-0.5 text-xs text-text-muted">
+          <h1 className="text-xl font-bold tracking-tight text-on-surface">
+            Transactions
+          </h1>
+          <p className="mt-1 text-sm text-text-muted">
             Find and review ledger entries.
           </p>
         </div>
@@ -190,7 +190,7 @@ export const TransactionsExplorerView: React.FC = () => {
       )}
 
       {/* Filters Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs space-y-3">
+      <div className="workspace-panel space-y-3 p-4">
         <form onSubmit={handleSearchSubmit} className="flex gap-2">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
@@ -290,7 +290,7 @@ export const TransactionsExplorerView: React.FC = () => {
       </div>
 
       {/* Transactions Table */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs">
+      <div className="workspace-panel">
         <div className="hidden overflow-x-auto lg:block">
           <table className="w-full text-left text-xs text-gray-700">
             <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-semibold uppercase tracking-wider text-[10px]">

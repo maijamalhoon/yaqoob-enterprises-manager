@@ -130,37 +130,37 @@ export const LedgerDashboardView: React.FC = () => {
     : monthlyData?.adjustment_out_paisa || 0;
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 max-w-7xl mx-auto w-full">
+    <div className="workspace-page flex-1 overflow-y-auto space-y-6 max-w-7xl mx-auto w-full">
       {/* Top Header / Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-xs">
+      <div className="workspace-header flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 tracking-tight">
-            Ledger Overview
-          </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Income, expenses and owner cash flows for the selected period.
+          <h1 className="text-xl font-bold tracking-tight text-on-surface">
+            Overview
+          </h1>
+          <p className="mt-1 text-sm text-text-muted">
+            Your business at a glance.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           {/* Period Selector */}
-          <div className="flex rounded-xl bg-gray-100 p-1 border border-gray-200">
+          <div className="flex rounded-lg border border-border-standard bg-surface-container-low p-1">
             <button
               onClick={() => setPeriod("day")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-all ${
                 period === "day" ?
-                  "bg-white text-gray-900 shadow-xs"
-                : "text-gray-600 hover:text-gray-900"
+                  "bg-white text-on-surface shadow-xs"
+                : "text-secondary hover:text-on-surface"
               }`}
             >
               Day
             </button>
             <button
               onClick={() => setPeriod("month")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-all ${
                 period === "month" ?
-                  "bg-white text-gray-900 shadow-xs"
-                : "text-gray-600 hover:text-gray-900"
+                  "bg-white text-on-surface shadow-xs"
+                : "text-secondary hover:text-on-surface"
               }`}
             >
               Month
@@ -168,8 +168,8 @@ export const LedgerDashboardView: React.FC = () => {
           </div>
 
           {/* Date Picker */}
-          <div className="flex items-center gap-1.5 bg-white border border-gray-300 rounded-xl px-2.5 py-1.5 text-xs">
-            <Calendar className="w-3.5 h-3.5 text-gray-500" />
+          <div className="workspace-control flex items-center gap-1.5 bg-white px-2.5 py-1.5 text-xs">
+            <Calendar className="w-3.5 h-3.5 text-text-muted" />
             <input
               type={period === "day" ? "date" : "month"}
               value={period === "day" ? currentDate : currentDate.slice(0, 7)}
@@ -180,13 +180,13 @@ export const LedgerDashboardView: React.FC = () => {
                   );
                 }
               }}
-              className="focus:outline-none text-gray-800 font-medium"
+              className="bg-transparent font-medium text-on-surface focus:outline-none"
             />
           </div>
 
           <button
             onClick={loadData}
-            className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-600"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-standard bg-white text-secondary hover:bg-surface-container-low"
             title="Refresh"
           >
             <RefreshCw
@@ -197,117 +197,110 @@ export const LedgerDashboardView: React.FC = () => {
       </div>
 
       {/* Main Financial Cards: Income, Expense, Net Profit */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
         {/* Income */}
-        <div className="bg-emerald-50/80 border border-emerald-200 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-emerald-800">
-            <span className="text-xs font-semibold uppercase tracking-wider">
-              Total Income
-            </span>
-            <ArrowDownLeft className="w-5 h-5 text-emerald-600" />
+        <div className="dashboard-metric dashboard-metric--income flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="dashboard-metric__label">Income</span>
+            <ArrowDownLeft className="dashboard-metric__icon h-5 w-5" />
           </div>
           <div className="mt-4">
-            <div className="text-2xl sm:text-3xl font-extrabold text-emerald-950 font-mono tracking-tight">
+            <div className="dashboard-metric__value font-mono tabular-nums">
               {formatPaisa(activeIncome)}
             </div>
-            <div className="text-[11px] text-emerald-700 mt-1">
-              From printing, stamp papers, & services
+            <div className="dashboard-metric__note hidden sm:block">
+              All recorded income
             </div>
           </div>
         </div>
 
         {/* Expenses */}
-        <div className="bg-rose-50/80 border border-rose-200 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-rose-800">
-            <span className="text-xs font-semibold uppercase tracking-wider">
-              Total Expenses
-            </span>
-            <ArrowUpRight className="w-5 h-5 text-rose-600" />
+        <div className="dashboard-metric dashboard-metric--expense flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="dashboard-metric__label">Expenses</span>
+            <ArrowUpRight className="dashboard-metric__icon h-5 w-5" />
           </div>
           <div className="mt-4">
-            <div className="text-2xl sm:text-3xl font-extrabold text-rose-950 font-mono tracking-tight">
+            <div className="dashboard-metric__value font-mono tabular-nums">
               {formatPaisa(activeExpense)}
             </div>
-            <div className="text-[11px] text-rose-700 mt-1">
-              Paper stock, supplies, bills & stamps
+            <div className="dashboard-metric__note hidden sm:block">
+              All recorded expenses
             </div>
           </div>
         </div>
 
         {/* Net Profit */}
-        <div className="bg-blue-50/80 border border-blue-200 rounded-2xl p-5 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-blue-800">
-            <span className="text-xs font-semibold uppercase tracking-wider">
-              Net Profit
-            </span>
-            <TrendingUp className="w-5 h-5 text-blue-600" />
+        <div className="dashboard-metric dashboard-metric--profit flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="dashboard-metric__label">Net profit</span>
+            <TrendingUp className="dashboard-metric__icon h-5 w-5" />
           </div>
           <div className="mt-4">
             <div
-              className={`text-2xl sm:text-3xl font-extrabold font-mono tracking-tight ${
-                activeProfit >= 0 ? "text-blue-950" : "text-rose-900"
+              className={`dashboard-metric__value font-mono tabular-nums ${
+                activeProfit < 0 ? "text-danger" : ""
               }`}
             >
               {formatPaisa(activeProfit)}
             </div>
-            <div className="text-[11px] text-blue-700 mt-1">
-              Profit = Income - Expense (P&L Invariant)
+            <div className="dashboard-metric__note hidden sm:block">
+              Income less expenses
             </div>
           </div>
         </div>
       </div>
 
       {/* Non-Operating Activities (Capital, Withdrawals, Adjustments) */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+      <div className="workspace-panel space-y-4 p-5">
+        <div className="flex items-center justify-between border-b border-border-standard pb-3">
           <div>
-            <h3 className="font-semibold text-gray-900 text-sm">
-              Non-Operating Cash Flows
+            <h3 className="text-sm font-semibold text-on-surface">
+              Other cash flows
             </h3>
-            <p className="text-xs text-gray-400">
-              Owner funds and adjustments are shown separately from operating
-              profit.
+            <p className="text-xs text-text-muted">
+              Owner activity, shown separately from profit.
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-          <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 flex flex-col justify-between">
-            <div className="flex items-center gap-1.5 text-gray-500 font-medium">
-              <Landmark className="w-3.5 h-3.5 text-blue-600" />
+        <div className="grid grid-cols-2 gap-2.5 text-xs sm:grid-cols-4 sm:gap-3">
+          <div className="flex flex-col justify-between rounded-lg border border-border-standard bg-surface-container-low/60 p-3">
+            <div className="flex items-center gap-1.5 font-medium text-secondary">
+              <Landmark className="h-3.5 w-3.5 text-primary" />
               <span>Capital In</span>
             </div>
-            <div className="mt-2 text-base font-bold text-gray-900 font-mono">
+            <div className="mt-2 font-mono text-sm font-bold text-on-surface">
               {formatPaisa(activeCapital)}
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 flex flex-col justify-between">
-            <div className="flex items-center gap-1.5 text-gray-500 font-medium">
-              <Wallet className="w-3.5 h-3.5 text-amber-600" />
+          <div className="flex flex-col justify-between rounded-lg border border-border-standard bg-surface-container-low/60 p-3">
+            <div className="flex items-center gap-1.5 font-medium text-secondary">
+              <Wallet className="h-3.5 w-3.5 text-tertiary" />
               <span>Withdrawals</span>
             </div>
-            <div className="mt-2 text-base font-bold text-gray-900 font-mono">
+            <div className="mt-2 font-mono text-sm font-bold text-on-surface">
               {formatPaisa(activeWithdrawal)}
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 flex flex-col justify-between">
-            <div className="flex items-center gap-1.5 text-gray-500 font-medium">
-              <Scale className="w-3.5 h-3.5 text-purple-600" />
+          <div className="flex flex-col justify-between rounded-lg border border-border-standard bg-surface-container-low/60 p-3">
+            <div className="flex items-center gap-1.5 font-medium text-secondary">
+              <Scale className="h-3.5 w-3.5 text-secondary" />
               <span>Adjustment (+)</span>
             </div>
-            <div className="mt-2 text-base font-bold text-gray-900 font-mono">
+            <div className="mt-2 font-mono text-sm font-bold text-on-surface">
               {formatPaisa(activeAdjIn)}
             </div>
           </div>
 
-          <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 flex flex-col justify-between">
-            <div className="flex items-center gap-1.5 text-gray-500 font-medium">
-              <Scale className="w-3.5 h-3.5 text-purple-600" />
+          <div className="flex flex-col justify-between rounded-lg border border-border-standard bg-surface-container-low/60 p-3">
+            <div className="flex items-center gap-1.5 font-medium text-secondary">
+              <Scale className="h-3.5 w-3.5 text-secondary" />
               <span>Adjustment (-)</span>
             </div>
-            <div className="mt-2 text-base font-bold text-gray-900 font-mono">
+            <div className="mt-2 font-mono text-sm font-bold text-on-surface">
               {formatPaisa(activeAdjOut)}
             </div>
           </div>

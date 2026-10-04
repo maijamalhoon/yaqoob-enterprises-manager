@@ -95,15 +95,15 @@ export const LedgerReportsView: React.FC = () => {
   const totalAnnualProfit = totalAnnualIncome - totalAnnualExpense;
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 max-w-7xl mx-auto w-full">
+    <div className="workspace-page flex-1 overflow-y-auto space-y-6 max-w-7xl mx-auto w-full">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-xs">
+      <div className="workspace-header flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 tracking-tight">
-            Financial Reports
-          </h2>
-          <p className="mt-0.5 text-xs text-text-muted">
-            Income, expenses and owner cash flows by month.
+          <h1 className="text-xl font-bold tracking-tight text-on-surface">
+            Reports
+          </h1>
+          <p className="mt-1 text-sm text-text-muted">
+            Monthly income, expenses, and cash flow.
           </p>
         </div>
 
@@ -111,7 +111,7 @@ export const LedgerReportsView: React.FC = () => {
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
-            className="border border-gray-300 rounded-xl px-3 py-1.5 bg-white text-xs font-semibold focus:outline-none"
+            className="workspace-control bg-white px-3 py-2 text-xs font-semibold"
           >
             {[
               currentYear - 2,
@@ -120,14 +120,14 @@ export const LedgerReportsView: React.FC = () => {
               currentYear + 1,
             ].map((y) => (
               <option key={y} value={y}>
-                Year {y}
+                {y}
               </option>
             ))}
           </select>
 
           <button
             onClick={loadData}
-            className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-600"
+            className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-standard bg-white text-secondary hover:bg-surface-container-low"
             title="Refresh"
           >
             <RefreshCw
@@ -138,32 +138,32 @@ export const LedgerReportsView: React.FC = () => {
       </div>
 
       {/* Annual Summary Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 flex flex-col justify-between">
-          <div className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">
-            Annual Income ({selectedYear})
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
+        <div className="dashboard-metric dashboard-metric--income flex flex-col justify-between">
+          <div className="dashboard-metric__label">
+            Income · {selectedYear}
           </div>
-          <div className="text-2xl font-bold text-emerald-950 font-mono mt-2">
+          <div className="dashboard-metric__value mt-2 font-mono tabular-nums">
             {formatPaisa(totalAnnualIncome)}
           </div>
         </div>
 
-        <div className="bg-rose-50/70 border border-rose-200 rounded-2xl p-4 flex flex-col justify-between">
-          <div className="text-xs font-semibold text-rose-800 uppercase tracking-wider">
-            Annual Expenses ({selectedYear})
+        <div className="dashboard-metric dashboard-metric--expense flex flex-col justify-between">
+          <div className="dashboard-metric__label">
+            Expenses · {selectedYear}
           </div>
-          <div className="text-2xl font-bold text-rose-950 font-mono mt-2">
+          <div className="dashboard-metric__value mt-2 font-mono tabular-nums">
             {formatPaisa(totalAnnualExpense)}
           </div>
         </div>
 
-        <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 flex flex-col justify-between">
-          <div className="text-xs font-semibold text-blue-800 uppercase tracking-wider">
-            Annual Net Profit ({selectedYear})
+        <div className="dashboard-metric dashboard-metric--profit flex flex-col justify-between">
+          <div className="dashboard-metric__label">
+            Net profit · {selectedYear}
           </div>
           <div
-            className={`text-2xl font-bold font-mono mt-2 ${
-              totalAnnualProfit >= 0 ? "text-blue-950" : "text-rose-950"
+            className={`dashboard-metric__value mt-2 font-mono tabular-nums ${
+              totalAnnualProfit < 0 ? "text-danger" : ""
             }`}
           >
             {formatPaisa(totalAnnualProfit)}
@@ -172,16 +172,16 @@ export const LedgerReportsView: React.FC = () => {
       </div>
 
       {/* Month-by-Month Table */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
-          <BarChart3 className="w-4 h-4 text-emerald-600" />
-          <h3 className="font-semibold text-gray-900 text-sm">
+      <div className="workspace-panel">
+        <div className="workspace-panel-heading flex items-center gap-2">
+          <BarChart3 className="h-4 w-4 text-primary" />
+          <h3 className="text-sm font-semibold text-on-surface">
             Monthly Breakdown
           </h3>
         </div>
 
         <div className="hidden overflow-x-auto lg:block">
-          <table className="w-full text-left text-xs text-gray-700">
+          <table className="data-table w-full text-left text-xs text-gray-700">
             <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-semibold uppercase text-[10px]">
               <tr>
                 <th className="px-4 py-3">Month</th>

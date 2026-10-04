@@ -36,10 +36,10 @@ export const Header: React.FC = () => {
   }, []);
 
   return (
-    <header className="h-14 sm:h-16 border-b border-border-standard bg-white/95 px-3 sm:px-6 flex items-center justify-between z-30 shrink-0">
+    <header className="z-30 flex h-14 shrink-0 items-center justify-between border-b border-border-standard bg-white/95 px-4 backdrop-blur-xl sm:px-6">
       <div className="flex min-w-0 items-center gap-2 lg:hidden">
-        <img src="/assets/logo.svg" alt="" className="h-8 w-8 rounded-md" />
-        <span className="truncate text-sm font-semibold text-on-surface">
+        <img src="/assets/logo.svg" alt="" className="h-8 w-8 rounded-lg" />
+        <span className="truncate text-[13px] font-bold tracking-tight text-on-surface">
           {organization.name || "Shop Pro"}
         </span>
       </div>
@@ -55,9 +55,9 @@ export const Header: React.FC = () => {
           onClick={() => setIsQuickExpenseOpen(true)}
           title="Quick Expense (Ctrl+Shift+E)"
           aria-label="Quick expense"
-          className="flex h-9 w-9 items-center justify-center rounded-md border border-border-standard bg-white text-xs font-medium text-on-surface transition-colors hover:bg-surface-container-low sm:w-auto sm:gap-1.5 sm:px-3"
+          className="flex h-9 w-9 items-center justify-center rounded-lg border border-border-standard bg-white text-xs font-semibold text-on-surface shadow-xs transition-colors hover:border-primary/25 hover:bg-surface-container-low sm:w-auto sm:gap-2 sm:px-3"
         >
-          <Receipt className="h-3.5 w-3.5 text-[#d97706]" />
+          <Receipt className="h-4 w-4 text-tertiary" />
           <span className="hidden sm:inline">Expense</span>
         </button>
 
@@ -89,7 +89,10 @@ export const Header: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsMenuOpen((prev) => !prev)}
-            className="flex items-center gap-2.5 p-1 rounded-lg hover:bg-[#f2f4f6] transition cursor-pointer"
+            aria-expanded={isMenuOpen}
+            aria-controls="profile-menu"
+            aria-label="Open account menu"
+            className="flex cursor-pointer items-center gap-2 rounded-lg p-1 transition-colors hover:bg-surface-container-low"
           >
             <UserAvatar
               src={user?.avatar_url}
@@ -97,10 +100,10 @@ export const Header: React.FC = () => {
               size="sm"
             />
             <div className="flex flex-col text-left leading-tight hidden sm:flex">
-              <span className="text-xs font-semibold text-[#191c1e] max-w-[130px] truncate">
+              <span className="max-w-[150px] truncate text-xs font-semibold text-on-surface">
                 {user?.full_name || organization.owner_name || "Owner"}
               </span>
-              <span className="text-[11px] text-[#667085] truncate">
+              <span className="truncate text-[11px] text-text-muted">
                 {organization.name || "Store"}
               </span>
             </div>
@@ -108,7 +111,10 @@ export const Header: React.FC = () => {
           </button>
 
           {isMenuOpen && (
-            <div className="absolute right-0 mt-2 w-56 rounded-xl border border-[#e6e8ec] bg-white p-1.5 shadow-[0_12px_32px_rgba(25,28,30,0.08)] z-50">
+            <div
+              id="profile-menu"
+              className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-border-standard bg-white p-1.5 shadow-level-2"
+            >
               <div className="px-3 py-2 border-b border-[#f2f4f6]">
                 <p className="text-xs font-bold text-[#191c1e] truncate">
                   {user?.full_name || organization.owner_name || "Owner"}

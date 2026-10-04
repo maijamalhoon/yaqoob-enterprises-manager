@@ -30,7 +30,7 @@ const secondaryItems: Array<{
   icon: React.ComponentType<{ className?: string }>;
 }> = [
   { id: "closings", label: "Review Queue", icon: Inbox },
-  { id: "settings", label: "Settings & Export", icon: Settings },
+  { id: "settings", label: "Settings", icon: Settings },
   { id: "accounts", label: "Accounts", icon: Wallet },
 ];
 
@@ -47,7 +47,7 @@ export const MobileNav: React.FC = () => {
   return (
     <nav
       aria-label="Main navigation"
-      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-border-standard bg-white/95 px-1 pt-1 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-border-standard bg-white/95 px-2 pt-1.5 pb-[env(safe-area-inset-bottom)] shadow-[0_-6px_24px_rgba(23,37,29,0.06)] backdrop-blur-xl md:hidden"
     >
       {primaryItems.map(({ id, label, icon: Icon }) => {
         const isActive = currentView === id;
@@ -57,8 +57,8 @@ export const MobileNav: React.FC = () => {
             type="button"
             aria-current={isActive ? "page" : undefined}
             onClick={() => navigate(id)}
-            className={`relative z-10 flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-md px-1 text-[10px] font-medium transition-colors ${
-              isActive ? "text-primary" : (
+            className={`relative z-10 flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold transition-colors ${
+              isActive ? "bg-primary/[0.07] text-primary" : (
                 "text-text-muted hover:bg-surface-container-low"
               )
             }`}
@@ -78,7 +78,10 @@ export const MobileNav: React.FC = () => {
               className="fixed inset-0 z-0 cursor-default"
               onClick={() => setIsMoreOpen(false)}
             />
-            <div className="absolute bottom-[calc(100%+0.5rem)] right-1 z-10 w-56 rounded-lg border border-border-standard bg-white p-1.5 shadow-level-2">
+            <div
+              id="mobile-more-menu"
+              className="absolute bottom-[calc(100%+0.625rem)] right-1 z-10 w-56 rounded-xl border border-border-standard bg-white p-1.5 shadow-level-2"
+            >
               {secondaryItems.map(({ id, label, icon: Icon }) => (
                 <button
                   key={id}
@@ -86,7 +89,7 @@ export const MobileNav: React.FC = () => {
                   onClick={() => navigate(id)}
                   className={`flex min-h-11 w-full items-center gap-3 rounded-md px-3 text-left text-sm transition-colors ${
                     currentView === id ?
-                      "bg-primary/10 font-semibold text-primary"
+                      "bg-primary/[0.07] font-semibold text-primary"
                     : "text-on-surface hover:bg-surface-container-low"
                   }`}
                 >
@@ -116,15 +119,17 @@ export const MobileNav: React.FC = () => {
         <button
           type="button"
           aria-expanded={isMoreOpen}
+          aria-controls="mobile-more-menu"
           aria-label="More navigation options"
           onClick={() => setIsMoreOpen((open) => !open)}
-          className={`relative z-10 flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-md px-1 text-[10px] font-medium transition-colors ${
+          className={`relative z-10 flex min-h-12 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold transition-colors ${
             (
               isMoreOpen ||
               currentView === "closings" ||
-              currentView === "settings"
+              currentView === "settings" ||
+              currentView === "accounts"
             ) ?
-              "text-primary"
+              "bg-primary/[0.07] text-primary"
             : "text-text-muted hover:bg-surface-container-low"
           }`}
         >

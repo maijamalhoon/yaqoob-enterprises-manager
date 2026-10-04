@@ -29,7 +29,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref,
   ) => {
     const baseStyles =
-      "inline-flex items-center justify-center font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer active:scale-[0.99]";
+      "inline-flex items-center justify-center font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer active:scale-[0.99]";
 
     const variants = {
       primary:
@@ -43,10 +43,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       ghost:
         "bg-transparent text-text-muted hover:text-on-surface hover:bg-surface-container-low",
       danger:
-        "bg-[#dc2626] hover:bg-[#b91c1c] text-white border border-[#dc2626] shadow-xs",
-      teal: "bg-[#16a34a] hover:bg-[#15803d] text-white border border-[#16a34a] shadow-xs",
+        "bg-danger hover:bg-danger/90 text-white border border-danger shadow-xs",
+      teal: "bg-primary hover:bg-primary-hover text-white border border-primary shadow-xs",
       emerald:
-        "bg-[#16a34a] hover:bg-[#15803d] text-white border border-[#16a34a] shadow-xs",
+        "bg-primary hover:bg-primary-hover text-white border border-primary shadow-xs",
     };
 
     const sizes = {

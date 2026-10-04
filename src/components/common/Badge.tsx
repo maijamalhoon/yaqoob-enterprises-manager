@@ -30,18 +30,18 @@ export const Badge: React.FC<BadgeProps> = ({
   const variants = {
     indigo: "bg-primary/10 text-primary border-primary/20",
     primary: "bg-primary/10 text-primary border-primary/20",
-    blue: "bg-[#eff6ff] text-[#2563eb] border-[#bfdbfe]",
+    blue: "bg-surface-container-low text-on-surface-variant border-outline-variant",
     cyan: "bg-[#ecfeff] text-[#0891b2] border-[#a5f3fc]",
-    teal: "bg-[#f0fdf4] text-[#16a34a] border-[#dcfce7]",
-    emerald: "bg-[#f0fdf4] text-[#16a34a] border-[#dcfce7]",
-    success: "bg-[#f0fdf4] text-[#16a34a] border-[#dcfce7]",
+    teal: "bg-success-bg text-success border-success-border",
+    emerald: "bg-success-bg text-success border-success-border",
+    success: "bg-success-bg text-success border-success-border",
     purple: "bg-[#faf5ff] text-[#7c3aed] border-[#e9d5ff]",
     amber: "bg-[#fffbeb] text-[#d97706] border-[#fef3c7]",
     warning: "bg-[#fffbeb] text-[#d97706] border-[#fef3c7]",
-    rose: "bg-[#fef2f2] text-[#dc2626] border-[#fee2e2]",
-    danger: "bg-[#fef2f2] text-[#dc2626] border-[#fee2e2]",
-    slate: "bg-[#f2f4f6] text-[#555f73] border-[#e6e8ec]",
-    neutral: "bg-[#f2f4f6] text-[#555f73] border-[#e6e8ec]",
+    rose: "bg-danger-bg text-danger border-danger-border",
+    danger: "bg-danger-bg text-danger border-danger-border",
+    slate: "bg-surface-container-low text-secondary border-border-standard",
+    neutral: "bg-surface-container-low text-secondary border-border-standard",
   };
 
   const sizes = {

@@ -1,5 +1,5 @@
 ---
-name: Calm Commerce Studio
+name: Yaqoob Commerce System
 colors:
   surface: '#f8f9fb'
   surface-dim: '#d9dadc'
@@ -140,7 +140,15 @@ elevation:
   level-3: '0 16px 32px -8px rgba(0, 0, 0, 0.08)'
 ---
 
-# Calm Commerce Studio — Design System
+# Yaqoob Enterprises — Design System
+
+> **Live implementation:** The original concept tokens and prototype inventory
+> below are retained as historical reference. The current product UI uses the
+> compact green-accented system in `src/index.css`: Manrope interface text,
+> tabular monospace financial values, cool-neutral surfaces, subtle borders,
+> and restrained motion. The current palette is surface `#f6f8f7`, text
+> `#19251f`, primary `#176b54`, and border `#e3eae6`. Keep that stylesheet as
+> the source of truth when changing component appearance.
 
 **Origin Project**: Solo Retail POS Manager (`projects/1203123875469000231`)  
 **Target Platform**: Desktop POS / Retail Manager (Responsive down to Tablet/Mobile)  
@@ -160,7 +168,7 @@ The design movement is **Modern Functional Minimalism**:
 
 ---
 
-## 2. Design Tokens Reference
+## 2. Historical Concept Tokens
 
 ### A. Color Palette
 
@@ -313,22 +321,22 @@ All 10 application screens requested map 1-to-1 without duplicates or alternate 
 
 ## 4. Component Implementation Specifications
 
-### Buttons
+### Buttons (Historical Concept)
 - **Primary**: Solid Indigo (`#4f46e5`) fill, white text, `rounded-lg` (8px), height 40px, font weight 500. Hover: `#4338ca`. Active: scale(0.99).
 - **Secondary / Subtle**: `#ffffff` background with `1px solid #e6e8ec`, `#14181f` text. Hover: `#f8f9fb`.
 - **Ghost**: Transparent background, `#667085` text. Hover: `#14181f` with `#f0f2f5` background fill.
 
-### Input Fields & Selects
+### Input Fields & Selects (Historical Concept)
 - Height 40px, `rounded-md` (10px / 12px), `#ffffff` fill, `1px solid #e6e8ec`.
 - Focus state: `1px solid #4f46e5` with `box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12)`.
 - Numeric / Financial inputs: font-family `JetBrains Mono` with trailing unit labels (`PKR`, `gsm`, `sheets`).
 
-### Chips & Status Badges
+### Chips & Status Badges (Historical Concept)
 - Padding: `2px 8px`, pill-radius (`rounded-full`), font-size: 11px, font-weight 500.
 - **Paid / Complete**: Light green `#f0fdf4`, text `#16a34a`, border `1px solid #dcfce7`.
 - **Pending / Queue**: Light amber `#fffbeb`, text `#d97706`, border `1px solid #fef3c7`.
 - **Low Stock / Void**: Light red `#fef2f2`, text `#dc2626`, border `1px solid #fee2e2`.
 
-### Cards & Panels
+### Cards & Panels (Historical Concept)
 - Background: `#ffffff`, border: `1px solid #e6e8ec`, `rounded-xl` (16px), padding: `1.5rem` (`24px`).
 - Card header: 16px semi-bold (`headline-sm`) aligned with contextual actions / badges, `1rem` bottom margin.

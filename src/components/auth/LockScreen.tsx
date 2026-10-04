@@ -179,8 +179,8 @@ export const AuthScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-dvh w-full items-center justify-center bg-surface p-4 font-sans text-on-surface">
-      <main className="w-full max-w-[400px] rounded-xl border border-border-standard bg-white p-6 shadow-level-2 sm:p-8">
+    <div className="auth-screen flex min-h-dvh w-full items-center justify-center bg-surface p-4 font-sans text-on-surface">
+      <main className="auth-card w-full max-w-[400px] rounded-xl border border-border-standard bg-white p-6 shadow-level-2 sm:p-8">
         {/* Header Branding */}
         <div className="mb-6 flex flex-col items-center text-center">
           <img
@@ -438,8 +438,8 @@ export const PinSetupScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-dvh w-full items-center justify-center bg-surface p-4 font-sans text-on-surface">
-      <main className="w-full max-w-[400px] rounded-lg border border-border-standard bg-white p-6 shadow-level-2 sm:p-8">
+    <div className="auth-screen flex min-h-dvh w-full items-center justify-center bg-surface p-4 font-sans text-on-surface">
+      <main className="auth-card w-full max-w-[400px] rounded-xl border border-border-standard bg-white p-6 shadow-level-2 sm:p-8">
         <div className="mb-6 flex flex-col items-center text-center">
           <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <KeyRound className="h-6 w-6" />
@@ -590,8 +590,8 @@ export const LockScreen: React.FC = () => {
   };
 
   return (
-    <div className="flex min-h-dvh w-full items-center justify-center bg-surface p-4 font-sans text-on-surface">
-      <main className="w-full max-w-[380px] rounded-lg border border-border-standard bg-white p-6 shadow-level-2 sm:p-8">
+    <div className="auth-screen flex min-h-dvh w-full items-center justify-center bg-surface p-4 font-sans text-on-surface">
+      <main className="auth-card w-full max-w-[380px] rounded-xl border border-border-standard bg-white p-6 shadow-level-2 sm:p-8">
         {/* User Avatar and Identity */}
         <div className="mb-6 flex flex-col items-center text-center">
           <div className="mb-3 rounded-full ring-4 ring-primary/10">
