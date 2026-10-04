@@ -118,6 +118,10 @@ interface AuthContextType {
   updatePassword: (
     newPassword: string,
   ) => Promise<{ success: boolean; error?: string }>;
+  changePassword: (
+    currentPassword: string,
+    newPassword: string,
+  ) => Promise<{ success: boolean; error?: string }>;
   updateProfilePhoto: (
     avatarUrl: string,
   ) => Promise<{ success: boolean; error?: string }>;
@@ -548,6 +552,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const changePassword = async (
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!user) return { success: false, error: "Sign in to change your password." };
+    if (!currentPassword) {
+      return { success: false, error: "Enter your current password." };
+    }
+
+    try {
+      if (isSupabaseReady) {
+        if (!user.email) {
+          return { success: false, error: "This account has no email address." };
+        }
+        const { data, error: signInError } =
+          await getSupabaseClient().auth.signInWithPassword({
+            email: user.email,
+            password: currentPassword,
+          });
+        if (signInError || data.user?.id !== user.id) {
+          return { success: false, error: "Current password is incorrect." };
+        }
+      } else {
+        const profile = await sqliteRepository.getSessionProfile(user.id);
+        if (
+          !profile?.password_hash ||
+          !(await verifyPassword(currentPassword, profile.password_hash))
+        ) {
+          return { success: false, error: "Current password is incorrect." };
+        }
+      }
+
+      return updatePassword(newPassword);
+    } catch (err) {
+      return {
+        success: false,
+        error: getErrorMessage(err, "Could not verify your current password."),
+      };
+    }
+  };
+
   const updateProfilePhoto = async (
     avatarUrl: string,
   ): Promise<{ success: boolean; error?: string }> => {
@@ -834,6 +879,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         setupPin,
         updatePin,
         updatePassword,
+        changePassword,
         updateProfilePhoto,
         createAccount,
         onboardingCompleted,
