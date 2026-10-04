@@ -1,12 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { CalendarDays, Minus, Plus, Send } from "lucide-react";
-import { LedgerAccount } from "../../types/ledger";
 
 interface ChatComposerProps {
   onSend: (text: string) => void;
-  accounts: LedgerAccount[];
-  selectedAccountId: string;
-  onAccountChange: (accountId: string) => void;
   disabled?: boolean;
   placeholder?: string;
   autoFocus?: boolean;
@@ -14,9 +10,6 @@ interface ChatComposerProps {
 
 export const ChatComposer: React.FC<ChatComposerProps> = ({
   onSend,
-  accounts,
-  selectedAccountId,
-  onAccountChange,
   disabled = false,
   placeholder = "Amount and item",
   autoFocus = true,
@@ -33,7 +26,7 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const trimmed = text.trim();
-    if (!trimmed || !selectedAccountId || disabled) return;
+    if (!trimmed || disabled) return;
 
     onSend(trimmed);
     setText("");
@@ -67,32 +60,6 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
 
   return (
     <div className="ledger-composer border-t border-border-standard px-3 py-2.5 sm:px-5 sm:py-3">
-      <div className="mx-auto mb-2 flex w-full max-w-4xl items-center gap-2">
-        <label
-          htmlFor="ledger-account"
-          className="shrink-0 text-xs font-semibold text-secondary"
-        >
-          Account
-        </label>
-        <select
-          id="ledger-account"
-          value={selectedAccountId}
-          onChange={(event) => onAccountChange(event.target.value)}
-          disabled={disabled || accounts.length === 0}
-          required
-          className="min-h-10 min-w-0 flex-1 rounded-md border border-border-standard bg-white px-2.5 text-xs text-on-surface focus:border-primary focus:outline-none"
-        >
-          <option value="">
-            {accounts.length ? "Choose an account" : "No accounts available"}
-          </option>
-          {accounts.map((account) => (
-            <option key={account.id} value={account.id}>
-              {account.name} · {account.type.replace("_", " ")}
-            </option>
-          ))}
-        </select>
-      </div>
-
       {/* Quick Category Chips for Fast 1-Tap Entry */}
       <div className="no-scrollbar mx-auto mb-2 flex w-full max-w-4xl items-center gap-2 overflow-x-auto pb-1 text-xs">
         <button
@@ -154,6 +121,9 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
         <div className="ledger-composer__input relative min-w-0 flex-1 rounded-lg border border-border-standard bg-white transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15">
           <textarea
             ref={textareaRef}
+            id="ledger-entry"
+            aria-describedby="ledger-entry-hint"
+            aria-keyshortcuts="Enter Shift+Enter"
             rows={1}
             value={text}
             onChange={handleInput}
@@ -168,7 +138,7 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
         {/* Send Button (48px Touch Target for Mobile Ergonomics) */}
         <button
           type="submit"
-          disabled={!text.trim() || !selectedAccountId || disabled}
+          disabled={!text.trim() || disabled}
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary text-white shadow-xs transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
           title="Send (Enter)"
           aria-label="Send entry"
@@ -176,6 +146,16 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
           <Send className="h-5 w-5" aria-hidden="true" />
         </button>
       </form>
+      <div
+        id="ledger-entry-hint"
+        className="mx-auto mt-2 flex w-full max-w-4xl flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] text-text-muted"
+      >
+        <span>
+          <span className="font-semibold text-secondary">Saved as a draft.</span>{" "}
+          Choose an account when you’re ready to update its balance.
+        </span>
+        <span className="hidden sm:inline">Enter to save · Shift + Enter for a new line</span>
+      </div>
     </div>
   );
 };

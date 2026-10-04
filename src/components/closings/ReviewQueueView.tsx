@@ -95,12 +95,12 @@ export const ReviewQueueView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 max-w-5xl mx-auto w-full">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-xs">
+    <div className="workspace-page flex-1 overflow-y-auto space-y-4 max-w-5xl mx-auto w-full">
+      <div className="workspace-header flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 tracking-tight">
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">
             Review Queue
-          </h2>
+          </h1>
           <p className="mt-0.5 text-xs text-text-muted">
             Unclear entries stay out of totals until you review them.
           </p>
@@ -116,7 +116,7 @@ export const ReviewQueueView: React.FC = () => {
       </div>
 
       {items.length === 0 ?
-        <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center text-gray-400">
+        <div className="workspace-panel p-12 text-center text-gray-400">
           <Inbox className="w-12 h-12 mx-auto mb-3 text-gray-300" />
           <h3 className="font-semibold text-gray-700 text-sm">
             Review Queue is Empty
@@ -129,7 +129,7 @@ export const ReviewQueueView: React.FC = () => {
           {items.map((item) => (
             <div
               key={item.id}
-              className="bg-white rounded-2xl border border-gray-200 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              className="workspace-panel p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
               <div className="space-y-1">
                 <div className="font-mono text-sm font-bold text-gray-900">

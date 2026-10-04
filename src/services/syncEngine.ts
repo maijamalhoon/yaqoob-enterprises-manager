@@ -86,7 +86,7 @@ export const TABLE_ALLOWED_COLUMNS: Record<string, string[]> = {
   daily_closings: [
     'id', 'organization_id', 'closing_date', 'opening_cash', 'cash_sales',
     'cash_expenses', 'cash_transfers_in', 'cash_transfers_out', 'expected_cash',
-    'actual_cash', 'difference', 'notes', 'closed_by', 'closed_at', 'created_at'
+    'actual_cash', 'difference', 'notes', 'closed_by', 'closed_at'
   ],
   audit_logs: [
     'id', 'organization_id', 'user_id', 'user_name', 'action', 'entity',
@@ -322,7 +322,7 @@ class SyncEngineService {
       for (const tableName of pullTables) {
         const timestampColumn = ['profiles', 'products', 'services'].includes(tableName)
           ? 'updated_at'
-          : 'created_at';
+          : tableName === 'daily_closings' ? 'closed_at' : 'created_at';
         const cursorRows = await db.select<{ cursor: string }>(
           `SELECT cursor FROM sync_cursors WHERE table_name = ? AND organization_id = ?`,
           [tableName, principal.organizationId]

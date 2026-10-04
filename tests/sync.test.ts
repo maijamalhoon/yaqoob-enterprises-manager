@@ -105,6 +105,45 @@ describe('Offline Sync Engine & SQLite Persistence', () => {
     const cleanService = sanitizePayloadForCloud('services', rawService as any);
     expect(cleanService.name).toBe('Photocopy');
     expect('components' in cleanService).toBe(false);
+
+    const cleanClosing = sanitizePayloadForCloud('daily_closings', {
+      id: 'closing-1',
+      organization_id: testOrgId,
+      closing_date: '2026-10-04',
+      closed_at: '2026-10-04T12:00:00Z',
+      created_at: '2026-10-04T12:00:00Z',
+    });
+    expect(cleanClosing.closed_at).toBe('2026-10-04T12:00:00Z');
+    expect('created_at' in cleanClosing).toBe(false);
+  });
+
+  it('uses the remote closed_at column as the daily-closing sync cursor', async () => {
+    const timestampQueries: Array<{ table: string; column: string }> = [];
+    const mockSupabase = {
+      from: vi.fn((table: string) => ({
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            gt: vi.fn((column: string) => {
+              timestampQueries.push({ table, column });
+              return {
+                order: vi.fn().mockResolvedValue({ data: [], error: null }),
+              };
+            }),
+          })),
+        })),
+      })),
+    };
+
+    vi.spyOn(supabaseLib, 'isSupabaseConfigured').mockReturnValue(true);
+    vi.spyOn(supabaseLib, 'getSupabaseClient').mockReturnValue(mockSupabase as any);
+
+    const result = await syncEngine.syncNow();
+
+    expect(result.error).toBeUndefined();
+    expect(timestampQueries).toContainEqual({
+      table: 'daily_closings',
+      column: 'closed_at',
+    });
   });
 
   it('handles unconfigured cloud gracefully without throwing errors or dropping mutations', async () => {

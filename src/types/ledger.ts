@@ -80,6 +80,25 @@ export interface Transaction {
   updated_at: string;
 }
 
+export interface TransactionDraft {
+  id: string;
+  organization_id: string;
+  type: TransactionType;
+  amount_paisa: number;
+  category_id: string | null;
+  category_name?: string;
+  adjustment_dir?: AdjustmentDirection | null;
+  business_date: string;
+  device_entry_time: string;
+  note?: string | null;
+  raw_text: string;
+  created_by: string;
+  created_by_name: string;
+  idempotency_key: string;
+  created_at: string;
+  pending_account_id?: string;
+}
+
 export interface AuditLogEntry {
   id: string;
   transaction_id: string;

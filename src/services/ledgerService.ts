@@ -15,6 +15,7 @@ import {
   Category,
   AccountLedgerEntry,
   LedgerAccount,
+  TransactionDraft,
 } from '../types/ledger';
 import { getKarachiBusinessDate } from '../lib/dates';
 import { SEED_CATEGORIES, SeedCategory } from '../parser/matcher';
@@ -22,8 +23,23 @@ import {
   enqueueOfflineTransaction,
   getOfflineQueue,
   dequeueOfflineTransaction,
+  markOfflineTransactionFailed,
   QueuedTransaction,
 } from './offlineQueue';
+import {
+  cacheAccounts,
+  enqueueOfflineAccountOperation,
+  getCachedAccounts,
+  getOfflineAccountOperations,
+  OfflineAccountOperation,
+  replaceCachedAccounts,
+  removeOfflineAccountOperation,
+} from './offlineAccountStore';
+import {
+  getOfflineDrafts,
+  removeOfflineDraft,
+  saveOfflineDraft,
+} from './offlineDraftStore';
 
 export interface CreateTransactionPayload {
   type: 'income' | 'expense' | 'capital_in' | 'withdrawal' | 'adjustment';
@@ -39,6 +55,8 @@ export interface CreateTransactionPayload {
   device?: string;
 }
 
+export type CreateTransactionDraftPayload = Omit<CreateTransactionPayload, 'accountId' | 'device'>;
+
 export interface TransactionFilter {
   startDate?: string;
   endDate?: string;
@@ -49,6 +67,8 @@ export interface TransactionFilter {
   limit?: number;
   offset?: number;
 }
+
+export const OFFLINE_SYNC_COMPLETE_EVENT = 'shop-pro:offline-sync-complete';
 
 function generateUUID(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -84,6 +104,30 @@ function queuedTransactionToLedgerTransaction(item: QueuedTransaction): Transact
   };
 }
 
+function isOnline(): boolean {
+  return typeof navigator === 'undefined' || navigator.onLine;
+}
+
+function isNetworkFailure(error: unknown): boolean {
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'object' && error !== null && 'message' in error
+      ? String(error.message)
+      : String(error || '');
+  return !isOnline() || /failed to fetch|fetch failed|network|load failed/i.test(message);
+}
+
+function normalizeAccount(account: any): LedgerAccount {
+  return {
+    ...account,
+    balance_paisa: Number(account.balance_paisa ?? Math.round(Number(account.current_balance || 0) * 100)),
+    current_balance: Number(account.current_balance || 0),
+    opening_balance: Number(account.opening_balance || 0),
+    is_default: Boolean(account.is_default),
+    is_active: Boolean(account.is_active),
+  };
+}
+
 export class LedgerService {
   private static instance: LedgerService;
 
@@ -92,6 +136,158 @@ export class LedgerService {
       LedgerService.instance = new LedgerService();
     }
     return LedgerService.instance;
+  }
+
+  async createTransactionDraft(
+    payload: CreateTransactionDraftPayload,
+    userId: string,
+  ): Promise<TransactionDraft> {
+    const principal = getSecurityPrincipal();
+    if (!principal) throw new Error('Sign in to a shop before saving this entry.');
+    if (!Number.isSafeInteger(payload.amountPaisa) || payload.amountPaisa <= 0) {
+      throw new Error('Enter an amount greater than zero.');
+    }
+
+    const id = generateUUID();
+    const draft: TransactionDraft = {
+      id,
+      organization_id: principal.organizationId,
+      type: payload.type,
+      amount_paisa: payload.amountPaisa,
+      category_id: payload.categoryId,
+      category_name: payload.categoryName,
+      adjustment_dir: payload.adjustmentDir || null,
+      business_date: payload.businessDate || getKarachiBusinessDate(),
+      device_entry_time: new Date().toISOString(),
+      note: payload.note || null,
+      raw_text: payload.rawText,
+      created_by: principal.id || userId,
+      created_by_name: payload.createdByName,
+      idempotency_key: `draft-${id}`,
+      created_at: new Date().toISOString(),
+    };
+    await saveOfflineDraft(draft);
+
+    if (!isOnline() || !isSupabaseConfigured()) return draft;
+    try {
+      const syncedDraft = await this.syncDraftToCloud(draft);
+      await removeOfflineDraft(draft.id);
+      return syncedDraft;
+    } catch (error) {
+      if (isNetworkFailure(error)) return draft;
+      await removeOfflineDraft(draft.id);
+      throw error;
+    }
+  }
+
+  async getTransactionDrafts(dateStr: string): Promise<TransactionDraft[]> {
+    const principal = getSecurityPrincipal();
+    if (!principal) return [];
+    const localDrafts = (await getOfflineDrafts(principal.organizationId))
+      .filter((draft) => draft.business_date === dateStr);
+    if (!isOnline() || !isSupabaseConfigured()) return localDrafts;
+
+    const { data, error } = await getSupabaseClient()
+      .from('transaction_drafts')
+      .select('*, categories(name)')
+      .eq('organization_id', principal.organizationId)
+      .eq('business_date', dateStr)
+      .order('device_entry_time', { ascending: false });
+    if (error) {
+      if (isNetworkFailure(error)) {
+        console.warn('Could not load shared transaction drafts; showing locally saved drafts:', error);
+        return localDrafts;
+      }
+      throw error;
+    }
+
+    const cloudDrafts: TransactionDraft[] = (data || []).map((draft: any) => ({
+      ...draft,
+      amount_paisa: Number(draft.amount_paisa),
+      category_name: draft.categories?.name || undefined,
+    }));
+    const draftsById = new Map(cloudDrafts.map((draft) => [draft.id, draft]));
+    for (const draft of localDrafts) {
+      const cloudDraft = draftsById.get(draft.id);
+      draftsById.set(draft.id, cloudDraft
+        ? { ...cloudDraft, pending_account_id: draft.pending_account_id }
+        : draft);
+    }
+    const mergedDrafts = [...draftsById.values()]
+      .sort((left, right) => right.device_entry_time.localeCompare(left.device_entry_time));
+    await Promise.all(mergedDrafts.map((draft) => saveOfflineDraft(draft)));
+    return mergedDrafts;
+  }
+
+  async postTransactionDraft(
+    draftId: string,
+    accountId: string,
+  ): Promise<{ transaction?: Transaction; isQueuedOffline: boolean }> {
+    const principal = getSecurityPrincipal();
+    if (!principal) throw new Error('Sign in to post this transaction.');
+    if (!accountId) throw new Error('Choose an account before posting this transaction.');
+    const localDraft = (await getOfflineDrafts(principal.organizationId))
+      .find((draft) => draft.id === draftId);
+
+    if (!isOnline() || !isSupabaseConfigured()) {
+      const accounts = await getCachedAccounts(principal.organizationId);
+      if (!accounts.some((account) => account.id === accountId && account.is_active)) {
+        throw new Error('Choose an active account loaded for this shop before posting offline.');
+      }
+      if (!localDraft) {
+        throw new Error('Reconnect to load this shared draft before selecting an account.');
+      }
+      await saveOfflineDraft({ ...localDraft, pending_account_id: accountId });
+      return { isQueuedOffline: true };
+    }
+
+    try {
+      if (localDraft) await this.syncDraftToCloud(localDraft);
+      const { data, error } = await getSupabaseClient().rpc('post_transaction_draft', {
+        draft_id: draftId,
+        selected_account_id: accountId,
+      });
+      if (error) throw error;
+      const postedTransaction = Array.isArray(data) ? data[0] : data;
+      if (!postedTransaction) throw new Error('Transaction could not be posted. Refresh and try again.');
+      await removeOfflineDraft(draftId);
+      return { transaction: postedTransaction as Transaction, isQueuedOffline: false };
+    } catch (error) {
+      if (!isNetworkFailure(error) || !localDraft) throw error;
+      const accounts = await getCachedAccounts(principal.organizationId);
+      if (!accounts.some((account) => account.id === accountId && account.is_active)) throw error;
+      await saveOfflineDraft({ ...localDraft, pending_account_id: accountId });
+      return { isQueuedOffline: true };
+    }
+  }
+
+  private async syncDraftToCloud(draft: TransactionDraft): Promise<TransactionDraft> {
+    const { data, error } = await getSupabaseClient()
+      .from('transaction_drafts')
+      .upsert({
+        id: draft.id,
+        organization_id: draft.organization_id,
+        type: draft.type,
+        amount_paisa: draft.amount_paisa,
+        category_id: draft.category_id,
+        adjustment_dir: draft.adjustment_dir,
+        business_date: draft.business_date,
+        device_entry_time: draft.device_entry_time,
+        note: draft.note,
+        raw_text: draft.raw_text,
+        created_by: draft.created_by,
+        created_by_name: draft.created_by_name,
+        idempotency_key: draft.idempotency_key,
+      }, { onConflict: 'id' })
+      .select('*, categories(name)')
+      .single();
+    if (error) throw error;
+    return {
+      ...data,
+      amount_paisa: Number(data.amount_paisa),
+      category_name: data.categories?.name || draft.category_name,
+      pending_account_id: draft.pending_account_id,
+    };
   }
 
   /**
@@ -110,6 +306,14 @@ export class LedgerService {
     const createdBy = principal?.id || userId;
     if (!payload.accountId) throw new Error('Choose an account before saving this transaction.');
     if (!principal) throw new Error('Sign in to a shop before saving this transaction.');
+
+    const isQueued = !isOnline() || !isSupabaseConfigured();
+    if (isQueued) {
+      const accounts = await getCachedAccounts(principal.organizationId);
+      if (!accounts.some((account) => account.id === payload.accountId && account.is_active)) {
+        throw new Error('Choose an active account loaded for this shop before saving offline.');
+      }
+    }
 
     const record = {
       id,
@@ -131,8 +335,7 @@ export class LedgerService {
     };
 
     // If offline or Supabase not configured, enqueue immediately
-    const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
-    if (!isOnline || !isSupabaseConfigured()) {
+    if (isQueued) {
       await enqueueOfflineTransaction({
         id,
         idempotencyKey,
@@ -169,6 +372,12 @@ export class LedgerService {
 
       return { transaction: data, isQueuedOffline: false };
     } catch (err) {
+      if (!isNetworkFailure(err)) throw err;
+      const accounts = await getCachedAccounts(principal.organizationId);
+      if (!accounts.some((account) => account.id === payload.accountId && account.is_active)) {
+        console.warn('Network error recording transaction; refusing to queue without a cached active account:', err);
+        throw new Error('Choose an active account loaded for this shop before saving offline.');
+      }
       console.warn('Network error recording transaction, falling back to offline queue:', err);
       await enqueueOfflineTransaction({
         id,
@@ -197,63 +406,236 @@ export class LedgerService {
   /**
    * Flushes queued transactions from IndexedDB to Supabase
    */
-  async flushOfflineQueue(): Promise<{ syncedCount: number; errors: any[] }> {
-    const queue = await getOfflineQueue();
-    if (queue.length === 0) return { syncedCount: 0, errors: [] };
+  async flushOfflineQueue(): Promise<{ syncedCount: number; errors: unknown[] }> {
+    if (!isOnline() || !isSupabaseConfigured()) return { syncedCount: 0, errors: [] };
 
-    const supabase = getSupabaseClient();
     const principal = getSecurityPrincipal();
+    if (!principal) return { syncedCount: 0, errors: [] };
+
+    const [accountOperations, queue] = await Promise.all([
+      getOfflineAccountOperations(principal.organizationId),
+      getOfflineQueue(),
+    ]);
+    const drafts = await getOfflineDrafts(principal.organizationId);
+    const transactions = queue.filter((item) =>
+      (!item.organizationId || item.organizationId === principal.organizationId) &&
+      (!item.createdBy || item.createdBy === principal.id),
+    );
     const accounts = queue.some((item) => !item.accountId)
       ? await this.getPaymentAccounts()
       : [];
     const defaultAccountId = accounts.find((account) => account.is_default)?.id;
+    const tasks: Array<
+      | { kind: 'ACCOUNT'; operation: OfflineAccountOperation; timestamp: number; priority: number }
+      | { kind: 'DRAFT'; draft: TransactionDraft; timestamp: number; priority: number }
+      | { kind: 'TRANSACTION'; transaction: QueuedTransaction; timestamp: number; priority: number }
+    > = [
+      ...accountOperations.map((operation) => ({
+        kind: 'ACCOUNT' as const,
+        operation,
+        timestamp: Date.parse(operation.createdAt),
+        priority: operation.kind === 'CREATE' ? 0 : operation.kind === 'TRANSFER' ? 2 : 3,
+      })),
+      ...drafts.map((draft) => ({
+        kind: 'DRAFT' as const,
+        draft,
+        timestamp: Date.parse(draft.device_entry_time),
+        priority: 1,
+      })),
+      ...transactions.map((transaction) => ({
+        kind: 'TRANSACTION' as const,
+        transaction,
+        timestamp: transaction.createdAt,
+        priority: 2,
+      })),
+    ];
+    tasks.sort((left, right) =>
+      left.timestamp - right.timestamp ||
+      left.priority - right.priority ||
+      (left.kind === 'ACCOUNT' ? left.operation.id : left.kind === 'DRAFT' ? left.draft.id : left.transaction.id)
+        .localeCompare(right.kind === 'ACCOUNT' ? right.operation.id : right.kind === 'DRAFT' ? right.draft.id : right.transaction.id),
+    );
+
     let syncedCount = 0;
-    const errors: any[] = [];
+    let accountsChanged = false;
+    const errors: unknown[] = [];
 
-    for (const item of queue) {
+    for (const task of tasks) {
       try {
-        const organizationId = item.organizationId || principal?.organizationId;
-        const createdBy = item.createdBy || principal?.id;
-        const accountId = item.accountId || defaultAccountId;
-        if (!organizationId || !createdBy || !accountId || organizationId !== principal?.organizationId) {
-          throw new Error('Queued transaction is missing its original shop or creator and cannot be synced safely.');
+        if (task.kind === 'ACCOUNT') {
+          if (task.operation.organizationId !== principal.organizationId) {
+            throw new Error('Queued account operation belongs to a different shop.');
+          }
+          await this.syncOfflineAccountOperation(task.operation);
+          await removeOfflineAccountOperation(task.operation.id);
+          accountsChanged = true;
+        } else if (task.kind === 'DRAFT') {
+          const syncedDraft = await this.syncDraftToCloud(task.draft);
+          if (syncedDraft.pending_account_id) {
+            const { error } = await getSupabaseClient().rpc('post_transaction_draft', {
+              draft_id: syncedDraft.id,
+              selected_account_id: syncedDraft.pending_account_id,
+            });
+            if (error) throw error;
+            accountsChanged = true;
+          }
+          await removeOfflineDraft(task.draft.id);
+        } else {
+          const item = task.transaction;
+          const organizationId = item.organizationId || principal.organizationId;
+          const createdBy = item.createdBy || principal.id;
+          const accountId = item.accountId || defaultAccountId;
+          if (!organizationId || !createdBy || !accountId) {
+            throw new Error('Queued transaction is missing its original shop, creator, or account and cannot be synced safely.');
+          }
+          if (organizationId !== principal.organizationId || createdBy !== principal.id) {
+            throw new Error('Queued transaction belongs to a different shop or creator and cannot be synced safely.');
+          }
+
+          const payload = {
+            id: item.id,
+            organization_id: organizationId,
+            account_id: accountId,
+            type: item.type,
+            amount_paisa: item.amountPaisa,
+            category_id: item.categoryId,
+            adjustment_dir: item.adjustmentDir || null,
+            business_date: item.businessDate,
+            device_entry_time: item.deviceEntryTime,
+            note: item.note || null,
+            raw_text: item.rawText,
+            status: 'active',
+            idempotency_key: item.idempotencyKey,
+            created_by: createdBy,
+            created_by_name: item.createdByName,
+          };
+
+          const { error } = await getSupabaseClient()
+            .from('transactions')
+            .upsert(payload, { onConflict: 'idempotency_key' });
+          if (error) throw error;
+          await dequeueOfflineTransaction(item.idempotencyKey);
         }
-
-        const payload = {
-          id: item.id,
-          organization_id: organizationId,
-          account_id: accountId,
-          type: item.type,
-          amount_paisa: item.amountPaisa,
-          category_id: item.categoryId,
-          adjustment_dir: item.adjustmentDir || null,
-          business_date: item.businessDate,
-          device_entry_time: item.deviceEntryTime,
-          note: item.note || null,
-          raw_text: item.rawText,
-          status: 'active',
-          idempotency_key: item.idempotencyKey,
-          created_by: createdBy,
-          created_by_name: item.createdByName,
-        };
-
-        const { error } = await supabase
-          .from('transactions')
-          .upsert(payload, { onConflict: 'idempotency_key' });
-
-        if (error) {
-          throw error;
-        }
-
-        await dequeueOfflineTransaction(item.idempotencyKey);
         syncedCount++;
       } catch (err) {
-        console.error(`Failed to flush queued transaction ${item.idempotencyKey}:`, err);
+        if (task.kind === 'ACCOUNT') {
+          console.error(`Failed to flush queued account operation ${task.operation.id}:`, err);
+          await enqueueOfflineAccountOperation({
+            ...task.operation,
+            attempts: task.operation.attempts + 1,
+          });
+        } else if (task.kind === 'DRAFT') {
+          console.error(`Failed to flush transaction draft ${task.draft.id}:`, err);
+        } else {
+          console.error(`Failed to flush queued transaction ${task.transaction.idempotencyKey}:`, err);
+          await markOfflineTransactionFailed(task.transaction.idempotencyKey);
+        }
         errors.push(err);
+        break;
+      }
+    }
+
+    if (accountsChanged) {
+      try {
+        await this.getPaymentAccounts();
+      } catch (error) {
+        console.error('Offline operations synced, but authoritative account balances could not be refreshed:', error);
+        errors.push(error);
       }
     }
 
     return { syncedCount, errors };
+  }
+
+  private async syncOfflineAccountOperation(operation: OfflineAccountOperation): Promise<void> {
+    const supabase = getSupabaseClient();
+    if (operation.kind === 'CREATE') {
+      const account = operation.account;
+      const { data, error } = await supabase
+        .from('payment_accounts')
+        .upsert({
+          id: account.id,
+          organization_id: operation.organizationId,
+          name: account.name,
+          type: account.type,
+          opening_balance: account.opening_balance,
+          is_active: account.is_active,
+          is_default: account.is_default,
+        }, { onConflict: 'id', ignoreDuplicates: true })
+        .select('*')
+        .maybeSingle();
+      if (error) throw error;
+
+      let serverAccount = data;
+      if (!serverAccount) {
+        const existing = await supabase
+          .from('payment_accounts')
+          .select('*')
+          .eq('id', account.id)
+          .eq('organization_id', operation.organizationId)
+          .maybeSingle();
+        if (existing.error) throw existing.error;
+        serverAccount = existing.data;
+      }
+      if (
+        !serverAccount ||
+        serverAccount.name !== account.name ||
+        serverAccount.type !== account.type ||
+        Number(serverAccount.opening_balance || 0) !== account.opening_balance
+      ) {
+        throw new Error('The account could not be verified after synchronization.');
+      }
+      await cacheAccounts([normalizeAccount(serverAccount)]);
+      return;
+    }
+
+    if (operation.kind === 'UPDATE') {
+      const { data, error } = await supabase
+        .from('payment_accounts')
+        .update(operation.changes)
+        .eq('id', operation.accountId)
+        .eq('organization_id', operation.organizationId)
+        .select('id')
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) throw new Error('The account update could not be verified.');
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('account_transfers')
+      .upsert({
+        id: operation.id,
+        idempotency_key: operation.id,
+        organization_id: operation.organizationId,
+        from_account_id: operation.fromAccountId,
+        to_account_id: operation.toAccountId,
+        amount: operation.amountPaisa / 100,
+        date: operation.businessDate,
+        notes: operation.notes || null,
+        created_by: operation.createdBy,
+      }, { onConflict: 'id', ignoreDuplicates: true })
+      .select('id')
+      .maybeSingle();
+    if (error) throw error;
+    if (data) return;
+
+    const existing = await supabase
+      .from('account_transfers')
+      .select('id, organization_id, from_account_id, to_account_id, amount, notes, created_by')
+      .eq('id', operation.id)
+      .eq('organization_id', operation.organizationId)
+      .maybeSingle();
+    if (existing.error) throw existing.error;
+    if (
+      !existing.data ||
+      existing.data.from_account_id !== operation.fromAccountId ||
+      existing.data.to_account_id !== operation.toAccountId ||
+      Number(existing.data.amount) !== operation.amountPaisa / 100 ||
+      existing.data.created_by !== operation.createdBy
+    ) {
+      throw new Error('The transfer could not be verified after synchronization.');
+    }
   }
 
   /**
@@ -261,10 +643,15 @@ export class LedgerService {
    */
   async getTransactionsForDate(dateStr: string = getKarachiBusinessDate()): Promise<Transaction[]> {
     const supabase = getSupabaseClient();
-    const accounts = await this.getPaymentAccounts().catch(() => []);
+    let accounts: LedgerAccount[] = [];
+    try {
+      accounts = await this.getPaymentAccounts();
+    } catch (error) {
+      console.warn('Could not load account names while fetching ledger transactions:', error);
+    }
     const { data, error } = await supabase
       .from('transactions')
-      .select('*, categories(name), payment_accounts(name)')
+      .select('*, categories(name)')
       .eq('business_date', dateStr)
       .order('device_entry_time', { ascending: true });
 
@@ -275,7 +662,7 @@ export class LedgerService {
     const cloudTransactions = (data || []).map((row: any) => ({
       ...row,
       category_name: row.categories?.name || undefined,
-      account_name: row.payment_accounts?.name || undefined,
+      account_name: accounts.find((account) => account.id === row.account_id)?.name,
     }));
     const queuedTransactions = await this.getQueuedTransactionsForDate(dateStr);
     const cloudIds = new Set(cloudTransactions.map((transaction) => transaction.id));
@@ -320,6 +707,11 @@ export class LedgerService {
     const principal = getSecurityPrincipal();
     if (!principal) return [];
 
+    if (!isOnline() || !isSupabaseConfigured()) {
+      return (await getCachedAccounts(principal.organizationId))
+        .filter((account) => account.is_active);
+    }
+
     const { data, error } = await getSupabaseClient()
       .from('payment_accounts')
       .select('*')
@@ -329,21 +721,29 @@ export class LedgerService {
       .order('name', { ascending: true });
 
     if (error) throw error;
-    return (data || []).map((account: any) => ({
-      ...account,
-      balance_paisa: Number(account.balance_paisa ?? Math.round(Number(account.current_balance || 0) * 100)),
-      current_balance: Number(account.current_balance || 0),
-      opening_balance: Number(account.opening_balance || 0),
-      is_default: Boolean(account.is_default),
-      is_active: Boolean(account.is_active),
-    }));
+    const serverAccounts = (data || []).map(normalizeAccount);
+    await replaceCachedAccounts(principal.organizationId, serverAccounts);
+    const accountMap = new Map(serverAccounts.map((account) => [account.id, account]));
+    const operations = await getOfflineAccountOperations(principal.organizationId);
+    const cachedAccounts = await getCachedAccounts(principal.organizationId);
+    for (const operation of operations) {
+      if (operation.kind === 'CREATE' && !accountMap.has(operation.account.id)) {
+        accountMap.set(operation.account.id, operation.account);
+      } else if (operation.kind === 'UPDATE') {
+        const cached = cachedAccounts.find((account) => account.id === operation.accountId);
+        const current = accountMap.get(operation.accountId) || cached;
+        if (current) accountMap.set(operation.accountId, { ...current, ...operation.changes });
+      }
+    }
+    await cacheAccounts([...accountMap.values()]);
+    return [...accountMap.values()].filter((account) => account.is_active);
   }
 
   async createPaymentAccount(input: {
     name: string;
     type: LedgerAccount['type'];
     openingBalancePaisa: number;
-  }): Promise<LedgerAccount> {
+  }): Promise<{ account: LedgerAccount; isQueuedOffline: boolean }> {
     const principal = getSecurityPrincipal();
     if (!principal) throw new Error('Sign in to manage shop accounts.');
     if (!input.name.trim()) throw new Error('Enter an account name.');
@@ -351,51 +751,84 @@ export class LedgerService {
       throw new Error('Enter a valid opening balance.');
     }
 
-    const openingBalance = input.openingBalancePaisa / 100;
-    const { data, error } = await getSupabaseClient()
-      .from('payment_accounts')
-      .insert({
-        organization_id: principal.organizationId,
-        name: input.name.trim(),
-        type: input.type,
-        current_balance: openingBalance,
-        opening_balance: openingBalance,
-        is_active: true,
-        is_default: false,
-      })
-      .select('*')
-      .single();
-
-    if (error) throw error;
-    return {
-      ...data,
-      balance_paisa: Number(data.balance_paisa ?? input.openingBalancePaisa),
-      current_balance: Number(data.current_balance || 0),
-      opening_balance: Number(data.opening_balance || 0),
-      is_active: Boolean(data.is_active),
-      is_default: Boolean(data.is_default),
+    const now = new Date().toISOString();
+    const account: LedgerAccount = {
+      id: generateUUID(),
+      organization_id: principal.organizationId,
+      name: input.name.trim(),
+      type: input.type,
+      balance_paisa: input.openingBalancePaisa,
+      current_balance: input.openingBalancePaisa / 100,
+      opening_balance: input.openingBalancePaisa / 100,
+      is_active: true,
+      is_default: false,
+      created_at: now,
     };
+    const operation: OfflineAccountOperation = {
+      id: account.id,
+      kind: 'CREATE',
+      organizationId: principal.organizationId,
+      createdBy: principal.id,
+      createdAt: now,
+      attempts: 0,
+      account,
+    };
+
+    if (!isOnline() || !isSupabaseConfigured()) {
+      await enqueueOfflineAccountOperation(operation, account);
+      return { account, isQueuedOffline: true };
+    }
+
+    try {
+      await this.syncOfflineAccountOperation(operation);
+      return { account, isQueuedOffline: false };
+    } catch (error) {
+      if (!isNetworkFailure(error)) throw error;
+      await enqueueOfflineAccountOperation(operation, account);
+      return { account, isQueuedOffline: true };
+    }
   }
 
   async updatePaymentAccount(
     accountId: string,
     changes: { name?: string; is_active?: boolean },
-  ): Promise<void> {
+  ): Promise<boolean> {
     const principal = getSecurityPrincipal();
     if (!principal) throw new Error('Sign in to manage shop accounts.');
     if (changes.name !== undefined && !changes.name.trim()) {
       throw new Error('Account name cannot be empty.');
     }
 
-    const { data, error } = await getSupabaseClient()
-      .from('payment_accounts')
-      .update({ ...changes, name: changes.name?.trim() })
-      .eq('id', accountId)
-      .eq('organization_id', principal.organizationId)
-      .select('id')
-      .maybeSingle();
-    if (error) throw error;
-    if (!data) throw new Error('Account could not be updated. Refresh and try again.');
+    const normalizedChanges = { ...changes, name: changes.name?.trim() };
+    const operation: OfflineAccountOperation = {
+      id: generateUUID(),
+      kind: 'UPDATE',
+      organizationId: principal.organizationId,
+      createdBy: principal.id,
+      createdAt: new Date().toISOString(),
+      attempts: 0,
+      accountId,
+      changes: normalizedChanges,
+    };
+    if (!isOnline() || !isSupabaseConfigured()) {
+      const accounts = await getCachedAccounts(principal.organizationId);
+      const account = accounts.find((item) => item.id === accountId);
+      if (!account) throw new Error('Load this shop account before changing it offline.');
+      await enqueueOfflineAccountOperation(operation, { ...account, ...normalizedChanges });
+      return true;
+    }
+
+    try {
+      await this.syncOfflineAccountOperation(operation);
+      return false;
+    } catch (error) {
+      if (!isNetworkFailure(error)) throw error;
+      const accounts = await getCachedAccounts(principal.organizationId);
+      const account = accounts.find((item) => item.id === accountId);
+      if (!account) throw new Error('Load this shop account before changing it offline.');
+      await enqueueOfflineAccountOperation(operation, { ...account, ...normalizedChanges });
+      return true;
+    }
   }
 
   async transferBetweenAccounts(input: {
@@ -403,7 +836,7 @@ export class LedgerService {
     toAccountId: string;
     amountPaisa: number;
     notes?: string;
-  }): Promise<void> {
+  }): Promise<boolean> {
     const principal = getSecurityPrincipal();
     if (!principal) throw new Error('Sign in to transfer shop funds.');
     if (!input.fromAccountId || !input.toAccountId || input.fromAccountId === input.toAccountId) {
@@ -413,20 +846,46 @@ export class LedgerService {
       throw new Error('Enter a valid transfer amount.');
     }
 
-    const { error } = await getSupabaseClient()
-      .from('account_transfers')
-      .insert({
-        id: generateUUID(),
-        idempotency_key: generateUUID(),
-        organization_id: principal.organizationId,
-        from_account_id: input.fromAccountId,
-        to_account_id: input.toAccountId,
-        amount: input.amountPaisa / 100,
-        date: getKarachiBusinessDate(),
-        notes: input.notes?.trim() || null,
-        created_by: principal.id,
-      });
-    if (error) throw error;
+    const operation: OfflineAccountOperation = {
+      id: generateUUID(),
+      kind: 'TRANSFER',
+      organizationId: principal.organizationId,
+      createdBy: principal.id,
+      createdAt: new Date().toISOString(),
+      attempts: 0,
+      fromAccountId: input.fromAccountId,
+      toAccountId: input.toAccountId,
+      amountPaisa: input.amountPaisa,
+      businessDate: getKarachiBusinessDate(),
+      notes: input.notes?.trim() || undefined,
+    };
+    if (!isOnline() || !isSupabaseConfigured()) {
+      const accounts = await getCachedAccounts(principal.organizationId);
+      const activeAccountIds = new Set(accounts
+        .filter((account) => account.is_active)
+        .map((account) => account.id));
+      if (!activeAccountIds.has(input.fromAccountId) || !activeAccountIds.has(input.toAccountId)) {
+        throw new Error('Load both active shop accounts before recording an offline transfer.');
+      }
+      await enqueueOfflineAccountOperation(operation);
+      return true;
+    }
+
+    try {
+      await this.syncOfflineAccountOperation(operation);
+      return false;
+    } catch (error) {
+      if (!isNetworkFailure(error)) throw error;
+      const accounts = await getCachedAccounts(principal.organizationId);
+      const activeAccountIds = new Set(accounts
+        .filter((account) => account.is_active)
+        .map((account) => account.id));
+      if (!activeAccountIds.has(input.fromAccountId) || !activeAccountIds.has(input.toAccountId)) {
+        throw new Error('Load both active shop accounts before queuing an offline transfer.');
+      }
+      await enqueueOfflineAccountOperation(operation);
+      return true;
+    }
   }
 
   async getAccountLedger(accountId: string): Promise<AccountLedgerEntry[]> {

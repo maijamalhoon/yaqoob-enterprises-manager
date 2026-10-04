@@ -24,6 +24,7 @@ export const Header: React.FC = () => {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const profileButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -31,9 +32,19 @@ export const Header: React.FC = () => {
         setIsMenuOpen(false);
       }
     };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && isMenuOpen) {
+        setIsMenuOpen(false);
+        profileButtonRef.current?.focus();
+      }
+    };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isMenuOpen]);
 
   return (
     <header className="z-30 flex h-14 shrink-0 items-center justify-between border-b border-border-standard bg-white/95 px-4 backdrop-blur-xl sm:px-6">
@@ -87,6 +98,7 @@ export const Header: React.FC = () => {
         {/* User Profile Menu Dropdown */}
         <div className="relative" ref={menuRef}>
           <button
+            ref={profileButtonRef}
             type="button"
             onClick={() => setIsMenuOpen((prev) => !prev)}
             aria-expanded={isMenuOpen}

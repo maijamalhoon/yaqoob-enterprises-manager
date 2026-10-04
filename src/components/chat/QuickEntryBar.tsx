@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Send, CornerDownLeft, X } from "lucide-react";
+import { CornerDownLeft, X } from "lucide-react";
 import { ledgerService } from "../../services/ledgerService";
 import { parseMessage, ParseResult, ClarificationOption } from "../../parser";
-import { LedgerAccount } from "../../types/ledger";
 import { useAuth } from "../../context/AuthContext";
-import { UndoToast } from "./UndoToast";
 import { ConfirmationModal } from "./ConfirmationModal";
 
 interface QuickEntryBarProps {
@@ -22,26 +20,8 @@ export const QuickEntryBar: React.FC<QuickEntryBarProps> = ({
   const [text, setText] = useState("");
   const [activeClarification, setActiveClarification] =
     useState<ParseResult | null>(null);
-  const [accounts, setAccounts] = useState<LedgerAccount[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState("");
-  const [undoState, setUndoState] = useState<{
-    transactionId: string;
-    categoryName: string;
-    amountPaisa: number;
-    type: string;
-    updatedAt: string;
-  } | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    ledgerService
-      .getPaymentAccounts()
-      .then(setAccounts)
-      .catch((err) =>
-        console.error("Could not load quick-entry accounts:", err),
-      );
-  }, []);
 
   // Keyboard shortcut listener: "/" focuses input, "Esc" clears it
   useEffect(() => {
@@ -72,9 +52,7 @@ export const QuickEntryBar: React.FC<QuickEntryBarProps> = ({
   const executeSave = async (
     entry: ParseResult,
     chosenOption?: ClarificationOption,
-    accountId = selectedAccountId,
   ) => {
-    if (!accountId) return;
     const type = chosenOption ? chosenOption.type : entry.type;
     const categoryId =
       chosenOption ? chosenOption.categoryId : entry.categoryId;
@@ -86,12 +64,11 @@ export const QuickEntryBar: React.FC<QuickEntryBarProps> = ({
       chosenOption ? chosenOption.amountPaisa : entry.amountPaisa!;
 
     try {
-      const res = await ledgerService.recordTransaction(
+      await ledgerService.createTransactionDraft(
         {
           type,
           categoryId,
           categoryName,
-          accountId,
           amountPaisa,
           businessDate: entry.businessDate,
           rawText: entry.raw,
@@ -102,15 +79,6 @@ export const QuickEntryBar: React.FC<QuickEntryBarProps> = ({
       );
 
       setText("");
-      if (res.transaction.id) {
-        setUndoState({
-          transactionId: res.transaction.id,
-          categoryName,
-          amountPaisa,
-          type,
-          updatedAt: res.transaction.updated_at || new Date().toISOString(),
-        });
-      }
       onTransactionSaved?.();
     } catch (err) {
       console.error("Quick entry save error:", err);
@@ -119,7 +87,7 @@ export const QuickEntryBar: React.FC<QuickEntryBarProps> = ({
 
   const handleSend = async () => {
     const trimmed = text.trim();
-    if (!trimmed || !selectedAccountId) return;
+    if (!trimmed) return;
 
     const categories = await ledgerService.getParserCategories();
     if (categories.length === 0) return;
@@ -140,19 +108,6 @@ export const QuickEntryBar: React.FC<QuickEntryBarProps> = ({
         <span className="text-gray-400 text-xs font-mono font-medium bg-gray-200/70 px-1.5 py-0.5 rounded border border-gray-300">
           /
         </span>
-        <select
-          aria-label="Quick entry account"
-          value={selectedAccountId}
-          onChange={(event) => setSelectedAccountId(event.target.value)}
-          className="max-w-32 min-w-20 rounded border border-border-standard bg-white px-1.5 py-1 text-[11px] text-secondary"
-        >
-          <option value="">Account</option>
-          {accounts.map((account) => (
-            <option key={account.id} value={account.id}>
-              {account.name}
-            </option>
-          ))}
-        </select>
         <input
           ref={inputRef}
           type="text"
@@ -179,32 +134,12 @@ export const QuickEntryBar: React.FC<QuickEntryBarProps> = ({
         )}
         <button
           onClick={handleSend}
-          disabled={!text.trim() || !selectedAccountId}
+          disabled={!text.trim()}
           className="px-2 py-1 bg-primary hover:bg-primary-hover disabled:opacity-40 text-white rounded-md text-[11px] font-semibold transition-colors flex items-center gap-1"
         >
           <CornerDownLeft className="w-3 h-3" />
         </button>
       </div>
-
-      {/* Undo Toast */}
-      {undoState && (
-        <UndoToast
-          transactionId={undoState.transactionId}
-          categoryName={undoState.categoryName}
-          amountPaisa={undoState.amountPaisa}
-          type={undoState.type}
-          onUndo={async (id) => {
-            await ledgerService.voidTransaction(
-              id,
-              "Quick entry undo",
-              undoState.updatedAt,
-            );
-            setUndoState(null);
-            onTransactionSaved?.();
-          }}
-          onDismiss={() => setUndoState(null)}
-        />
-      )}
 
       {/* Confirmation Modal */}
       {activeClarification && (

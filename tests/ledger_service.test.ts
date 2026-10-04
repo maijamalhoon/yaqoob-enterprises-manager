@@ -1,7 +1,19 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as supabaseLib from '../src/lib/supabase';
 import { ledgerService } from '../src/services/ledgerService';
-import { Transaction } from '../src/types/ledger';
+import { LedgerAccount, Transaction } from '../src/types/ledger';
+import {
+  cacheAccounts,
+  enqueueOfflineAccountOperation,
+  getCachedAccounts,
+  getOfflineAccountOperations,
+  replaceCachedAccounts,
+  removeOfflineAccountOperation,
+} from '../src/services/offlineAccountStore';
+import {
+  getOfflineDrafts,
+  removeOfflineDraft,
+} from '../src/services/offlineDraftStore';
 import {
   dequeueOfflineTransaction,
   enqueueOfflineTransaction,
@@ -12,6 +24,8 @@ const timestamp = '2026-10-04T05:00:00Z';
 const organizationId = 'org-yaqoob-001';
 const creatorId = 'test-owner';
 const queueKeys: string[] = [];
+const accountOperationIds: string[] = [];
+const draftIds: string[] = [];
 
 const mutations = [
   {
@@ -46,9 +60,15 @@ function mockUpdateResult(data: { id: string } | null) {
   vi.spyOn(supabaseLib, 'getSupabaseClient').mockReturnValue(mockClient as never);
 }
 
-afterEach(() => {
+afterEach(async () => {
   for (const key of queueKeys.splice(0)) {
-    void dequeueOfflineTransaction(key);
+    await dequeueOfflineTransaction(key);
+  }
+  for (const id of accountOperationIds.splice(0)) {
+    await removeOfflineAccountOperation(id);
+  }
+  for (const id of draftIds.splice(0)) {
+    await removeOfflineDraft(id);
   }
   vi.restoreAllMocks();
   Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
@@ -202,6 +222,7 @@ describe('ledger mutation concurrency', () => {
       type: 'income',
       amount_paisa: 10000,
       category_id: 'category-print',
+      account_id: 'account-1',
       categories: { name: 'Printing' },
       business_date: '2026-10-04',
       device_entry_time: timestamp,
@@ -243,6 +264,8 @@ describe('ledger mutation concurrency', () => {
       'queued-tx-1',
       'queued-tx-2',
     ]);
+    expect(transactionQuery.select).toHaveBeenCalledWith('*, categories(name)');
+    expect(transactions[0].account_name).toBe('Cash Wallet');
     expect(transactions[1].created_at).toBe('');
     expect(summary.income_paisa).toBe(13000);
     expect(summary.expense_paisa).toBe(1500);
@@ -267,5 +290,268 @@ describe('ledger mutation concurrency', () => {
       organization_id: organizationId,
       created_by: creatorId,
     });
+  });
+
+  it('persists offline accounts and transfers, then replays them before linked transactions exactly once', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    vi.spyOn(supabaseLib, 'isSupabaseConfigured').mockReturnValue(true);
+
+    const firstAccountResult = await ledgerService.createPaymentAccount({
+      name: 'Offline Cash',
+      type: 'CASH',
+      openingBalancePaisa: 12000,
+    });
+    const secondAccountResult = await ledgerService.createPaymentAccount({
+      name: 'Offline Bank',
+      type: 'BANK',
+      openingBalancePaisa: 3000,
+    });
+    const firstAccount = firstAccountResult.account;
+    const secondAccount = secondAccountResult.account;
+    expect(firstAccountResult.isQueuedOffline).toBe(true);
+    expect(secondAccountResult.isQueuedOffline).toBe(true);
+
+    expect(await ledgerService.transferBetweenAccounts({
+      fromAccountId: firstAccount.id,
+      toAccountId: secondAccount.id,
+      amountPaisa: 1000,
+      notes: 'Offline transfer',
+    })).toBe(true);
+
+    await ledgerService.recordTransaction({
+      type: 'income',
+      amountPaisa: 500,
+      categoryId: 'category-print',
+      accountId: firstAccount.id,
+      rawText: 'PRINT 5',
+      createdByName: 'Test Owner',
+    }, creatorId);
+
+    const operations = await getOfflineAccountOperations(organizationId);
+    accountOperationIds.push(...operations.map((operation) => operation.id));
+    expect(operations.map((operation) => operation.kind)).toEqual(['CREATE', 'CREATE', 'TRANSFER']);
+
+    Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+    const accountRows = new Map<string, Record<string, unknown>>();
+    const transferRows = new Map<string, Record<string, unknown>>();
+    const transactionRows = new Map<string, Record<string, unknown>>();
+    const replayOrder: string[] = [];
+    const failedAfterCommit = new Set<string>();
+    const mockClient = {
+      from: vi.fn((table: string) => {
+        let pendingUpsert: Record<string, unknown> | undefined;
+        let filters: Record<string, unknown> = {};
+        let query: Record<string, any>;
+        query = {
+          upsert: vi.fn((value: Record<string, unknown>) => {
+            pendingUpsert = value;
+            replayOrder.push(table);
+            return query;
+          }),
+          insert: vi.fn((value: Record<string, unknown>) => {
+            pendingUpsert = value;
+            replayOrder.push(table);
+            return query;
+          }),
+          select: vi.fn(() => query),
+          eq: vi.fn((key: string, value: unknown) => {
+            filters[key] = value;
+            return query;
+          }),
+          order: vi.fn(() => query),
+          maybeSingle: vi.fn(async () => {
+            const rows = table === 'payment_accounts' ? accountRows
+              : table === 'account_transfers' ? transferRows
+              : transactionRows;
+            if (pendingUpsert) {
+              const pending = pendingUpsert;
+              pendingUpsert = undefined;
+              const row = { ...pending };
+              if (table === 'payment_accounts') {
+                row.current_balance = Number(row.opening_balance || 0);
+                row.balance_paisa = Math.round(Number(row.opening_balance || 0) * 100);
+              }
+              const key = String(row.id);
+              if (rows.has(key)) return { data: null, error: null };
+              rows.set(key, row);
+              const failureKey = `${table}:${key}`;
+              if (
+                (table === 'account_transfers' || (table === 'payment_accounts' && accountRows.size === 1)) &&
+                !failedAfterCommit.has(failureKey)
+              ) {
+                failedAfterCommit.add(failureKey);
+                return { data: null, error: new TypeError('Failed to fetch') };
+              }
+              return { data: row, error: null };
+            }
+            const found = [...rows.values()].find((row) =>
+              Object.entries(filters).every(([key, value]) => row[key] === value),
+            );
+            return { data: found || null, error: null };
+          }),
+          then: (resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) => {
+            const rows = table === 'payment_accounts' ? accountRows
+              : table === 'account_transfers' ? transferRows
+              : transactionRows;
+            if (pendingUpsert) rows.set(String(pendingUpsert.id), { ...pendingUpsert });
+            const result = [...rows.values()].filter((row) =>
+              Object.entries(filters).every(([key, value]) => row[key] === value),
+            );
+            return Promise.resolve({ data: result, error: null }).then(resolve, reject);
+          },
+        };
+        return query;
+      }),
+    };
+    vi.spyOn(supabaseLib, 'getSupabaseClient').mockReturnValue(mockClient as never);
+
+    const result = await ledgerService.flushOfflineQueue();
+    expect(result.syncedCount).toBe(0);
+    expect(result.errors).toHaveLength(1);
+    expect(accountRows.size).toBe(1);
+    expect(transferRows.size).toBe(0);
+    expect(transactionRows.size).toBe(0);
+
+    const retry = await ledgerService.flushOfflineQueue();
+    expect(retry.syncedCount).toBe(2);
+    expect(retry.errors).toHaveLength(1);
+    expect([...accountRows.values()]
+      .map((account) => account.current_balance)
+      .sort((left, right) => Number(left) - Number(right))).toEqual([30, 120]);
+    expect(transferRows.size).toBe(1);
+    expect(transactionRows.size).toBe(0);
+
+    const finalAttempt = await ledgerService.flushOfflineQueue();
+    expect(finalAttempt.syncedCount).toBe(2);
+    expect(finalAttempt.errors).toEqual([]);
+    expect(replayOrder).toEqual([
+      'payment_accounts',
+      'payment_accounts',
+      'payment_accounts',
+      'account_transfers',
+      'account_transfers',
+      'transactions',
+    ]);
+    expect(transferRows.size).toBe(1);
+    expect(transactionRows.size).toBe(1);
+  });
+
+  it('rejects a new offline transaction when its account is not cached for the active shop', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    vi.spyOn(supabaseLib, 'isSupabaseConfigured').mockReturnValue(true);
+
+    await expect(ledgerService.recordTransaction({
+      type: 'income',
+      amountPaisa: 500,
+      categoryId: 'category-print',
+      accountId: 'uncached-account',
+      rawText: 'PRINT 5',
+      createdByName: 'Test Owner',
+    }, creatorId)).rejects.toThrow(/active account loaded for this shop/i);
+  });
+
+  it('replaces stale account snapshots without dropping accounts still pending creation', async () => {
+    const makeAccount = (id: string): LedgerAccount => ({
+      id,
+      organization_id: organizationId,
+      name: id,
+      type: 'CASH',
+      balance_paisa: 0,
+      current_balance: 0,
+      opening_balance: 0,
+      is_active: true,
+      is_default: false,
+      created_at: timestamp,
+    });
+    const activeAccount = makeAccount('cached-active-account');
+    const staleAccount = makeAccount('cached-stale-account');
+    const pendingAccount = makeAccount('pending-local-account');
+    await cacheAccounts([activeAccount, staleAccount]);
+    await replaceCachedAccounts(organizationId, [activeAccount]);
+    expect((await getCachedAccounts(organizationId)).map((account) => account.id))
+      .not.toContain(staleAccount.id);
+
+    const operationId = 'offline-pending-create-operation';
+    accountOperationIds.push(operationId);
+    await enqueueOfflineAccountOperation({
+      id: operationId,
+      kind: 'CREATE',
+      organizationId,
+      createdBy: creatorId,
+      createdAt: timestamp,
+      attempts: 0,
+      account: pendingAccount,
+    }, pendingAccount);
+    await replaceCachedAccounts(organizationId, [activeAccount]);
+
+    expect((await getCachedAccounts(organizationId)).map((account) => account.id))
+      .toContain(pendingAccount.id);
+  });
+
+  it('saves entries as unposted drafts first, then posts the chosen account exactly once', async () => {
+    const account: LedgerAccount = {
+      id: 'draft-test-account',
+      organization_id: organizationId,
+      name: 'Draft Test Wallet',
+      type: 'CASH',
+      balance_paisa: 9000,
+      current_balance: 90,
+      opening_balance: 90,
+      is_active: true,
+      is_default: false,
+      created_at: timestamp,
+    };
+    await cacheAccounts([account]);
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    vi.spyOn(supabaseLib, 'isSupabaseConfigured').mockReturnValue(true);
+
+    const draft = await ledgerService.createTransactionDraft({
+      type: 'income',
+      amountPaisa: 2500,
+      categoryId: 'category-print',
+      categoryName: 'Printing',
+      businessDate: '2026-10-04',
+      rawText: 'PRINT 25',
+      createdByName: 'Test Owner',
+    }, creatorId);
+    draftIds.push(draft.id);
+    expect((await ledgerService.getTransactionDrafts('2026-10-04')).map((item) => item.id))
+      .toContain(draft.id);
+    expect((await getCachedAccounts(organizationId)).find((item) => item.id === account.id)?.balance_paisa)
+      .toBe(9000);
+
+    const queuedPost = await ledgerService.postTransactionDraft(draft.id, account.id);
+    expect(queuedPost.isQueuedOffline).toBe(true);
+    expect((await getOfflineDrafts(organizationId)).find((item) => item.id === draft.id)?.pending_account_id)
+      .toBe(account.id);
+    expect((await getCachedAccounts(organizationId)).find((item) => item.id === account.id)?.balance_paisa)
+      .toBe(9000);
+
+    Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
+    const postedTransaction = { id: 'draft-posted-tx', account_id: account.id, amount_paisa: 2500 };
+    const draftQuery = {
+      upsert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: { ...draft, categories: { name: 'Printing' } },
+        error: null,
+      }),
+    };
+    const rpc = vi.fn().mockResolvedValue({ data: postedTransaction, error: null });
+    const mockClient = {
+      from: vi.fn().mockReturnValue(draftQuery),
+      rpc,
+    };
+    vi.spyOn(supabaseLib, 'getSupabaseClient').mockReturnValue(mockClient as never);
+
+    const result = await ledgerService.postTransactionDraft(draft.id, account.id);
+    expect(result.transaction).toMatchObject(postedTransaction);
+    expect(rpc).toHaveBeenCalledWith('post_transaction_draft', {
+      draft_id: draft.id,
+      selected_account_id: account.id,
+    });
+    expect(await getOfflineDrafts(organizationId)).toEqual([]);
+    expect((await getCachedAccounts(organizationId)).find((item) => item.id === account.id)?.balance_paisa)
+      .toBe(9000);
   });
 });

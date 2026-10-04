@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { AppProvider, useApp } from "./context/AppContext";
 import { Sidebar } from "./components/layout/Sidebar";
@@ -18,9 +18,44 @@ import { LedgerReportsView } from "./components/reports/LedgerReportsView";
 import { ReviewQueueView } from "./components/closings/ReviewQueueView";
 import { LedgerSettingsView } from "./components/settings/LedgerSettingsView";
 import { AccountsView } from "./components/accounts/AccountsView";
+import {
+  ledgerService,
+  OFFLINE_SYNC_COMPLETE_EVENT,
+} from "./services/ledgerService";
 
 const MainShell: React.FC = () => {
   const { currentView } = useApp();
+
+  useEffect(() => {
+    let syncInFlight: Promise<void> | undefined;
+    const synchronizeOfflineWork = () => {
+      if (syncInFlight) return;
+      syncInFlight = ledgerService
+        .flushOfflineQueue()
+        .then((result) => {
+          window.dispatchEvent(new CustomEvent(OFFLINE_SYNC_COMPLETE_EVENT, {
+            detail: result,
+          }));
+        })
+        .catch((error: unknown) => {
+          console.error("Could not synchronize offline ledger work:", error);
+        })
+        .finally(() => {
+          syncInFlight = undefined;
+        });
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") synchronizeOfflineWork();
+    };
+
+    synchronizeOfflineWork();
+    window.addEventListener("online", synchronizeOfflineWork);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.removeEventListener("online", synchronizeOfflineWork);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   const renderActiveView = () => {
     switch (currentView) {
@@ -45,13 +80,23 @@ const MainShell: React.FC = () => {
 
   return (
     <div className="app-shell flex h-dvh w-full min-w-0 overflow-hidden font-sans text-on-surface">
+      <a
+        href="#main-content"
+        className="sr-only z-50 rounded-md bg-white px-4 py-2 text-sm font-semibold text-primary shadow-level-2 focus:not-sr-only focus:fixed focus:left-4 focus:top-4"
+      >
+        Skip to main content
+      </a>
       {/* Sidebar Navigation */}
       <Sidebar />
 
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <Header />
-        <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-surface pb-[calc(3.25rem+env(safe-area-inset-bottom))] md:pb-0">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="flex min-h-0 flex-1 flex-col overflow-hidden bg-surface pb-[calc(3.25rem+env(safe-area-inset-bottom))] md:pb-0"
+        >
           {renderActiveView()}
         </main>
       </div>

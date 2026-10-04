@@ -147,6 +147,21 @@ describe('Real PostgreSQL Engine & RLS Security Tests (PGlite)', () => {
       '../supabase/migrations/20261004003000_account_balances_and_postings.sql'
     );
     await pg.exec(fs.readFileSync(accountMigrationPath, 'utf8'));
+    const draftMigrationPath = path.resolve(
+      __dirname,
+      '../supabase/migrations/20261004004000_transaction_drafts.sql'
+    );
+    await pg.exec(fs.readFileSync(draftMigrationPath, 'utf8'));
+    const aliasMigrationPath = path.resolve(
+      __dirname,
+      '../supabase/migrations/20261004005000_tenant_scoped_category_aliases.sql'
+    );
+    await pg.exec(fs.readFileSync(aliasMigrationPath, 'utf8'));
+    const provisioningMigrationPath = path.resolve(
+      __dirname,
+      '../supabase/migrations/20261004006000_repair_shop_provisioning.sql'
+    );
+    await pg.exec(fs.readFileSync(provisioningMigrationPath, 'utf8'));
 
     const accountRows = await pg.query<{ id: string; organization_id: string }>(
       'SELECT id, organization_id FROM public.payment_accounts WHERE is_default = TRUE;'
@@ -588,5 +603,55 @@ describe('Real PostgreSQL Engine & RLS Security Tests (PGlite)', () => {
     expect(summary.rows[0].expense_paisa).toBe(502000);
     expect(summary.rows[0].net_profit_paisa).toBe(508000);
     expect(summary.rows[0].adjustment_in_paisa).toBe(50000); // Rs 500
+  });
+
+  it('keeps transaction drafts off account balances until an atomic account post, then retries idempotently', async () => {
+    await setAuthContext(brother1Id, 'authenticated');
+    const before = await pg.query<{ balance_paisa: number }>(
+      `SELECT balance_paisa::int FROM public.payment_accounts WHERE id = '${defaultAccountId}';`,
+    );
+    const draftId = '55000000-0000-0000-0000-000000000001';
+
+    await pg.exec(`
+      INSERT INTO public.transaction_drafts (
+        id, organization_id, type, amount_paisa, category_id, business_date,
+        device_entry_time, raw_text, created_by, created_by_name, idempotency_key
+      ) VALUES (
+        '${draftId}', '00000000-0000-0000-0000-000000000001', 'income', 12345,
+        'c1000000-0000-0000-0000-000000000001', '2026-10-04', NOW(),
+        'PAGINATION TEST DRAFT', '${brother1Id}', 'Yaqoob', 'draft-${draftId}'
+      );
+    `);
+    const afterDraft = await pg.query<{ balance_paisa: number }>(
+      `SELECT balance_paisa::int FROM public.payment_accounts WHERE id = '${defaultAccountId}';`,
+    );
+    expect(afterDraft.rows[0].balance_paisa).toBe(before.rows[0].balance_paisa);
+    await setAuthContext(strangerId, 'authenticated');
+    const hiddenDraft = await pg.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count FROM public.transaction_drafts WHERE id = '${draftId}';`,
+    );
+    expect(hiddenDraft.rows[0].count).toBe(0);
+    await setAuthContext(brother1Id, 'authenticated');
+
+    const posted = await pg.query<{ id: string; account_id: string; amount_paisa: number }>(
+      `SELECT id, account_id, amount_paisa::int FROM public.post_transaction_draft('${draftId}', '${defaultAccountId}');`,
+    );
+    expect(posted.rows).toHaveLength(1);
+    expect(posted.rows[0].account_id).toBe(defaultAccountId);
+    expect(posted.rows[0].amount_paisa).toBe(12345);
+
+    const retry = await pg.query<{ id: string }>(
+      `SELECT id FROM public.post_transaction_draft('${draftId}', '${defaultAccountId}');`,
+    );
+    expect(retry.rows[0].id).toBe(posted.rows[0].id);
+    const finalBalance = await pg.query<{ balance_paisa: number }>(
+      `SELECT balance_paisa::int FROM public.payment_accounts WHERE id = '${defaultAccountId}';`,
+    );
+    expect(finalBalance.rows[0].balance_paisa).toBe(before.rows[0].balance_paisa + 12345);
+
+    const remainingDrafts = await pg.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count FROM public.transaction_drafts WHERE id = '${draftId}';`,
+    );
+    expect(remainingDrafts.rows[0].count).toBe(0);
   });
 });

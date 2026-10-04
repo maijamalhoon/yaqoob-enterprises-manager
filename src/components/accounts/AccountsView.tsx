@@ -8,7 +8,10 @@ import {
   Wallet,
   X,
 } from "lucide-react";
-import { ledgerService } from "../../services/ledgerService";
+import {
+  ledgerService,
+  OFFLINE_SYNC_COMPLETE_EVENT,
+} from "../../services/ledgerService";
 import { formatPaisa, parseInputToPaisa } from "../../lib/money";
 import { AccountLedgerEntry, LedgerAccount } from "../../types/ledger";
 
@@ -49,9 +52,11 @@ export const AccountsView: React.FC = () => {
           result[0]?.id || ""
         ),
       );
+      return true;
     } catch (loadError) {
       console.error("Could not load accounts:", loadError);
       setError("Accounts could not be loaded. Please refresh and try again.");
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -59,6 +64,28 @@ export const AccountsView: React.FC = () => {
 
   useEffect(() => {
     void loadAccounts();
+    const handleOnline = () => {
+      void loadAccounts();
+    };
+    const handleOfflineSyncComplete = (event: Event) => {
+      const syncResult = (event as CustomEvent<{
+        syncedCount: number;
+        errors: unknown[];
+      }>).detail;
+      void loadAccounts().then((refreshed) => {
+        if (syncResult.errors.length > 0) {
+          setError("Some offline changes could not sync yet. They will retry when connection is available.");
+        } else if (refreshed && syncResult.syncedCount > 0) {
+          setMessage("Offline changes synced. Account balances refreshed.");
+        }
+      });
+    };
+    window.addEventListener("online", handleOnline);
+    window.addEventListener(OFFLINE_SYNC_COMPLETE_EVENT, handleOfflineSyncComplete);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener(OFFLINE_SYNC_COMPLETE_EVENT, handleOfflineSyncComplete);
+    };
   }, []);
 
   useEffect(() => {
@@ -90,15 +117,18 @@ export const AccountsView: React.FC = () => {
 
     setIsCreating(true);
     try {
-      const account = await ledgerService.createPaymentAccount({
+      const result = await ledgerService.createPaymentAccount({
         name: accountName,
         type: accountType,
         openingBalancePaisa: parsed.paisa,
       });
+      const { account } = result;
       setAccountName("");
       setOpeningAmount("");
       setSelectedAccountId(account.id);
-      setMessage("Account created.");
+      setMessage(result.isQueuedOffline
+        ? "Account saved offline. It will sync when you reconnect."
+        : "Account created.");
       await loadAccounts();
     } catch (createError) {
       console.error("Could not create account:", createError);
@@ -112,11 +142,13 @@ export const AccountsView: React.FC = () => {
 
   const handleSaveName = async (accountId: string) => {
     try {
-      await ledgerService.updatePaymentAccount(accountId, {
+      const isQueuedOffline = await ledgerService.updatePaymentAccount(accountId, {
         name: editingName,
       });
       setEditingAccountId("");
-      setMessage("Account name updated.");
+      setMessage(isQueuedOffline
+        ? "Account change saved offline. It will sync when you reconnect."
+        : "Account name updated.");
       await loadAccounts();
     } catch (updateError) {
       console.error("Could not update account:", updateError);
@@ -126,12 +158,12 @@ export const AccountsView: React.FC = () => {
 
   const handleDeactivate = async (account: LedgerAccount) => {
     try {
-      await ledgerService.updatePaymentAccount(account.id, {
+      const isQueuedOffline = await ledgerService.updatePaymentAccount(account.id, {
         is_active: !account.is_active,
       });
-      setMessage(
-        account.is_active ? "Account deactivated." : "Account reactivated.",
-      );
+      setMessage(isQueuedOffline
+        ? "Account change saved offline. It will sync when you reconnect."
+        : account.is_active ? "Account deactivated." : "Account reactivated.");
       await loadAccounts();
     } catch (updateError) {
       console.error("Could not change account status:", updateError);
@@ -151,13 +183,15 @@ export const AccountsView: React.FC = () => {
 
     setIsTransferring(true);
     try {
-      await ledgerService.transferBetweenAccounts({
+      const isQueuedOffline = await ledgerService.transferBetweenAccounts({
         fromAccountId: sourceAccountId,
         toAccountId: destinationAccountId,
         amountPaisa: parsed.paisa,
       });
       setTransferAmount("");
-      setMessage("Transfer recorded.");
+      setMessage(isQueuedOffline
+        ? "Transfer saved offline. Balances will update after it syncs."
+        : "Transfer recorded.");
       await loadAccounts();
     } catch (transferError) {
       console.error("Could not transfer account funds:", transferError);
@@ -180,9 +214,9 @@ export const AccountsView: React.FC = () => {
   const activeAccounts = accounts.filter((account) => account.is_active);
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+    <div className="workspace-page flex-1 overflow-y-auto">
       <div className="mx-auto w-full max-w-5xl space-y-5">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <header className="workspace-header flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-xl font-bold text-on-surface">Accounts</h1>
             <p className="mt-1 text-sm text-text-muted">
@@ -209,8 +243,8 @@ export const AccountsView: React.FC = () => {
           </p>
         )}
 
-        <section className="overflow-hidden rounded-lg border border-border-standard bg-white">
-          <div className="border-b border-border-standard px-4 py-3">
+        <section className="workspace-panel">
+          <div className="workspace-panel-heading">
             <h2 className="text-sm font-semibold text-on-surface">
               Your accounts
             </h2>
@@ -321,7 +355,7 @@ export const AccountsView: React.FC = () => {
         </section>
 
         <div className="grid gap-5 lg:grid-cols-2">
-          <section className="rounded-lg border border-border-standard bg-white p-4">
+          <section className="workspace-panel p-4">
             <div className="mb-3 flex items-center gap-2">
               <Plus className="h-4 w-4 text-primary" aria-hidden="true" />
               <h2 className="text-sm font-semibold text-on-surface">
@@ -377,7 +411,7 @@ export const AccountsView: React.FC = () => {
             </form>
           </section>
 
-          <section className="rounded-lg border border-border-standard bg-white p-4">
+          <section className="workspace-panel p-4">
             <div className="mb-3 flex items-center gap-2">
               <ArrowLeftRight
                 className="h-4 w-4 text-primary"
@@ -450,8 +484,8 @@ export const AccountsView: React.FC = () => {
         </div>
 
         {selectedAccount && (
-          <section className="overflow-hidden rounded-lg border border-border-standard bg-white">
-            <div className="flex items-center justify-between gap-3 border-b border-border-standard px-4 py-3">
+          <section className="workspace-panel">
+            <div className="workspace-panel-heading flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold text-on-surface">
                   {selectedAccount.name}

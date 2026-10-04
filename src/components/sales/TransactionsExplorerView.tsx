@@ -18,6 +18,25 @@ import {
 } from "lucide-react";
 import { VoidModal } from "../chat/VoidModal";
 
+const getTransactionDisplayDetails = (transaction: Transaction) => {
+  const testDataMatch = transaction.raw_text.match(
+    /^SHOP_PRO_PAGINATION_TEST \| (income|expense) \| (\d{4})$/,
+  );
+  if (!testDataMatch) {
+    return {
+      isTestData: false,
+      rawText: transaction.raw_text,
+      note: transaction.note,
+    };
+  }
+
+  return {
+    isTestData: true,
+    rawText: `Pagination test entry #${testDataMatch[2]}`,
+    note: "Generated test data",
+  };
+};
+
 export const TransactionsExplorerView: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -51,7 +70,7 @@ export const TransactionsExplorerView: React.FC = () => {
     status: selectedStatus,
   });
 
-  const loadData = async () => {
+  const loadData = async (requestedPage = page) => {
     setIsLoading(true);
     setLoadError("");
     try {
@@ -61,7 +80,7 @@ export const TransactionsExplorerView: React.FC = () => {
       const res = await ledgerService.getFilteredTransactions({
         ...getCurrentFilter(),
         limit: pageSize,
-        offset: page * pageSize,
+        offset: requestedPage * pageSize,
       });
 
       setTransactions(res.transactions);
@@ -92,7 +111,7 @@ export const TransactionsExplorerView: React.FC = () => {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setPage(0);
-    loadData();
+    void loadData(0);
   };
 
   const exportToCSV = async () => {
@@ -131,7 +150,7 @@ export const TransactionsExplorerView: React.FC = () => {
       ]);
 
       downloadCSV(
-        "yaqoob_ledger_export",
+        "shop_pro_ledger_export",
         headers,
         rows,
         getKarachiBusinessDate(),
@@ -162,12 +181,15 @@ export const TransactionsExplorerView: React.FC = () => {
             onClick={exportToCSV}
             disabled={isExporting || totalCount === 0}
             className="flex min-h-10 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label="Export filtered transactions as CSV"
           >
             <Download className="w-3.5 h-3.5" />{" "}
             {isExporting ? "Exporting..." : "Export CSV"}
           </button>
           <button
-            onClick={loadData}
+            onClick={() => void loadData()}
+            aria-label="Refresh transactions"
+            disabled={isLoading}
             className="flex h-10 w-10 items-center justify-center rounded-md border border-border-standard text-secondary transition-colors hover:bg-surface-container-low"
             title="Refresh"
           >
@@ -199,6 +221,7 @@ export const TransactionsExplorerView: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search raw text, note, or ID..."
+              aria-label="Search transactions"
               className="w-full rounded-md border border-border-standard py-2 pl-9 pr-3 text-xs text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
             />
           </div>
@@ -217,6 +240,7 @@ export const TransactionsExplorerView: React.FC = () => {
             <input
               type="date"
               value={startDate}
+              aria-label="Start date"
               onChange={(e) => {
                 setStartDate(e.target.value);
                 setPage(0);
@@ -231,6 +255,7 @@ export const TransactionsExplorerView: React.FC = () => {
             <input
               type="date"
               value={endDate}
+              aria-label="End date"
               onChange={(e) => {
                 setEndDate(e.target.value);
                 setPage(0);
@@ -318,6 +343,7 @@ export const TransactionsExplorerView: React.FC = () => {
                   const isVoided = tx.status === "voided";
                   const isIncome = tx.type === "income";
                   const isExpense = tx.type === "expense";
+                  const details = getTransactionDisplayDetails(tx);
 
                   return (
                     <tr
@@ -355,12 +381,17 @@ export const TransactionsExplorerView: React.FC = () => {
                         <div className="font-semibold text-gray-900">
                           {tx.category_name || "-"}
                         </div>
-                        <div className="text-[11px] font-mono text-gray-400 truncate max-w-xs">
-                          &ldquo;{tx.raw_text}&rdquo;
+                        <div className="flex max-w-xs items-center gap-1.5 truncate text-[11px] text-gray-500">
+                          {details.isTestData && (
+                            <span className="shrink-0 rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-800">
+                              Test data
+                            </span>
+                          )}
+                          <span className="truncate">{details.rawText}</span>
                         </div>
-                        {tx.note && (
+                        {details.note && (
                           <div className="text-[11px] text-gray-500 italic">
-                            Note: {tx.note}
+                            Note: {details.note}
                           </div>
                         )}
                         {isVoided && (
@@ -401,6 +432,7 @@ export const TransactionsExplorerView: React.FC = () => {
                         {!isVoided && (
                           <button
                             onClick={() => setVoidingTx(tx)}
+                            aria-label={`Void ${tx.category_name || tx.type} transaction`}
                             className="p-1 hover:bg-rose-50 rounded text-gray-400 hover:text-rose-600"
                             title="Void Transaction"
                           >
@@ -425,6 +457,7 @@ export const TransactionsExplorerView: React.FC = () => {
               const isVoided = tx.status === "voided";
               const isIncome = tx.type === "income";
               const isExpense = tx.type === "expense";
+              const details = getTransactionDisplayDetails(tx);
 
               return (
                 <article
@@ -480,13 +513,20 @@ export const TransactionsExplorerView: React.FC = () => {
                     )}
                   </div>
 
-                  {tx.raw_text && tx.raw_text !== tx.category_name && (
-                    <p className="mt-2 truncate text-xs text-secondary">
-                      {tx.raw_text}
-                    </p>
+                  {details.rawText && details.rawText !== tx.category_name && (
+                    <div className="mt-2 flex items-center gap-1.5">
+                      {details.isTestData && (
+                        <span className="shrink-0 rounded bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-800">
+                          Test data
+                        </span>
+                      )}
+                      <p className="truncate text-xs text-secondary">
+                        {details.rawText}
+                      </p>
+                    </div>
                   )}
-                  {tx.note && (
-                    <p className="mt-1 text-xs text-text-muted">{tx.note}</p>
+                  {details.note && (
+                    <p className="mt-1 text-xs text-text-muted">{details.note}</p>
                   )}
                   {isVoided && tx.void_reason && (
                     <p className="mt-1 text-xs text-rose-700">
@@ -520,16 +560,18 @@ export const TransactionsExplorerView: React.FC = () => {
           <div className="flex items-center gap-1">
             <button
               onClick={() => setPage((p) => Math.max(0, p - 1))}
-              disabled={page === 0}
-              className="p-1 rounded border border-gray-300 disabled:opacity-40 hover:bg-white"
+              disabled={page === 0 || isLoading}
+              aria-label="Previous page"
+              className="flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
             <span className="px-2 font-medium">Page {page + 1}</span>
             <button
               onClick={() => setPage((p) => p + 1)}
-              disabled={(page + 1) * pageSize >= totalCount}
-              className="p-1 rounded border border-gray-300 disabled:opacity-40 hover:bg-white"
+              disabled={(page + 1) * pageSize >= totalCount || isLoading}
+              aria-label="Next page"
+              className="flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ChevronRight className="w-4 h-4" />
             </button>

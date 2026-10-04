@@ -7,9 +7,17 @@ import { UndoToast } from "./UndoToast";
 import { VoidModal } from "./VoidModal";
 import { EditModal } from "./EditModal";
 import { InstallHelpModal } from "./InstallHelpModal";
-import { ledgerService } from "../../services/ledgerService";
+import {
+  ledgerService,
+  OFFLINE_SYNC_COMPLETE_EVENT,
+} from "../../services/ledgerService";
 import { parseMessage, ParseResult, ClarificationOption } from "../../parser";
-import { LedgerAccount, Transaction, DailySummary } from "../../types/ledger";
+import {
+  LedgerAccount,
+  Transaction,
+  TransactionDraft,
+  DailySummary,
+} from "../../types/ledger";
 import { useAuth } from "../../context/AuthContext";
 import { useApp } from "../../context/AppContext";
 import { getKarachiBusinessDate } from "../../lib/dates";
@@ -31,8 +39,8 @@ export const ChatView: React.FC = () => {
 
   // State
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [drafts, setDrafts] = useState<TransactionDraft[]>([]);
   const [accounts, setAccounts] = useState<LedgerAccount[]>([]);
-  const [selectedAccountId, setSelectedAccountId] = useState("");
   const [summary, setSummary] = useState<DailySummary>({
     business_date: getKarachiBusinessDate(),
     income_paisa: 0,
@@ -68,18 +76,16 @@ export const ChatView: React.FC = () => {
   const loadDayData = useCallback(async () => {
     try {
       const todayStr = getKarachiBusinessDate();
-      const [txs, sum, rev] = await Promise.all([
+      const [txs, sum, rev, pendingDrafts] = await Promise.all([
         ledgerService.getTransactionsForDate(todayStr),
         ledgerService.getDailySummary(todayStr),
         ledgerService.getReviewQueue(),
+        ledgerService.getTransactionDrafts(todayStr),
       ]);
       const availableAccounts = await ledgerService.getPaymentAccounts();
       setTransactions(txs);
+      setDrafts(pendingDrafts);
       setAccounts(availableAccounts);
-      setSelectedAccountId((current) =>
-        availableAccounts.some((account) => account.id === current) ? current
-        : "",
-      );
       setSummary(sum);
       setReviewCount(rev.length);
 
@@ -95,7 +101,10 @@ export const ChatView: React.FC = () => {
 
     const handleOnline = async () => {
       setIsOnline(true);
-      await ledgerService.flushOfflineQueue();
+      loadDayData();
+    };
+
+    const handleOfflineSyncComplete = () => {
       loadDayData();
     };
 
@@ -111,6 +120,7 @@ export const ChatView: React.FC = () => {
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
+    window.addEventListener(OFFLINE_SYNC_COMPLETE_EVENT, handleOfflineSyncComplete);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     // Supabase Realtime Subscription across all 3 brothers
@@ -121,6 +131,7 @@ export const ChatView: React.FC = () => {
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      window.removeEventListener(OFFLINE_SYNC_COMPLETE_EVENT, handleOfflineSyncComplete);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       unsubscribe();
     };
@@ -130,9 +141,7 @@ export const ChatView: React.FC = () => {
   const executeSave = async (
     entry: ParseResult,
     chosenOption?: ClarificationOption,
-    accountId = selectedAccountId,
   ): Promise<boolean> => {
-    if (!accountId) return false;
     const type = chosenOption ? chosenOption.type : entry.type;
     const categoryId =
       chosenOption ? chosenOption.categoryId || null : entry.categoryId;
@@ -144,12 +153,11 @@ export const ChatView: React.FC = () => {
       chosenOption ? chosenOption.amountPaisa : entry.amountPaisa!;
 
     try {
-      const res = await ledgerService.recordTransaction(
+      await ledgerService.createTransactionDraft(
         {
           type,
           categoryId,
           categoryName,
-          accountId,
           amountPaisa,
           businessDate: entry.businessDate,
           rawText: entry.raw,
@@ -158,8 +166,6 @@ export const ChatView: React.FC = () => {
         },
         currentUserId,
       );
-
-      // If learned fuzzy alias, trigger alias learning in background
       if (entry.isFuzzyOrPhonetic && categoryId && entry.suggestedAlias) {
         ledgerService
           .learnAlias(categoryId, entry.suggestedAlias)
@@ -167,20 +173,15 @@ export const ChatView: React.FC = () => {
       }
 
       await loadDayData();
-
-      // Trigger 6-Second Undo Toast on successful save
-      if (res.transaction.id) {
-        setUndoState({
-          transactionId: res.transaction.id,
-          categoryName,
-          amountPaisa,
-          type,
-          updatedAt: res.transaction.updated_at || new Date().toISOString(),
-        });
-      }
+      showToast(
+        "success",
+        "Entry saved",
+        "Choose an account from the entry when you are ready to update its balance.",
+      );
       return true;
     } catch (err) {
       console.error("Failed to record transaction:", err);
+      showToast("error", "Entry not saved", "Please check the entry and try again.");
       return false;
     }
   };
@@ -257,6 +258,23 @@ export const ChatView: React.FC = () => {
     }
   };
 
+  const handleAssignDraft = async (draft: TransactionDraft, accountId: string) => {
+    try {
+      const result = await ledgerService.postTransactionDraft(draft.id, accountId);
+      await loadDayData();
+      showToast(
+        "success",
+        result.isQueuedOffline ? "Posting queued" : "Balance updated",
+        result.isQueuedOffline
+          ? "This entry will post to the selected account when you reconnect."
+          : `${draft.category_name || draft.type} was posted to the selected account.`,
+      );
+    } catch (error) {
+      console.error("Could not post transaction draft:", error);
+      showToast("error", "Could not update balance", "Check the account and try again.");
+    }
+  };
+
   const handleSkipToReview = async (rawText: string, reason: string) => {
     setActiveClarification(null);
     try {
@@ -327,18 +345,18 @@ export const ChatView: React.FC = () => {
       {/* 2. Chat Feed (Bubbles) */}
       <ChatFeed
         transactions={transactions}
+        drafts={drafts}
+        accounts={accounts}
         onEdit={(tx) => setEditingTransaction(tx)}
         onVoid={(tx) => setVoidingTransaction(tx)}
         onRestore={handleRestore}
+        onAssignDraft={handleAssignDraft}
       />
 
       {/* 3. Chat Composer (48px targets, chips, Enter-to-send) */}
       <ChatComposer
         onSend={handleSendMessage}
-        accounts={accounts}
-        selectedAccountId={selectedAccountId}
-        onAccountChange={setSelectedAccountId}
-        disabled={accounts.length === 0}
+        disabled={isSavingBatch}
       />
 
       {/* 4. Undo Toast (6-Second countdown) */}
