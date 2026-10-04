@@ -7,7 +7,6 @@ import { ToastContainer } from "./components/common/ToastContainer";
 import { CommandPalette } from "./components/layout/CommandPalette";
 import { ShortcutsHelpModal } from "./components/layout/ShortcutsHelpModal";
 import { QuickExpenseModal } from "./components/expenses/QuickExpenseModal";
-import { PrintReceiptModal } from "./components/pos/PrintReceiptModal";
 import { AuthScreen, LockScreen, PinSetupScreen } from "./components/auth/LockScreen";
 
 // Modern Shop Ledger Views
@@ -17,18 +16,6 @@ import { TransactionsExplorerView } from "./components/sales/TransactionsExplore
 import { LedgerReportsView } from "./components/reports/LedgerReportsView";
 import { ReviewQueueView } from "./components/closings/ReviewQueueView";
 import { LedgerSettingsView } from "./components/settings/LedgerSettingsView";
-
-// Legacy Views (Preserved for compatibility)
-import { DashboardView } from "./components/dashboard/DashboardView";
-import { QuickSaleView } from "./components/pos/QuickSaleView";
-import { InventoryView } from "./components/inventory/InventoryView";
-import { SalesHistoryView } from "./components/sales/SalesHistoryView";
-import { ExpensesView } from "./components/expenses/ExpensesView";
-import { AccountsView } from "./components/accounts/AccountsView";
-import { CustomersView } from "./components/customers/CustomersView";
-import { DailyClosingView } from "./components/closings/DailyClosingView";
-import { ReportsView } from "./components/reports/ReportsView";
-import { SettingsView } from "./components/settings/SettingsView";
 
 const MainShell: React.FC = () => {
   const { currentView } = useApp();
@@ -47,16 +34,6 @@ const MainShell: React.FC = () => {
         return <ReviewQueueView />;
       case "settings":
         return <LedgerSettingsView />;
-      case "pos":
-        return <QuickSaleView />;
-      case "inventory":
-        return <InventoryView />;
-      case "expenses":
-        return <ExpensesView />;
-      case "accounts":
-        return <AccountsView />;
-      case "customers":
-        return <CustomersView />;
       default:
         return <ChatView />;
     }
@@ -77,7 +54,6 @@ const MainShell: React.FC = () => {
 
       {/* Global Modals & Overlays */}
       <QuickExpenseModal />
-      <PrintReceiptModal />
       <CommandPalette />
       <ShortcutsHelpModal />
       <ToastContainer />

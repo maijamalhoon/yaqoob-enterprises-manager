@@ -9,10 +9,22 @@
   "background_color": "#f8f9fb",
   "icons": [
     {
+      "src": "/assets/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    },
+    {
       "src": "/assets/logo.svg",
       "type": "image/svg+xml",
-      "sizes": "any 192x192 512x512",
-      "purpose": "any maskable"
+      "sizes": "any",
+      "purpose": "any"
     }
   ]
 }
