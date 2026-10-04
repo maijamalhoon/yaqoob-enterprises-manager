@@ -1,12 +1,12 @@
 {
-  "short_name": "Yaqoob Ledger",
-  "name": "Yaqoob Enterprises Shop Ledger",
-  "description": "Fast deterministic shop ledger for printing, stamp papers, and physical services",
+  "short_name": "Shop Pro",
+  "name": "Shop Pro Business Manager",
+  "description": "Manage shop income, expenses, accounts and inventory online or offline.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "theme_color": "#059669",
-  "background_color": "#f8f9fb",
+  "theme_color": "#17654e",
+  "background_color": "#f5f7f6",
   "icons": [
     {
       "src": "/assets/icon-192.png",

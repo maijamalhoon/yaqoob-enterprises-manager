@@ -1,12 +1,20 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useApp } from "../../context/AppContext";
-import { Search, Receipt, HelpCircle, LockKeyhole, Settings, LogOut, ChevronDown } from "lucide-react";
+import {
+  Search,
+  Receipt,
+  HelpCircle,
+  LockKeyhole,
+  Settings,
+  LogOut,
+  ChevronDown,
+} from "lucide-react";
 import { UserAvatar } from "../common/UserAvatar";
 import { QuickEntryBar } from "../chat/QuickEntryBar";
 
 export const Header: React.FC = () => {
-  const { organization, user, lock, signOut } = useAuth();
+  const { organization, user, lock, signOut, hasPinSetup } = useAuth();
   const {
     setIsQuickExpenseOpen,
     setIsCommandPaletteOpen,
@@ -28,19 +36,26 @@ export const Header: React.FC = () => {
   }, []);
 
   return (
-    <header className="h-16 border-b border-[#e6e8ec] bg-white/95 backdrop-blur-md px-6 flex items-center justify-between z-30 select-none shrink-0">
+    <header className="h-14 sm:h-16 border-b border-border-standard bg-white/95 px-3 sm:px-6 flex items-center justify-between z-30 shrink-0">
+      <div className="flex min-w-0 items-center gap-2 lg:hidden">
+        <img src="/assets/logo.svg" alt="" className="h-8 w-8 rounded-md" />
+        <span className="truncate text-sm font-semibold text-on-surface">
+          {organization.name || "Shop Pro"}
+        </span>
+      </div>
       {/* Center Desktop Quick-Entry Bar ("/" shortcut) */}
-      <div className="flex-1 max-w-xl mx-4">
+      <div className="hidden lg:flex flex-1 max-w-xl mx-4">
         <QuickEntryBar />
       </div>
 
       {/* Right Utility & Profile Controls */}
-      <div className="flex items-center gap-3 sm:gap-4">
+      <div className="flex items-center gap-1.5 sm:gap-3">
         {/* Quick Expense Shortcut */}
         <button
           onClick={() => setIsQuickExpenseOpen(true)}
           title="Quick Expense (Ctrl+Shift+E)"
-          className="h-9 px-3 rounded-lg border border-[#e6e8ec] bg-white hover:bg-[#f2f4f6] text-xs font-medium text-[#14181f] flex items-center gap-1.5 transition-colors cursor-pointer"
+          aria-label="Quick expense"
+          className="flex h-9 w-9 items-center justify-center rounded-md border border-border-standard bg-white text-xs font-medium text-on-surface transition-colors hover:bg-surface-container-low sm:w-auto sm:gap-1.5 sm:px-3"
         >
           <Receipt className="h-3.5 w-3.5 text-[#d97706]" />
           <span className="hidden sm:inline">Expense</span>
@@ -50,22 +65,24 @@ export const Header: React.FC = () => {
         <button
           onClick={() => setIsShortcutsHelpOpen(true)}
           title="Keyboard Shortcuts"
-          className="w-9 h-9 flex items-center justify-center rounded-lg text-[#555f73] hover:bg-[#f2f4f6] hover:text-[#191c1e] transition-colors cursor-pointer"
+          className="hidden h-9 w-9 items-center justify-center rounded-md text-secondary transition-colors hover:bg-surface-container-low hover:text-on-surface sm:flex"
         >
           <HelpCircle className="h-4 w-4" />
         </button>
 
-        <div className="h-5 w-px bg-[#e6e8ec]" />
+        <div className="hidden h-5 w-px bg-border-standard sm:block" />
 
         {/* Lock Register Shortcut Button */}
-        <button
-          onClick={lock}
-          title="Lock register (4-digit PIN required to resume)"
-          aria-label="Lock register"
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-[#555f73] transition-colors hover:bg-[#f2f4f6] hover:text-[#191c1e] cursor-pointer"
-        >
-          <LockKeyhole className="h-4 w-4" />
-        </button>
+        {hasPinSetup && (
+          <button
+            onClick={lock}
+            title="Lock register (4-digit PIN required to resume)"
+            aria-label="Lock register"
+            className="hidden h-9 w-9 items-center justify-center rounded-md text-secondary transition-colors hover:bg-surface-container-low hover:text-on-surface sm:flex"
+          >
+            <LockKeyhole className="h-4 w-4" />
+          </button>
+        )}
 
         {/* User Profile Menu Dropdown */}
         <div className="relative" ref={menuRef}>
@@ -102,17 +119,19 @@ export const Header: React.FC = () => {
               </div>
 
               <div className="py-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    setCurrentView("settings");
-                  }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#191c1e] rounded-lg hover:bg-[#f8f9fb] transition cursor-pointer"
-                >
-                  <Settings className="h-3.5 w-3.5 text-[#777587]" />
-                  <span>Profile & Settings</span>
-                </button>
+                {hasPinSetup && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMenuOpen(false);
+                      setCurrentView("settings");
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-[#191c1e] rounded-lg hover:bg-[#f8f9fb] transition cursor-pointer"
+                  >
+                    <Settings className="h-3.5 w-3.5 text-[#777587]" />
+                    <span>Profile & Settings</span>
+                  </button>
+                )}
 
                 <button
                   type="button"

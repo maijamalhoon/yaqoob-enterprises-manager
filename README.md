@@ -1,7 +1,7 @@
-# Yaqoob Enterprises Shop Ledger (v2.0)
+# Shop Pro
 
-> **High-Velocity Deterministic Shop Ledger & Financial Intelligence System**  
-> Engineered specifically for Yaqoob Enterprises (Photocopying, Printing, Legal Stamp Papers, Lamination, and Documentation Services).  
+> **Offline-first business management for shops and service businesses**  
+> Manage transactions, accounts, and inventory across phones, tablets, and computers.  
 > **Cost: Rs 0 / month** (100% Free Tiers, Zero Paid APIs, Zero AI Token Dependencies).
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7.3-blue.svg)](https://www.typescriptlang.org/)
@@ -14,7 +14,7 @@
 
 ## 🌟 Product Architecture: "Simple Input -> Smart Processing -> Organized Backend -> Powerful Reports"
 
-Yaqoob Enterprises Ledger replaces handwritten paper registers with a conversational, lightning-fast chat ledger used by the **shop owner and his 2 brothers** across smartphones and counter PCs.
+Shop Pro replaces handwritten registers with a fast business ledger that works across phones, tablets, and computers.
 
 ```mermaid
 graph TD

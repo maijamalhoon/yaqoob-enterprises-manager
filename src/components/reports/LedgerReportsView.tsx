@@ -1,8 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { getSupabaseClient } from '../../lib/supabase';
-import { formatPaisa } from '../../lib/money';
-import { getKarachiBusinessDate } from '../../lib/dates';
-import { BarChart3, TrendingUp, Calendar, ArrowDownLeft, ArrowUpRight, RefreshCw } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { getSupabaseClient } from "../../lib/supabase";
+import { formatPaisa } from "../../lib/money";
+import { getKarachiBusinessDate } from "../../lib/dates";
+import {
+  BarChart3,
+  TrendingUp,
+  Calendar,
+  ArrowDownLeft,
+  ArrowUpRight,
+  RefreshCw,
+} from "lucide-react";
 
 interface MonthlyReportRow {
   month_start: string;
@@ -28,13 +35,13 @@ export const LedgerReportsView: React.FC = () => {
     const supabase = getSupabaseClient();
     try {
       const { data, error } = await supabase
-        .from('view_monthly_summary')
-        .select('*')
-        .eq('year', selectedYear)
-        .order('month', { ascending: true });
+        .from("view_monthly_summary")
+        .select("*")
+        .eq("year", selectedYear)
+        .order("month", { ascending: true });
 
       if (error) {
-        console.error('Error fetching monthly report view:', error);
+        console.error("Error fetching monthly report view:", error);
       }
 
       setMonthlyData(
@@ -49,10 +56,10 @@ export const LedgerReportsView: React.FC = () => {
           withdrawal_paisa: Number(row.withdrawal_paisa || 0),
           adjustment_in_paisa: Number(row.adjustment_in_paisa || 0),
           adjustment_out_paisa: Number(row.adjustment_out_paisa || 0),
-        }))
+        })),
       );
     } catch (err) {
-      console.error('Error loading reports:', err);
+      console.error("Error loading reports:", err);
     } finally {
       setIsLoading(false);
     }
@@ -63,12 +70,28 @@ export const LedgerReportsView: React.FC = () => {
   }, [selectedYear]);
 
   const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
-  const totalAnnualIncome = monthlyData.reduce((acc, m) => acc + m.income_paisa, 0);
-  const totalAnnualExpense = monthlyData.reduce((acc, m) => acc + m.expense_paisa, 0);
+  const totalAnnualIncome = monthlyData.reduce(
+    (acc, m) => acc + m.income_paisa,
+    0,
+  );
+  const totalAnnualExpense = monthlyData.reduce(
+    (acc, m) => acc + m.expense_paisa,
+    0,
+  );
   const totalAnnualProfit = totalAnnualIncome - totalAnnualExpense;
 
   return (
@@ -76,9 +99,11 @@ export const LedgerReportsView: React.FC = () => {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-xs">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 tracking-tight">Month-vs-Month Financial Reports</h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Full annual historical comparison directly queried from view_monthly_summary.
+          <h2 className="text-xl font-bold text-gray-900 tracking-tight">
+            Financial Reports
+          </h2>
+          <p className="mt-0.5 text-xs text-text-muted">
+            Income, expenses and owner cash flows by month.
           </p>
         </div>
 
@@ -88,7 +113,12 @@ export const LedgerReportsView: React.FC = () => {
             onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
             className="border border-gray-300 rounded-xl px-3 py-1.5 bg-white text-xs font-semibold focus:outline-none"
           >
-            {[currentYear - 2, currentYear - 1, currentYear, currentYear + 1].map((y) => (
+            {[
+              currentYear - 2,
+              currentYear - 1,
+              currentYear,
+              currentYear + 1,
+            ].map((y) => (
               <option key={y} value={y}>
                 Year {y}
               </option>
@@ -100,7 +130,9 @@ export const LedgerReportsView: React.FC = () => {
             className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-600"
             title="Refresh"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+            />
           </button>
         </div>
       </div>
@@ -131,7 +163,7 @@ export const LedgerReportsView: React.FC = () => {
           </div>
           <div
             className={`text-2xl font-bold font-mono mt-2 ${
-              totalAnnualProfit >= 0 ? 'text-blue-950' : 'text-rose-950'
+              totalAnnualProfit >= 0 ? "text-blue-950" : "text-rose-950"
             }`}
           >
             {formatPaisa(totalAnnualProfit)}
@@ -143,10 +175,12 @@ export const LedgerReportsView: React.FC = () => {
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
           <BarChart3 className="w-4 h-4 text-emerald-600" />
-          <h3 className="font-semibold text-gray-900 text-sm">Monthly Breakdown</h3>
+          <h3 className="font-semibold text-gray-900 text-sm">
+            Monthly Breakdown
+          </h3>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto lg:block">
           <table className="w-full text-left text-xs text-gray-700">
             <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-semibold uppercase text-[10px]">
               <tr>
@@ -160,19 +194,26 @@ export const LedgerReportsView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 font-mono">
-              {monthlyData.length === 0 ? (
+              {monthlyData.length === 0 ?
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400 font-sans">
+                  <td
+                    colSpan={7}
+                    className="px-4 py-8 text-center text-gray-400 font-sans"
+                  >
                     No transactions recorded for year {selectedYear}.
                   </td>
                 </tr>
-              ) : (
-                monthlyData.map((row) => {
-                  const mName = monthNames[row.month - 1] || `Month ${row.month}`;
-                  const netAdj = row.adjustment_in_paisa - row.adjustment_out_paisa;
+              : monthlyData.map((row) => {
+                  const mName =
+                    monthNames[row.month - 1] || `Month ${row.month}`;
+                  const netAdj =
+                    row.adjustment_in_paisa - row.adjustment_out_paisa;
 
                   return (
-                    <tr key={row.month} className="hover:bg-gray-50/60 transition-colors">
+                    <tr
+                      key={row.month}
+                      className="hover:bg-gray-50/60 transition-colors"
+                    >
                       <td className="px-4 py-3 font-sans font-semibold text-gray-900">
                         {mName} {row.year}
                       </td>
@@ -184,26 +225,112 @@ export const LedgerReportsView: React.FC = () => {
                       </td>
                       <td
                         className={`px-4 py-3 text-right font-extrabold ${
-                          row.net_profit_paisa >= 0 ? 'text-blue-900' : 'text-rose-900'
+                          row.net_profit_paisa >= 0 ?
+                            "text-blue-900"
+                          : "text-rose-900"
                         }`}
                       >
                         {formatPaisa(row.net_profit_paisa)}
                       </td>
                       <td className="px-4 py-3 text-right text-gray-600">
-                        {row.capital_in_paisa > 0 ? formatPaisa(row.capital_in_paisa) : '-'}
+                        {row.capital_in_paisa > 0 ?
+                          formatPaisa(row.capital_in_paisa)
+                        : "-"}
                       </td>
                       <td className="px-4 py-3 text-right text-gray-600">
-                        {row.withdrawal_paisa > 0 ? formatPaisa(row.withdrawal_paisa) : '-'}
+                        {row.withdrawal_paisa > 0 ?
+                          formatPaisa(row.withdrawal_paisa)
+                        : "-"}
                       </td>
                       <td className="px-4 py-3 text-right text-gray-600">
-                        {netAdj !== 0 ? formatPaisa(netAdj) : '-'}
+                        {netAdj !== 0 ? formatPaisa(netAdj) : "-"}
                       </td>
                     </tr>
                   );
                 })
-              )}
+              }
             </tbody>
           </table>
+        </div>
+
+        <div className="divide-y divide-border-standard lg:hidden">
+          {monthlyData.length === 0 ?
+            <p className="px-4 py-8 text-center text-sm text-text-muted">
+              No transactions recorded for {selectedYear}.
+            </p>
+          : monthlyData.map((row) => {
+              const monthName =
+                monthNames[row.month - 1] || `Month ${row.month}`;
+              const netAdjustment =
+                row.adjustment_in_paisa - row.adjustment_out_paisa;
+
+              return (
+                <article key={row.month} className="px-3 py-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <h4 className="text-sm font-semibold text-on-surface">
+                      {monthName} {row.year}
+                    </h4>
+                    <div className="text-right">
+                      <p className="text-[10px] font-semibold uppercase text-text-muted">
+                        Net profit
+                      </p>
+                      <p
+                        className={`font-mono text-sm font-bold tabular-nums ${row.net_profit_paisa >= 0 ? "text-blue-900" : "text-rose-900"}`}
+                      >
+                        {formatPaisa(row.net_profit_paisa)}
+                      </p>
+                    </div>
+                  </div>
+                  <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2">
+                    <div>
+                      <dt className="text-[10px] font-medium text-text-muted">
+                        Income
+                      </dt>
+                      <dd className="font-mono text-xs font-semibold text-primary">
+                        {formatPaisa(row.income_paisa)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[10px] font-medium text-text-muted">
+                        Expenses
+                      </dt>
+                      <dd className="font-mono text-xs font-semibold text-rose-700">
+                        {formatPaisa(row.expense_paisa)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[10px] font-medium text-text-muted">
+                        Capital in
+                      </dt>
+                      <dd className="font-mono text-xs text-secondary">
+                        {row.capital_in_paisa > 0 ?
+                          formatPaisa(row.capital_in_paisa)
+                        : "-"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[10px] font-medium text-text-muted">
+                        Withdrawals
+                      </dt>
+                      <dd className="font-mono text-xs text-secondary">
+                        {row.withdrawal_paisa > 0 ?
+                          formatPaisa(row.withdrawal_paisa)
+                        : "-"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-[10px] font-medium text-text-muted">
+                        Net adjustment
+                      </dt>
+                      <dd className="font-mono text-xs text-secondary">
+                        {netAdjustment !== 0 ? formatPaisa(netAdjustment) : "-"}
+                      </dd>
+                    </div>
+                  </dl>
+                </article>
+              );
+            })
+          }
         </div>
       </div>
     </div>

@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { ledgerService } from '../../services/ledgerService';
-import { Transaction, Category } from '../../types/ledger';
-import { formatPaisa } from '../../lib/money';
-import { formatKarachiTime, getKarachiBusinessDate } from '../../lib/dates';
+import React, { useState, useEffect } from "react";
+import { ledgerService } from "../../services/ledgerService";
+import { Transaction, Category } from "../../types/ledger";
+import { formatPaisa } from "../../lib/money";
+import { formatKarachiTime, getKarachiBusinessDate } from "../../lib/dates";
+import { exportToCSV as downloadCSV } from "../../lib/utils";
 import {
   Search,
-  Filter,
   Download,
   Calendar,
   ChevronLeft,
@@ -15,41 +15,51 @@ import {
   RefreshCw,
   Ban,
   Trash2,
-} from 'lucide-react';
-import { VoidModal } from '../chat/VoidModal';
+} from "lucide-react";
+import { VoidModal } from "../chat/VoidModal";
 
 export const TransactionsExplorerView: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   // Filters
-  const [searchQuery, setSearchQuery] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [selectedType, setSelectedType] = useState('all');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState<'active' | 'voided' | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [selectedType, setSelectedType] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState<
+    "active" | "voided" | "all"
+  >("all");
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [page, setPage] = useState(0);
   const pageSize = 25;
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
 
   const [voidingTx, setVoidingTx] = useState<Transaction | null>(null);
 
+  const getCurrentFilter = () => ({
+    searchQuery: searchQuery.trim() || undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    type: selectedType,
+    categoryId: selectedCategory,
+    status: selectedStatus,
+  });
+
   const loadData = async () => {
     setIsLoading(true);
+    setLoadError("");
     try {
       const cats = await ledgerService.getCategories();
       setCategories(cats);
 
       const res = await ledgerService.getFilteredTransactions({
-        searchQuery: searchQuery.trim() || undefined,
-        startDate: startDate || undefined,
-        endDate: endDate || undefined,
-        type: selectedType,
-        categoryId: selectedCategory,
-        status: selectedStatus,
+        ...getCurrentFilter(),
         limit: pageSize,
         offset: page * pageSize,
       });
@@ -57,7 +67,12 @@ export const TransactionsExplorerView: React.FC = () => {
       setTransactions(res.transactions);
       setTotalCount(res.count);
     } catch (err) {
-      console.error('Error fetching transactions:', err);
+      console.error("Error fetching transactions:", err);
+      setTransactions([]);
+      setTotalCount(0);
+      setLoadError(
+        "Transactions could not be loaded. Please refresh and try again.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -65,7 +80,14 @@ export const TransactionsExplorerView: React.FC = () => {
 
   useEffect(() => {
     loadData();
-  }, [page, selectedType, selectedCategory, selectedStatus, startDate, endDate]);
+  }, [
+    page,
+    selectedType,
+    selectedCategory,
+    selectedStatus,
+    startDate,
+    endDate,
+  ]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,44 +95,53 @@ export const TransactionsExplorerView: React.FC = () => {
     loadData();
   };
 
-  const exportToCSV = () => {
-    if (transactions.length === 0) return;
-
+  const exportToCSV = async () => {
+    setIsExporting(true);
+    setExportError("");
     const headers = [
-      'ID',
-      'Business Date',
-      'Device Time',
-      'Type',
-      'Category',
-      'Amount (Rs)',
-      'Raw Text',
-      'Status',
-      'Void Reason',
-      'Created By',
+      "ID",
+      "Business Date",
+      "Device Time",
+      "Type",
+      "Category",
+      "Amount (Rs)",
+      "Raw Text",
+      "Status",
+      "Void Reason",
+      "Created By",
     ];
 
-    const rows = transactions.map((t) => [
-      t.id,
-      t.business_date,
-      t.device_entry_time,
-      t.type,
-      t.category_name || '',
-      (t.amount_paisa / 100).toFixed(2),
-      `"${(t.raw_text || '').replace(/"/g, '""')}"`,
-      t.status,
-      `"${(t.void_reason || '').replace(/"/g, '""')}"`,
-      `"${(t.created_by_name || '').replace(/"/g, '""')}"`,
-    ]);
+    try {
+      const exportedTransactions =
+        await ledgerService.getAllFilteredTransactions(getCurrentFilter());
 
-    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `yaqoob_ledger_export_${getKarachiBusinessDate()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      if (exportedTransactions.length === 0) return;
+
+      const rows = exportedTransactions.map((transaction) => [
+        transaction.id,
+        transaction.business_date,
+        transaction.device_entry_time,
+        transaction.type,
+        transaction.category_name || "",
+        (transaction.amount_paisa / 100).toFixed(2),
+        transaction.raw_text || "",
+        transaction.status,
+        transaction.void_reason || "",
+        transaction.created_by_name || "",
+      ]);
+
+      downloadCSV(
+        "yaqoob_ledger_export",
+        headers,
+        rows,
+        getKarachiBusinessDate(),
+      );
+    } catch (err) {
+      console.error("Error exporting transactions:", err);
+      setExportError("The CSV export could not be completed. Please retry.");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -118,28 +149,45 @@ export const TransactionsExplorerView: React.FC = () => {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-gray-200 shadow-xs">
         <div>
-          <h2 className="text-xl font-bold text-gray-900 tracking-tight">Transactions Explorer</h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Search, filter, paginate, and audit all ledger entries with immutable timestamps.
+          <h2 className="text-xl font-bold text-gray-900 tracking-tight">
+            Transactions Explorer
+          </h2>
+          <p className="mt-0.5 text-xs text-text-muted">
+            Find and review ledger entries.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={exportToCSV}
-            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition-colors"
+            disabled={isExporting || totalCount === 0}
+            className="flex min-h-10 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-white shadow-xs transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Download className="w-3.5 h-3.5" /> Export CSV
+            <Download className="w-3.5 h-3.5" />{" "}
+            {isExporting ? "Exporting..." : "Export CSV"}
           </button>
           <button
             onClick={loadData}
-            className="p-2 rounded-xl border border-gray-200 hover:bg-gray-50 text-gray-600"
+            className="flex h-10 w-10 items-center justify-center rounded-md border border-border-standard text-secondary transition-colors hover:bg-surface-container-low"
             title="Refresh"
           >
-            <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`}
+            />
           </button>
         </div>
       </div>
+
+      {exportError && (
+        <p role="alert" className="text-xs text-rose-700">
+          {exportError}
+        </p>
+      )}
+      {loadError && (
+        <p role="alert" className="text-xs text-rose-700">
+          {loadError}
+        </p>
+      )}
 
       {/* Filters Bar */}
       <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-xs space-y-3">
@@ -151,12 +199,12 @@ export const TransactionsExplorerView: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search raw text, note, or ID..."
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              className="w-full rounded-md border border-border-standard py-2 pl-9 pr-3 text-xs text-on-surface focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
             />
           </div>
           <button
             type="submit"
-            className="px-4 py-2 bg-gray-900 hover:bg-black text-white text-xs font-semibold rounded-xl"
+            className="min-h-10 rounded-md bg-on-surface px-4 text-xs font-semibold text-white transition-colors hover:bg-secondary"
           >
             Search
           </button>
@@ -198,7 +246,7 @@ export const TransactionsExplorerView: React.FC = () => {
               setSelectedType(e.target.value);
               setPage(0);
             }}
-            className="border border-gray-300 rounded-xl px-2 py-1.5 bg-gray-50/50 text-gray-700 text-xs focus:outline-none"
+            className="min-w-0 rounded-md border border-border-standard bg-white px-2 py-2 text-xs text-on-surface focus:border-primary focus:outline-none"
           >
             <option value="all">All Types</option>
             <option value="income">Income</option>
@@ -215,7 +263,7 @@ export const TransactionsExplorerView: React.FC = () => {
               setSelectedCategory(e.target.value);
               setPage(0);
             }}
-            className="border border-gray-300 rounded-xl px-2 py-1.5 bg-gray-50/50 text-gray-700 text-xs focus:outline-none"
+            className="min-w-0 rounded-md border border-border-standard bg-white px-2 py-2 text-xs text-on-surface focus:border-primary focus:outline-none"
           >
             <option value="all">All Categories</option>
             {categories.map((c) => (
@@ -229,10 +277,10 @@ export const TransactionsExplorerView: React.FC = () => {
           <select
             value={selectedStatus}
             onChange={(e) => {
-              setSelectedStatus(e.target.value as any);
+              setSelectedStatus(e.target.value as "active" | "voided" | "all");
               setPage(0);
             }}
-            className="border border-gray-300 rounded-xl px-2 py-1.5 bg-gray-50/50 text-gray-700 text-xs focus:outline-none"
+            className="min-w-0 rounded-md border border-border-standard bg-white px-2 py-2 text-xs text-on-surface focus:border-primary focus:outline-none"
           >
             <option value="all">All Statuses</option>
             <option value="active">Active Only</option>
@@ -243,7 +291,7 @@ export const TransactionsExplorerView: React.FC = () => {
 
       {/* Transactions Table */}
       <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
+        <div className="hidden overflow-x-auto lg:block">
           <table className="w-full text-left text-xs text-gray-700">
             <thead className="bg-gray-50 border-b border-gray-200 text-gray-500 font-semibold uppercase tracking-wider text-[10px]">
               <tr>
@@ -257,54 +305,64 @@ export const TransactionsExplorerView: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {transactions.length === 0 ? (
+              {transactions.length === 0 ?
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                  <td
+                    colSpan={7}
+                    className="px-4 py-8 text-center text-gray-400"
+                  >
                     No transactions match the selected filters.
                   </td>
                 </tr>
-              ) : (
-                transactions.map((tx) => {
-                  const isVoided = tx.status === 'voided';
-                  const isIncome = tx.type === 'income';
-                  const isExpense = tx.type === 'expense';
+              : transactions.map((tx) => {
+                  const isVoided = tx.status === "voided";
+                  const isIncome = tx.type === "income";
+                  const isExpense = tx.type === "expense";
 
                   return (
                     <tr
                       key={tx.id}
                       className={`hover:bg-gray-50/80 transition-colors ${
-                        isVoided ? 'bg-gray-50/50 text-gray-400' : ''
+                        isVoided ? "bg-gray-50/50 text-gray-400" : ""
                       }`}
                     >
                       <td className="px-4 py-3 font-mono text-[11px] whitespace-nowrap">
                         <div>{tx.business_date}</div>
-                        <div className="text-gray-400">{formatKarachiTime(tx.device_entry_time)}</div>
+                        <div className="text-gray-400">
+                          {formatKarachiTime(tx.device_entry_time)}
+                        </div>
                       </td>
 
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
-                            isIncome
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : isExpense
-                              ? 'bg-rose-100 text-rose-800'
-                              : 'bg-blue-100 text-blue-800'
+                            isIncome ? "bg-emerald-100 text-emerald-800"
+                            : isExpense ? "bg-rose-100 text-rose-800"
+                            : "bg-blue-100 text-blue-800"
                           }`}
                         >
-                          {isIncome && <ArrowDownLeft className="w-2.5 h-2.5" />}
-                          {isExpense && <ArrowUpRight className="w-2.5 h-2.5" />}
-                          {tx.type.replace('_', ' ')}
+                          {isIncome && (
+                            <ArrowDownLeft className="w-2.5 h-2.5" />
+                          )}
+                          {isExpense && (
+                            <ArrowUpRight className="w-2.5 h-2.5" />
+                          )}
+                          {tx.type.replace("_", " ")}
                         </span>
                       </td>
 
                       <td className="px-4 py-3">
                         <div className="font-semibold text-gray-900">
-                          {tx.category_name || '-'}
+                          {tx.category_name || "-"}
                         </div>
                         <div className="text-[11px] font-mono text-gray-400 truncate max-w-xs">
                           &ldquo;{tx.raw_text}&rdquo;
                         </div>
-                        {tx.note && <div className="text-[11px] text-gray-500 italic">Note: {tx.note}</div>}
+                        {tx.note && (
+                          <div className="text-[11px] text-gray-500 italic">
+                            Note: {tx.note}
+                          </div>
+                        )}
                         {isVoided && (
                           <div className="text-[10px] text-rose-600 font-medium mt-0.5">
                             Voided reason: {tx.void_reason}
@@ -318,29 +376,25 @@ export const TransactionsExplorerView: React.FC = () => {
 
                       <td
                         className={`px-4 py-3 font-mono font-bold text-sm text-right whitespace-nowrap ${
-                          isVoided
-                            ? 'line-through text-gray-400'
-                            : isIncome
-                            ? 'text-emerald-700'
-                            : isExpense
-                            ? 'text-rose-700'
-                            : 'text-gray-900'
+                          isVoided ? "line-through text-gray-400"
+                          : isIncome ? "text-emerald-700"
+                          : isExpense ? "text-rose-700"
+                          : "text-gray-900"
                         }`}
                       >
-                        {isExpense ? '-' : ''}
+                        {isExpense ? "-" : ""}
                         {formatPaisa(tx.amount_paisa)}
                       </td>
 
                       <td className="px-4 py-3 text-center whitespace-nowrap">
-                        {isVoided ? (
+                        {isVoided ?
                           <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 font-semibold text-[10px] border border-rose-200">
                             Voided
                           </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-[10px] border border-emerald-200">
+                        : <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold text-[10px] border border-emerald-200">
                             Active
                           </span>
-                        )}
+                        }
                       </td>
 
                       <td className="px-4 py-3 text-right whitespace-nowrap">
@@ -357,16 +411,110 @@ export const TransactionsExplorerView: React.FC = () => {
                     </tr>
                   );
                 })
-              )}
+              }
             </tbody>
           </table>
+        </div>
+
+        <div className="divide-y divide-border-standard lg:hidden">
+          {transactions.length === 0 ?
+            <p className="px-4 py-8 text-center text-sm text-text-muted">
+              No transactions match the selected filters.
+            </p>
+          : transactions.map((tx) => {
+              const isVoided = tx.status === "voided";
+              const isIncome = tx.type === "income";
+              const isExpense = tx.type === "expense";
+
+              return (
+                <article
+                  key={tx.id}
+                  className={`px-3 py-3 ${isVoided ? "bg-surface-container-low/60" : ""}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="truncate text-sm font-semibold text-on-surface">
+                        {tx.category_name || tx.type.replace("_", " ")}
+                      </h3>
+                      <p className="mt-0.5 text-[11px] text-text-muted">
+                        {tx.business_date} ·{" "}
+                        {formatKarachiTime(tx.device_entry_time)}
+                      </p>
+                    </div>
+                    <p
+                      className={`shrink-0 font-mono text-sm font-semibold tabular-nums ${
+                        isVoided ? "line-through text-text-muted"
+                        : isIncome ? "text-primary"
+                        : isExpense ? "text-rose-700"
+                        : "text-on-surface"
+                      }`}
+                    >
+                      {isExpense ? "-" : ""}
+                      {formatPaisa(tx.amount_paisa)}
+                    </p>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span
+                      className={`rounded-sm px-1.5 py-0.5 text-[10px] font-semibold uppercase ${
+                        isIncome ? "bg-primary/10 text-primary"
+                        : isExpense ? "bg-rose-50 text-rose-700"
+                        : "bg-surface-container-low text-secondary"
+                      }`}
+                    >
+                      {tx.type.replace("_", " ")}
+                    </span>
+                    <span
+                      className={`rounded-sm px-1.5 py-0.5 text-[10px] font-semibold ${
+                        isVoided ?
+                          "bg-rose-50 text-rose-700"
+                        : "bg-surface-container-low text-secondary"
+                      }`}
+                    >
+                      {isVoided ? "Voided" : "Active"}
+                    </span>
+                    {tx.created_by_name && (
+                      <span className="text-[11px] text-text-muted">
+                        {tx.created_by_name}
+                      </span>
+                    )}
+                  </div>
+
+                  {tx.raw_text && tx.raw_text !== tx.category_name && (
+                    <p className="mt-2 truncate text-xs text-secondary">
+                      {tx.raw_text}
+                    </p>
+                  )}
+                  {tx.note && (
+                    <p className="mt-1 text-xs text-text-muted">{tx.note}</p>
+                  )}
+                  {isVoided && tx.void_reason && (
+                    <p className="mt-1 text-xs text-rose-700">
+                      Reason: {tx.void_reason}
+                    </p>
+                  )}
+                  {!isVoided && (
+                    <button
+                      type="button"
+                      onClick={() => setVoidingTx(tx)}
+                      aria-label={`Void ${tx.category_name || tx.type} transaction`}
+                      className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border-standard bg-white px-2.5 text-xs font-medium text-secondary transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Void
+                    </button>
+                  )}
+                </article>
+              );
+            })
+          }
         </div>
 
         {/* Pagination Footer */}
         <div className="px-4 py-3 bg-gray-50 border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
           <div>
-            Showing {transactions.length > 0 ? page * pageSize + 1 : 0} to{' '}
-            {Math.min((page + 1) * pageSize, totalCount)} of {totalCount} records
+            Showing {transactions.length > 0 ? page * pageSize + 1 : 0} to{" "}
+            {Math.min((page + 1) * pageSize, totalCount)} of {totalCount}{" "}
+            records
           </div>
 
           <div className="flex items-center gap-1">

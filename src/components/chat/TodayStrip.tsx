@@ -1,8 +1,16 @@
-import React from 'react';
-import { DailySummary } from '../../types/ledger';
-import { formatPaisa } from '../../lib/money';
-import { formatDisplayDate, getKarachiBusinessDate } from '../../lib/dates';
-import { ArrowDownLeft, ArrowUpRight, TrendingUp, Wifi, WifiOff } from 'lucide-react';
+import React from "react";
+import { DailySummary } from "../../types/ledger";
+import { formatPaisa } from "../../lib/money";
+import { formatDisplayDate, getKarachiBusinessDate } from "../../lib/dates";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  CloudUpload,
+  Download,
+  TrendingUp,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
 
 interface TodayStripProps {
   summary: DailySummary;
@@ -25,24 +33,31 @@ export const TodayStrip: React.FC<TodayStripProps> = ({
   const displayDate = formatDisplayDate(todayStr);
 
   return (
-    <div className="bg-white border-b border-gray-200 px-4 py-3 shadow-xs">
+    <div className="border-b border-border-standard bg-white px-4 py-3 shadow-xs">
       {/* Top Meta Bar */}
-      <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+      <div className="mb-2 flex items-center justify-between text-xs text-text-muted">
         <div className="flex items-center gap-2">
-          <span className="font-semibold text-gray-800 text-sm">Today ({displayDate})</span>
-          <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-600">
-            {isOnline ? (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <Wifi className="w-3 h-3 text-emerald-600" />
-                Live
-              </>
-            ) : (
-              <>
-                <WifiOff className="w-3 h-3 text-amber-500" />
+          <span className="text-sm font-semibold text-on-surface">
+            Today ({displayDate})
+          </span>
+          <span className="flex items-center gap-1 rounded-full bg-surface-container-low px-2 py-0.5 text-[10px] font-medium text-secondary">
+            {isOnline ?
+              queuedCount > 0 ?
+                <>
+                  <CloudUpload className="h-3 w-3 text-amber-700" />
+                  Sync pending ({queuedCount})
+                </>
+              : <>
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                  <Wifi className="h-3 w-3 text-primary" />
+                  Online
+                </>
+
+            : <>
+                <WifiOff className="h-3 w-3 text-amber-700" />
                 Offline ({queuedCount} queued)
               </>
-            )}
+            }
           </span>
         </div>
 
@@ -50,7 +65,7 @@ export const TodayStrip: React.FC<TodayStripProps> = ({
           {reviewCount > 0 && onOpenReviewQueue && (
             <button
               onClick={onOpenReviewQueue}
-              className="flex items-center gap-1 text-[11px] px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded-md font-medium hover:bg-amber-100 transition-colors"
+              className="flex min-h-9 items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-2 text-[11px] font-medium text-amber-800 transition-colors hover:bg-amber-100"
             >
               Review queue: <span className="font-bold">{reviewCount}</span>
             </button>
@@ -58,10 +73,10 @@ export const TodayStrip: React.FC<TodayStripProps> = ({
 
           <button
             onClick={onOpenInstallHelp}
-            className="text-[11px] px-2 py-1 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-md font-medium transition-colors"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border-standard bg-white px-2 text-[11px] font-medium text-secondary transition-colors hover:bg-surface-container-low"
             title="Install App as PWA"
           >
-            📲 Install
+            <Download className="h-3.5 w-3.5" aria-hidden="true" /> Install
           </button>
         </div>
       </div>
@@ -74,7 +89,7 @@ export const TodayStrip: React.FC<TodayStripProps> = ({
             <span>Income</span>
             <ArrowDownLeft className="w-3.5 h-3.5" />
           </div>
-          <div className="mt-1 text-base sm:text-lg font-bold text-emerald-900 tracking-tight font-mono">
+          <div className="mt-1 font-mono text-base font-bold text-emerald-900 tabular-nums sm:text-lg">
             {formatPaisa(summary.income_paisa)}
           </div>
         </div>
@@ -85,7 +100,7 @@ export const TodayStrip: React.FC<TodayStripProps> = ({
             <span>Expenses</span>
             <ArrowUpRight className="w-3.5 h-3.5" />
           </div>
-          <div className="mt-1 text-base sm:text-lg font-bold text-rose-900 tracking-tight font-mono">
+          <div className="mt-1 font-mono text-base font-bold text-rose-900 tabular-nums sm:text-lg">
             {formatPaisa(summary.expense_paisa)}
           </div>
         </div>
@@ -97,8 +112,8 @@ export const TodayStrip: React.FC<TodayStripProps> = ({
             <TrendingUp className="w-3.5 h-3.5" />
           </div>
           <div
-            className={`mt-1 text-base sm:text-lg font-bold tracking-tight font-mono ${
-              summary.net_profit_paisa >= 0 ? 'text-blue-900' : 'text-rose-900'
+            className={`mt-1 font-mono text-base font-bold tabular-nums sm:text-lg ${
+              summary.net_profit_paisa >= 0 ? "text-blue-900" : "text-rose-900"
             }`}
           >
             {formatPaisa(summary.net_profit_paisa)}
@@ -110,10 +125,16 @@ export const TodayStrip: React.FC<TodayStripProps> = ({
       {(summary.capital_in_paisa > 0 || summary.withdrawal_paisa > 0) && (
         <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
           <div>
-            Capital In: <span className="font-semibold text-gray-700 font-mono">{formatPaisa(summary.capital_in_paisa)}</span>
+            Capital In:{" "}
+            <span className="font-semibold text-gray-700 font-mono">
+              {formatPaisa(summary.capital_in_paisa)}
+            </span>
           </div>
           <div>
-            Withdrawals: <span className="font-semibold text-gray-700 font-mono">{formatPaisa(summary.withdrawal_paisa)}</span>
+            Withdrawals:{" "}
+            <span className="font-semibold text-gray-700 font-mono">
+              {formatPaisa(summary.withdrawal_paisa)}
+            </span>
           </div>
         </div>
       )}

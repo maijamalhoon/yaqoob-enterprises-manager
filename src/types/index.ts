@@ -219,6 +219,7 @@ export interface SaleItem {
   total: number;
   cogs: number;
   gross_profit: number;
+  created_at?: string;
 }
 
 export interface Sale {

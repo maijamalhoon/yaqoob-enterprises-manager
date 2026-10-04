@@ -1,6 +1,12 @@
 import React from "react";
 import { useApp } from "../../context/AppContext";
-import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from "lucide-react";
+import {
+  CheckCircle2,
+  AlertCircle,
+  Info,
+  AlertTriangle,
+  X,
+} from "lucide-react";
 import { cn } from "../../lib/utils";
 
 export const ToastContainer: React.FC = () => {
@@ -14,8 +20,10 @@ export const ToastContainer: React.FC = () => {
         const icons = {
           success: <CheckCircle2 className="h-5 w-5 text-[#16a34a] shrink-0" />,
           error: <AlertCircle className="h-5 w-5 text-[#dc2626] shrink-0" />,
-          warning: <AlertTriangle className="h-5 w-5 text-[#d97706] shrink-0" />,
-          info: <Info className="h-5 w-5 text-[#4f46e5] shrink-0" />,
+          warning: (
+            <AlertTriangle className="h-5 w-5 text-[#d97706] shrink-0" />
+          ),
+          info: <Info className="h-5 w-5 shrink-0 text-primary" />,
         };
 
         const borders = {
@@ -35,7 +43,9 @@ export const ToastContainer: React.FC = () => {
           >
             {icons[toast.type]}
             <div className="flex-1 text-left">
-              <h4 className="text-xs font-semibold text-[#14181f]">{toast.title}</h4>
+              <h4 className="text-xs font-semibold text-[#14181f]">
+                {toast.title}
+              </h4>
               {toast.message && (
                 <p className="text-xs text-[#667085] mt-0.5 leading-relaxed">
                   {toast.message}

@@ -243,6 +243,24 @@ describe('Phase 2: Local Deterministic Parser Suite', () => {
       expect(batch.canSaveAll).toBe(false);
       expect(batch.hasErrorsOrConflicts).toBe(true);
     });
+
+    it('splits same-line entries joined by English or Roman Urdu conjunctions', () => {
+      const englishBatch = parseMessage('PRINT 500 and LAMINATION 200', [], refDate);
+      const urduBatch = parseMessage('PHOTOCOPY 100 aur STAMP 350', [], refDate);
+
+      expect(englishBatch.isBatch).toBe(true);
+      expect(englishBatch.entries.map((entry) => entry.amountPaisa)).toEqual([50000, 20000]);
+      expect(englishBatch.entries.every((entry) => entry.action === 'auto_save')).toBe(true);
+      expect(urduBatch.isBatch).toBe(true);
+      expect(urduBatch.entries.map((entry) => entry.amountPaisa)).toEqual([10000, 35000]);
+    });
+
+    it('does not split a conjunction when one side has no amount', () => {
+      const result = parseMessage('PRINT 500 and lamination', [], refDate);
+
+      expect(result.isBatch).toBe(false);
+      expect(result.entries).toHaveLength(1);
+    });
   });
 
   describe('8. Realistic 300+ Message Corpus Test', () => {

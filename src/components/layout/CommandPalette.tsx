@@ -120,7 +120,7 @@ export const CommandPalette: React.FC = () => {
       />
       <div className="relative w-full max-w-xl rounded-xl border border-[#e6e8ec] bg-white shadow-[0_16px_32px_-8px_rgba(0,0,0,0.08)] overflow-hidden z-10 animate-in zoom-in-95 duration-100">
         <div className="flex items-center px-4 border-b border-[#e6e8ec]">
-          <Search className="h-4 w-4 text-[#4f46e5] shrink-0" />
+          <Search className="h-4 w-4 shrink-0 text-primary" />
           <input
             autoFocus
             type="text"
@@ -151,7 +151,7 @@ export const CommandPalette: React.FC = () => {
                     <button
                       key={page.view}
                       onClick={() => navigateTo(page.view)}
-                      className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-[#14181f] hover:bg-[#f7f8fa] hover:text-[#4f46e5] transition-colors text-left cursor-pointer"
+                      className="flex cursor-pointer items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-medium text-on-surface transition-colors hover:bg-surface-container-low hover:text-primary"
                     >
                       <Icon className="h-3.5 w-3.5 text-[#667085]" />
                       <span>{page.label}</span>
@@ -177,7 +177,7 @@ export const CommandPalette: React.FC = () => {
                       className="flex items-center justify-between px-3 py-2 rounded-lg text-xs hover:bg-[#f7f8fa] cursor-pointer transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        <Package className="h-3.5 w-3.5 text-[#4f46e5]" />
+                        <Package className="h-3.5 w-3.5 text-primary" />
                         <span className="text-[#14181f] font-medium">
                           {p.name}
                         </span>
@@ -185,7 +185,7 @@ export const CommandPalette: React.FC = () => {
                           {p.sku}
                         </span>
                       </div>
-                      <span className="font-mono font-medium text-[#4f46e5]">
+                      <span className="font-mono font-medium text-primary">
                         {organization.currency_symbol} {p.selling_price}
                       </span>
                     </div>
@@ -205,12 +205,12 @@ export const CommandPalette: React.FC = () => {
                       className="flex items-center justify-between px-3 py-2 rounded-lg text-xs hover:bg-[#f7f8fa] cursor-pointer transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        <ShoppingCart className="h-3.5 w-3.5 text-[#4f46e5]" />
+                        <ShoppingCart className="h-3.5 w-3.5 text-primary" />
                         <span className="text-[#14181f] font-medium">
                           {s.name}
                         </span>
                       </div>
-                      <span className="font-mono font-medium text-[#4f46e5]">
+                      <span className="font-mono font-medium text-primary">
                         {organization.currency_symbol} {s.selling_price}
                       </span>
                     </div>
@@ -230,7 +230,7 @@ export const CommandPalette: React.FC = () => {
                       className="flex items-center justify-between px-3 py-2 rounded-lg text-xs hover:bg-[#f7f8fa] cursor-pointer transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        <Users className="h-3.5 w-3.5 text-[#4f46e5]" />
+                        <Users className="h-3.5 w-3.5 text-primary" />
                         <span className="text-[#14181f] font-medium">
                           {c.name}
                         </span>

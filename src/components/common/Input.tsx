@@ -25,7 +25,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     ref,
   ) => {
     const inputId =
-      id || (label ? `input-${label.toLowerCase().replace(/\s+/g, "-")}` : undefined);
+      id ||
+      (label ? `input-${label.toLowerCase().replace(/\s+/g, "-")}` : undefined);
 
     return (
       <div className="w-full space-y-1.5 text-left">
@@ -48,10 +49,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
             type={type}
             ref={ref}
             className={cn(
-              "w-full h-10 rounded-lg bg-white border border-[#e6e8ec] px-3 py-2 text-sm text-[#14181f] placeholder:text-[#98a2b3] transition-all duration-150 focus:border-[#4f46e5] focus:outline-none focus:ring-3 focus:ring-[#4f46e5]/12 disabled:cursor-not-allowed disabled:opacity-50 font-sans shadow-xs",
+              "w-full h-10 rounded-lg bg-white border border-border-standard px-3 py-2 text-sm text-on-surface placeholder:text-text-muted transition-colors duration-150 focus:border-primary focus:outline-none focus:ring-3 focus:ring-primary/15 disabled:cursor-not-allowed disabled:opacity-50 font-sans shadow-xs",
               leftIcon && "pl-9",
               (rightIcon || shortcutHint) && "pr-12",
-              error && "border-[#dc2626] focus:border-[#dc2626] focus:ring-[#dc2626]/15",
+              error &&
+                "border-[#dc2626] focus:border-[#dc2626] focus:ring-[#dc2626]/15",
               className,
             )}
             {...props}

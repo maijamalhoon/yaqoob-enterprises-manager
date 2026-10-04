@@ -1,11 +1,13 @@
-import React from 'react';
-import { Smartphone, Monitor, Apple, Check, X } from 'lucide-react';
+import React from "react";
+import { Smartphone, Monitor, Apple, Check, X } from "lucide-react";
 
 interface InstallHelpModalProps {
   onClose: () => void;
 }
 
-export const InstallHelpModal: React.FC<InstallHelpModalProps> = ({ onClose }) => {
+export const InstallHelpModal: React.FC<InstallHelpModalProps> = ({
+  onClose,
+}) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150">
       <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
@@ -13,9 +15,14 @@ export const InstallHelpModal: React.FC<InstallHelpModalProps> = ({ onClose }) =
         <div className="px-5 py-4 bg-emerald-50/70 border-b border-emerald-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Smartphone className="w-5 h-5 text-emerald-600" />
-            <h3 className="font-semibold text-gray-900 text-base">Install Yaqoob Ledger</h3>
+            <h3 className="font-semibold text-gray-900 text-base">
+              Install Shop Pro
+            </h3>
           </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-gray-400 hover:text-gray-600">
+          <button
+            onClick={onClose}
+            className="p-1 rounded-lg text-gray-400 hover:text-gray-600"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -23,7 +30,8 @@ export const InstallHelpModal: React.FC<InstallHelpModalProps> = ({ onClose }) =
         {/* Content */}
         <div className="p-5 overflow-y-auto space-y-4 text-sm text-gray-700">
           <p className="text-gray-600 text-xs leading-relaxed">
-            Install this application on your phone or PC for lightning-fast 1-tap access, offline recording, and full-screen experience.
+            Install this application on your phone or PC for lightning-fast
+            1-tap access, offline recording, and full-screen experience.
           </p>
 
           {/* Android Guide */}
@@ -34,7 +42,10 @@ export const InstallHelpModal: React.FC<InstallHelpModalProps> = ({ onClose }) =
             </div>
             <ol className="list-decimal list-inside text-xs text-gray-600 space-y-1 pl-1">
               <li>Tap the three dots (⋮) menu in Chrome top-right.</li>
-              <li>Tap <strong>Install app</strong> or <strong>Add to Home Screen</strong>.</li>
+              <li>
+                Tap <strong>Install app</strong> or{" "}
+                <strong>Add to Home Screen</strong>.
+              </li>
               <li>Confirm install. The icon appears on your home screen!</li>
             </ol>
           </div>
@@ -46,13 +57,23 @@ export const InstallHelpModal: React.FC<InstallHelpModalProps> = ({ onClose }) =
               <span>iPhone / iPad (Apple Safari)</span>
             </div>
             <div className="text-[11px] font-semibold text-amber-700 bg-amber-50 p-2 rounded-lg border border-amber-200">
-              ⚠️ iPhone users: Safari requires adding to Home Screen for offline caching & full-screen mode!
+              ⚠️ iPhone users: Safari requires adding to Home Screen for offline
+              caching & full-screen mode!
             </div>
             <ol className="list-decimal list-inside text-xs text-gray-600 space-y-1 pl-1">
-              <li>Open this site in <strong>Safari</strong>.</li>
-              <li>Tap the <strong>Share</strong> button (box with upward arrow) at the bottom.</li>
-              <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
-              <li>Tap <strong>Add</strong> at top right.</li>
+              <li>
+                Open this site in <strong>Safari</strong>.
+              </li>
+              <li>
+                Tap the <strong>Share</strong> button (box with upward arrow) at
+                the bottom.
+              </li>
+              <li>
+                Scroll down and tap <strong>Add to Home Screen</strong>.
+              </li>
+              <li>
+                Tap <strong>Add</strong> at top right.
+              </li>
             </ol>
           </div>
 
@@ -64,7 +85,9 @@ export const InstallHelpModal: React.FC<InstallHelpModalProps> = ({ onClose }) =
             </div>
             <ol className="list-decimal list-inside text-xs text-gray-600 space-y-1 pl-1">
               <li>Look at the right side of the address bar.</li>
-              <li>Click the <strong>Install</strong> computer icon.</li>
+              <li>
+                Click the <strong>Install</strong> computer icon.
+              </li>
               <li>The ledger opens in its own fast desktop window.</li>
             </ol>
           </div>

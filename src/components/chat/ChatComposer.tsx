@@ -1,8 +1,12 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, CornerDownLeft, Sparkles } from 'lucide-react';
+import React, { useState, useRef, useEffect } from "react";
+import { CalendarDays, Minus, Plus, Send } from "lucide-react";
+import { LedgerAccount } from "../../types/ledger";
 
 interface ChatComposerProps {
   onSend: (text: string) => void;
+  accounts: LedgerAccount[];
+  selectedAccountId: string;
+  onAccountChange: (accountId: string) => void;
   disabled?: boolean;
   placeholder?: string;
   autoFocus?: boolean;
@@ -10,11 +14,14 @@ interface ChatComposerProps {
 
 export const ChatComposer: React.FC<ChatComposerProps> = ({
   onSend,
+  accounts,
+  selectedAccountId,
+  onAccountChange,
   disabled = false,
-  placeholder = 'Type e.g. "PRINT 300" or "PAPER - 2000"...',
+  placeholder = "Amount and item",
   autoFocus = true,
 }) => {
-  const [text, setText] = useState('');
+  const [text, setText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -26,17 +33,17 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const trimmed = text.trim();
-    if (!trimmed || disabled) return;
+    if (!trimmed || !selectedAccountId || disabled) return;
 
     onSend(trimmed);
-    setText('');
+    setText("");
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = "auto";
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }
@@ -46,7 +53,7 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
     setText(e.target.value);
     // Auto-grow up to 120px
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = "auto";
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
     }
   };
@@ -59,56 +66,92 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
   };
 
   return (
-    <div className="bg-white border-t border-gray-200 px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-lg">
+    <div className="border-t border-border-standard bg-surface px-3 py-2 sm:px-5 sm:py-3">
+      <div className="mx-auto mb-2 flex w-full max-w-4xl items-center gap-2">
+        <label
+          htmlFor="ledger-account"
+          className="shrink-0 text-xs font-semibold text-secondary"
+        >
+          Account
+        </label>
+        <select
+          id="ledger-account"
+          value={selectedAccountId}
+          onChange={(event) => onAccountChange(event.target.value)}
+          disabled={disabled || accounts.length === 0}
+          required
+          className="min-h-10 min-w-0 flex-1 rounded-md border border-border-standard bg-white px-2.5 text-xs text-on-surface focus:border-primary focus:outline-none"
+        >
+          <option value="">
+            {accounts.length ? "Choose an account" : "No accounts available"}
+          </option>
+          {accounts.map((account) => (
+            <option key={account.id} value={account.id}>
+              {account.name} · {account.type.replace("_", " ")}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* Quick Category Chips for Fast 1-Tap Entry */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-1 scrollbar-none text-xs">
+      <div className="no-scrollbar mx-auto mb-2 flex w-full max-w-4xl items-center gap-2 overflow-x-auto pb-1 text-xs">
         <button
           type="button"
-          onClick={() => insertChip('PRINT')}
-          className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-medium hover:bg-emerald-100 transition-colors shrink-0"
+          onClick={() => insertChip("PRINT")}
+          className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md border border-border-standard bg-white px-3 text-secondary transition-colors hover:bg-surface-container-low"
         >
-          + PRINT
+          <Plus className="h-3.5 w-3.5 text-primary" aria-hidden="true" /> Print
         </button>
         <button
           type="button"
-          onClick={() => insertChip('STAMP')}
-          className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-medium hover:bg-emerald-100 transition-colors shrink-0"
+          onClick={() => insertChip("STAMP")}
+          className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md border border-border-standard bg-white px-3 text-secondary transition-colors hover:bg-surface-container-low"
         >
-          + STAMP
+          <Plus className="h-3.5 w-3.5 text-primary" aria-hidden="true" /> Stamp
         </button>
         <button
           type="button"
-          onClick={() => insertChip('LAMINATION')}
-          className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 font-medium hover:bg-emerald-100 transition-colors shrink-0"
+          onClick={() => insertChip("LAMINATION")}
+          className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md border border-border-standard bg-white px-3 text-secondary transition-colors hover:bg-surface-container-low"
         >
-          + LAMINATION
+          <Plus className="h-3.5 w-3.5 text-primary" aria-hidden="true" />{" "}
+          Lamination
         </button>
         <button
           type="button"
-          onClick={() => insertChip('PAPER - ')}
-          className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 font-medium hover:bg-rose-100 transition-colors shrink-0"
+          onClick={() => insertChip("PAPER - ")}
+          className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md border border-border-standard bg-white px-3 text-secondary transition-colors hover:bg-surface-container-low"
         >
-          - PAPER
+          <Minus className="h-3.5 w-3.5 text-amber-700" aria-hidden="true" />{" "}
+          Paper
         </button>
         <button
           type="button"
-          onClick={() => insertChip('BILL - ')}
-          className="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 font-medium hover:bg-rose-100 transition-colors shrink-0"
+          onClick={() => insertChip("BILL - ")}
+          className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md border border-border-standard bg-white px-3 text-secondary transition-colors hover:bg-surface-container-low"
         >
-          - BILL
+          <Minus className="h-3.5 w-3.5 text-amber-700" aria-hidden="true" />{" "}
+          Bill
         </button>
         <button
           type="button"
-          onClick={() => insertChip('yesterday')}
-          className="px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 font-medium hover:bg-gray-200 transition-colors shrink-0"
+          onClick={() => insertChip("yesterday")}
+          className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md border border-border-standard bg-white px-3 text-secondary transition-colors hover:bg-surface-container-low"
         >
-          📅 yesterday
+          <CalendarDays
+            className="h-3.5 w-3.5 text-text-muted"
+            aria-hidden="true"
+          />{" "}
+          Yesterday
         </button>
       </div>
 
       {/* Input Row */}
-      <form onSubmit={handleSubmit} className="flex items-end gap-2">
-        <div className="flex-1 min-w-0 relative rounded-2xl border border-gray-300 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 bg-gray-50/70 transition-all">
+      <form
+        onSubmit={handleSubmit}
+        className="mx-auto flex w-full max-w-4xl items-end gap-2"
+      >
+        <div className="relative min-w-0 flex-1 rounded-lg border border-border-standard bg-white transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15">
           <textarea
             ref={textareaRef}
             rows={1}
@@ -117,18 +160,20 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
             onKeyDown={handleKeyDown}
             disabled={disabled}
             placeholder={placeholder}
-            className="w-full resize-none bg-transparent px-3.5 py-2.5 text-sm sm:text-base text-gray-900 placeholder:text-gray-400 focus:outline-none max-h-32 min-h-[44px]"
+            aria-label="Ledger entry"
+            className="max-h-32 min-h-12 w-full resize-none bg-transparent px-3.5 py-3 text-sm text-on-surface placeholder:text-text-muted focus:outline-none sm:text-base"
           />
         </div>
 
         {/* Send Button (48px Touch Target for Mobile Ergonomics) */}
         <button
           type="submit"
-          disabled={!text.trim() || disabled}
-          className="w-12 h-11 sm:h-11 rounded-2xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:hover:bg-emerald-600 text-white flex items-center justify-center shadow-xs transition-all active:scale-95 shrink-0"
+          disabled={!text.trim() || !selectedAccountId || disabled}
+          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary text-white shadow-xs transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40"
           title="Send (Enter)"
+          aria-label="Send entry"
         >
-          <Send className="w-5 h-5" />
+          <Send className="h-5 w-5" aria-hidden="true" />
         </button>
       </form>
     </div>

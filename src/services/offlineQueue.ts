@@ -7,6 +7,9 @@
 export interface QueuedTransaction {
   id: string; // client uuid
   idempotencyKey: string;
+  organizationId?: string;
+  createdBy?: string;
+  accountId?: string;
   type: string;
   amountPaisa: number;
   categoryId: string | null;

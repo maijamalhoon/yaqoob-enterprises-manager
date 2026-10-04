@@ -1,4 +1,4 @@
-# Yaqoob Enterprises Manager - Database Architecture & Schema
+# Shop Pro - Database Architecture & Schema
 
 ## 1. Dual-Database Architecture
 

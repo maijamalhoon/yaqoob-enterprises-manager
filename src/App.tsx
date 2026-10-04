@@ -2,12 +2,13 @@ import React from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { AppProvider, useApp } from "./context/AppContext";
 import { Sidebar } from "./components/layout/Sidebar";
+import { MobileNav } from "./components/layout/MobileNav";
 import { Header } from "./components/layout/Header";
 import { ToastContainer } from "./components/common/ToastContainer";
 import { CommandPalette } from "./components/layout/CommandPalette";
 import { ShortcutsHelpModal } from "./components/layout/ShortcutsHelpModal";
 import { QuickExpenseModal } from "./components/expenses/QuickExpenseModal";
-import { AuthScreen, LockScreen, PinSetupScreen } from "./components/auth/LockScreen";
+import { AuthScreen, LockScreen } from "./components/auth/LockScreen";
 
 // Modern Shop Ledger Views
 import { ChatView } from "./components/chat/ChatView";
@@ -16,6 +17,7 @@ import { TransactionsExplorerView } from "./components/sales/TransactionsExplore
 import { LedgerReportsView } from "./components/reports/LedgerReportsView";
 import { ReviewQueueView } from "./components/closings/ReviewQueueView";
 import { LedgerSettingsView } from "./components/settings/LedgerSettingsView";
+import { AccountsView } from "./components/accounts/AccountsView";
 
 const MainShell: React.FC = () => {
   const { currentView } = useApp();
@@ -34,23 +36,27 @@ const MainShell: React.FC = () => {
         return <ReviewQueueView />;
       case "settings":
         return <LedgerSettingsView />;
+      case "accounts":
+        return <AccountsView />;
       default:
         return <ChatView />;
     }
   };
 
   return (
-    <div className="app-shell flex h-screen w-screen overflow-hidden font-sans text-[#191c1e]">
+    <div className="app-shell flex h-dvh w-full min-w-0 overflow-hidden font-sans text-on-surface">
       {/* Sidebar Navigation */}
       <Sidebar />
 
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <Header />
-        <main className="flex flex-1 flex-col overflow-hidden bg-[#f8f9fb]">
+        <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-surface pb-[calc(3.25rem+env(safe-area-inset-bottom))] md:pb-0">
           {renderActiveView()}
         </main>
       </div>
+
+      <MobileNav />
 
       {/* Global Modals & Overlays */}
       <QuickExpenseModal />
@@ -62,11 +68,11 @@ const MainShell: React.FC = () => {
 };
 
 const WorkspaceGate: React.FC = () => {
-  const { isLoading, isLocked, user, hasLocalAccount, hasPinSetup } = useAuth();
+  const { isLoading, isLocked, user, hasLocalAccount } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#f8f9fb] flex items-center justify-center text-[#667085]">
+      <div className="min-h-dvh bg-surface flex items-center justify-center text-text-muted">
         Loading workspace...
       </div>
     );
@@ -77,12 +83,7 @@ const WorkspaceGate: React.FC = () => {
     return <AuthScreen />;
   }
 
-  // If account is signed in but has not yet set up their 4-digit quick-unlock PIN
-  if (!hasPinSetup) {
-    return <PinSetupScreen />;
-  }
-
-  // If locked, show LockScreen with 4-digit quick-unlock
+  // PIN unlock remains optional for accounts that configured it.
   if (isLocked) {
     return <LockScreen />;
   }

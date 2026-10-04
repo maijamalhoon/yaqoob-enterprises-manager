@@ -28,8 +28,8 @@ export const Badge: React.FC<BadgeProps> = ({
   ...props
 }) => {
   const variants = {
-    indigo: "bg-[#eef2ff] text-[#4f46e5] border-[#c7d2fe]",
-    primary: "bg-[#eef2ff] text-[#4f46e5] border-[#c7d2fe]",
+    indigo: "bg-primary/10 text-primary border-primary/20",
+    primary: "bg-primary/10 text-primary border-primary/20",
     blue: "bg-[#eff6ff] text-[#2563eb] border-[#bfdbfe]",
     cyan: "bg-[#ecfeff] text-[#0891b2] border-[#a5f3fc]",
     teal: "bg-[#f0fdf4] text-[#16a34a] border-[#dcfce7]",

@@ -179,19 +179,34 @@ export function isThisYear(dateStr: string): boolean {
 /**
  * Export tabular data directly to CSV download
  */
-export function exportToCSV(filename: string, headers: string[], rows: (string | number)[][]) {
-  const csvContent = [
-    headers.map((h) => `"${h.replace(/"/g, '""')}"`).join(','),
-    ...rows.map((row) =>
-      row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')
-    ),
+export function serializeCSV(headers: string[], rows: (string | number)[][]): string {
+  const encodeCell = (value: string | number) => {
+    let text = String(value ?? '');
+    if (typeof value === 'string' && /^[\t\r\n ]*[=+\-@]/.test(text)) {
+      text = `'${text}`;
+    }
+    return `"${text.replace(/"/g, '""')}"`;
+  };
+
+  return [
+    headers.map(encodeCell).join(','),
+    ...rows.map((row) => row.map(encodeCell).join(',')),
   ].join('\r\n');
+}
+
+export function exportToCSV(
+  filename: string,
+  headers: string[],
+  rows: (string | number)[][],
+  dateSuffix = new Date().toISOString().slice(0, 10)
+) {
+  const csvContent = `\uFEFF${serializeCSV(headers, rows)}`;
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', `${filename}-${new Date().toISOString().slice(0, 10)}.csv`);
+  link.setAttribute('download', `${filename}-${dateSuffix}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);

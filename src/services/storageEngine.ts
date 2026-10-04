@@ -108,7 +108,7 @@ function loadStorage(): StorageSchema {
           action: 'SYSTEM_INITIALIZED',
           entity: 'ORGANIZATION',
           entity_id: DEFAULT_ORGANIZATION.id,
-          details: 'Yaqoob Enterprises Manager initialized with starter inventory and services',
+          details: 'Shop Pro initialized with starter inventory and services',
           created_at: new Date().toISOString(),
         },
       ],
@@ -1738,7 +1738,7 @@ export class StorageEngine {
           },
         };
       }
-      return { valid: false, error: 'File is not a valid Yaqoob Enterprises Manager database backup' };
+      return { valid: false, error: 'This backup file is not valid for Shop Pro.' };
     } catch (e: any) {
       return { valid: false, error: `Corrupt JSON backup file: ${e.message}` };
     }

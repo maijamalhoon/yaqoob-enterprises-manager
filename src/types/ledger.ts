@@ -29,12 +29,40 @@ export interface CategoryAlias {
   created_at: string;
 }
 
+export interface LedgerAccount {
+  id: string;
+  organization_id: string;
+  name: string;
+  type: 'CASH' | 'BANK' | 'DIGITAL_WALLET' | 'OTHER';
+  balance_paisa: number;
+  current_balance: number;
+  opening_balance: number;
+  is_active: boolean;
+  is_default: boolean;
+  created_at: string;
+}
+
+export interface AccountLedgerEntry {
+  id: string;
+  organization_id: string;
+  account_id: string;
+  transaction_id: string | null;
+  transfer_id: string | null;
+  entry_type: string;
+  amount_paisa: number;
+  balance_after_paisa: number;
+  business_date: string;
+  created_at: string;
+}
+
 export interface Transaction {
   id: string;
   type: TransactionType;
   amount_paisa: number; // BigInt in DB, number in JS (safe up to 90 trillion paisa / 900 billion rupees)
   category_id: string | null;
   category_name?: string;
+  account_id: string;
+  account_name?: string;
   adjustment_dir?: AdjustmentDirection | null;
   business_date: string; // YYYY-MM-DD in Asia/Karachi
   device_entry_time: string; // ISO 8601 UTC

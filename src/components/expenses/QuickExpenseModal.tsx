@@ -121,7 +121,7 @@ export const QuickExpenseModal: React.FC = () => {
       description="Record petty cash, toner, ink, electricity, rent, or supplies purchase."
       maxWidth="md"
     >
-      <form onSubmit={handleSubmit} className="space-y-4 py-1 select-none">
+      <form onSubmit={handleSubmit} className="space-y-4 py-1">
         <div className="hidden">
           {/* Expense Category */}
           <div>
@@ -131,7 +131,7 @@ export const QuickExpenseModal: React.FC = () => {
             <select
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
-              className="w-full h-10 rounded-lg bg-white border border-[#e6e8ec] px-3 text-xs text-[#14181f] focus:border-[#4f46e5] focus:outline-none"
+              className="w-full h-10 rounded-lg border border-border-standard bg-white px-3 text-xs text-on-surface focus:border-primary focus:outline-none"
             >
               {categories.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -149,7 +149,7 @@ export const QuickExpenseModal: React.FC = () => {
             <select
               value={accountId}
               onChange={(e) => setAccountId(e.target.value)}
-              className="w-full h-10 rounded-lg bg-white border border-[#e6e8ec] px-3 text-xs text-[#14181f] focus:border-[#4f46e5] focus:outline-none"
+              className="w-full h-10 rounded-lg border border-border-standard bg-white px-3 text-xs text-on-surface focus:border-primary focus:outline-none"
             >
               {accounts.map((a) => (
                 <option key={a.id} value={a.id}>
@@ -215,11 +215,11 @@ export const QuickExpenseModal: React.FC = () => {
         </div>
 
         {/* Impact Notice */}
-        <div className="p-3 rounded-lg bg-[#f8f9fb] border border-[#e6e8ec] text-xs text-[#667085] flex items-start gap-2">
-          <AlertCircle className="h-4 w-4 text-[#4f46e5] shrink-0 mt-0.5" />
+        <div className="flex items-start gap-2 rounded-lg border border-border-standard bg-surface p-3 text-xs text-text-muted">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <span>
             Recording this expense will immediately deduct from{" "}
-            <strong className="text-[#14181f]">
+            <strong className="text-on-surface">
               {selectedAccount ? selectedAccount.name : "the selected account"}
             </strong>{" "}
             and update today&rsquo;s cash closing statement.

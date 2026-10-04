@@ -19,6 +19,18 @@ export interface BatchParseResult {
   hasErrorsOrConflicts: boolean;
 }
 
+function splitCompoundLine(line: string, referenceDate: Date): string[] {
+  const parts = line.split(/\s+(?:and|aur)\s+/i).map((part) => part.trim());
+  if (parts.length < 2) return [line];
+
+  const eachPartHasOneAmount = parts.every((part) => {
+    const normalized = normalizeLine(part, referenceDate);
+    return normalized.amountPaisa !== null && !/\d/.test(normalized.cleanedText);
+  });
+
+  return eachPartHasOneAmount ? parts : [line];
+}
+
 /**
  * Parses user message (single-line or multi-line) into classified entries.
  */
@@ -28,7 +40,7 @@ export function parseMessage(
   referenceDate: Date = new Date(),
   categories: SeedCategory[] = SEED_CATEGORIES
 ): BatchParseResult {
-  const lines = splitLines(input);
+  const lines = splitLines(input).flatMap((line) => splitCompoundLine(line, referenceDate));
 
   if (lines.length === 0) {
     return {

@@ -61,23 +61,20 @@ function generatePng(size) {
       const dist = Math.sqrt(dx * dx + dy * dy);
 
       if (dist <= cornerR) {
-        // Gradient from Emerald (#059669) to Indigo (#4F46E5)
-        const t = (x + y) / (width + height);
-        const r = Math.round(5 * (1 - t) + 79 * t);
-        const g = Math.round(150 * (1 - t) + 70 * t);
-        const b = Math.round(105 * (1 - t) + 229 * t);
+        // Solid evergreen brand mark (#17654E)
+        const r = 23;
+        const g = 101;
+        const b = 78;
 
-        // Check if pixel is part of stylized 'Y' symbol
-        const relX = (x - center) / (size * 0.38);
-        const relY = (y - center) / (size * 0.38);
+        const page = x >= size * 0.29 && x <= size * 0.71 && y >= size * 0.2 && y <= size * 0.8;
+        const rule = [0.38, 0.5, 0.62].some((position) => Math.abs(y - size * position) < size * 0.018) && x >= size * 0.38 && x <= size * 0.63;
 
-        // Draw 'Y' symbol: left arm, right arm, and stem
-        const inLeftArm = Math.abs(relX + relY * 0.8) < 0.22 && relY < 0.05 && relY > -0.85;
-        const inRightArm = Math.abs(relX - relY * 0.8) < 0.22 && relY < 0.05 && relY > -0.85;
-        const inStem = Math.abs(relX) < 0.16 && relY >= -0.05 && relY < 0.85;
-
-        if (inLeftArm || inRightArm || inStem) {
-          // White symbol
+        if (page && rule) {
+          rawData[pxOffset] = r;
+          rawData[pxOffset + 1] = g;
+          rawData[pxOffset + 2] = b;
+          rawData[pxOffset + 3] = 255;
+        } else if (page) {
           rawData[pxOffset] = 255;
           rawData[pxOffset + 1] = 255;
           rawData[pxOffset + 2] = 255;

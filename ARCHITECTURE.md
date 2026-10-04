@@ -1,8 +1,8 @@
-# Yaqoob Enterprises Manager - System Architecture
+# Shop Pro - System Architecture
 
 ## 1. Architectural Philosophy & Overview
 
-**Yaqoob Enterprises Manager** is an enterprise-grade, offline-first Windows desktop POS and ERP application. It adheres to Clean Architecture principles with decoupled boundaries between:
+**Shop Pro** is an offline-first shop management application for browser and installable PWA use. It separates the interface, business logic, local persistence, and cloud services:
 1. **Desktop Shell & Native Services (Tauri 2 / Rust 2021)**
 2. **User Interface & Reactive State (React 19 / TypeScript 5.7)**
 3. **Domain Business Logic & Financial Formulas (StorageEngine)**

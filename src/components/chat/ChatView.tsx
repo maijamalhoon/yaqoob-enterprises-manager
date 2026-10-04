@@ -1,18 +1,18 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { TodayStrip } from './TodayStrip';
-import { ChatFeed } from './ChatFeed';
-import { ChatComposer } from './ChatComposer';
-import { ConfirmationModal } from './ConfirmationModal';
-import { UndoToast } from './UndoToast';
-import { VoidModal } from './VoidModal';
-import { EditModal } from './EditModal';
-import { InstallHelpModal } from './InstallHelpModal';
-import { ledgerService } from '../../services/ledgerService';
-import { getOfflineQueue } from '../../services/offlineQueue';
-import { parseMessage, ParseResult, ClarificationOption } from '../../parser';
-import { Transaction, DailySummary } from '../../types/ledger';
-import { useAuth } from '../../context/AuthContext';
-import { getKarachiBusinessDate } from '../../lib/dates';
+import React, { useState, useEffect, useCallback } from "react";
+import { TodayStrip } from "./TodayStrip";
+import { ChatFeed } from "./ChatFeed";
+import { ChatComposer } from "./ChatComposer";
+import { ConfirmationModal } from "./ConfirmationModal";
+import { UndoToast } from "./UndoToast";
+import { VoidModal } from "./VoidModal";
+import { EditModal } from "./EditModal";
+import { InstallHelpModal } from "./InstallHelpModal";
+import { ledgerService } from "../../services/ledgerService";
+import { parseMessage, ParseResult, ClarificationOption } from "../../parser";
+import { LedgerAccount, Transaction, DailySummary } from "../../types/ledger";
+import { useAuth } from "../../context/AuthContext";
+import { useApp } from "../../context/AppContext";
+import { getKarachiBusinessDate } from "../../lib/dates";
 
 interface UndoState {
   transactionId: string;
@@ -24,11 +24,15 @@ interface UndoState {
 
 export const ChatView: React.FC = () => {
   const { user } = useAuth();
-  const currentUserId = user?.id || 'offline-user';
-  const currentUserName = user?.full_name || user?.email?.split('@')[0] || 'Shop Brother';
+  const { showToast } = useApp();
+  const currentUserId = user?.id || "offline-user";
+  const currentUserName =
+    user?.full_name || user?.email?.split("@")[0] || "Shop Brother";
 
   // State
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [accounts, setAccounts] = useState<LedgerAccount[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState("");
   const [summary, setSummary] = useState<DailySummary>({
     business_date: getKarachiBusinessDate(),
     income_paisa: 0,
@@ -41,16 +45,23 @@ export const ChatView: React.FC = () => {
     transaction_count: 0,
   });
 
-  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== "undefined" ? navigator.onLine : true,
+  );
   const [queuedCount, setQueuedCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
 
   // Modals & Popups
-  const [activeClarification, setActiveClarification] = useState<ParseResult | null>(null);
+  const [activeClarification, setActiveClarification] =
+    useState<ParseResult | null>(null);
   const [batchEntries, setBatchEntries] = useState<ParseResult[] | null>(null);
+  const [batchError, setBatchError] = useState<string | null>(null);
+  const [isSavingBatch, setIsSavingBatch] = useState(false);
   const [undoState, setUndoState] = useState<UndoState | null>(null);
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [voidingTransaction, setVoidingTransaction] = useState<Transaction | null>(null);
+  const [editingTransaction, setEditingTransaction] =
+    useState<Transaction | null>(null);
+  const [voidingTransaction, setVoidingTransaction] =
+    useState<Transaction | null>(null);
   const [showInstallHelp, setShowInstallHelp] = useState(false);
 
   // Load data
@@ -62,14 +73,19 @@ export const ChatView: React.FC = () => {
         ledgerService.getDailySummary(todayStr),
         ledgerService.getReviewQueue(),
       ]);
+      const availableAccounts = await ledgerService.getPaymentAccounts();
       setTransactions(txs);
+      setAccounts(availableAccounts);
+      setSelectedAccountId((current) =>
+        availableAccounts.some((account) => account.id === current) ? current
+        : "",
+      );
       setSummary(sum);
       setReviewCount(rev.length);
 
-      const queue = await getOfflineQueue();
-      setQueuedCount(queue.length);
+      setQueuedCount(await ledgerService.getPendingTransactionCount());
     } catch (err) {
-      console.error('Error loading ledger data:', err);
+      console.error("Error loading ledger data:", err);
     }
   }, []);
 
@@ -88,14 +104,14 @@ export const ChatView: React.FC = () => {
     };
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === "visible") {
         loadDayData();
       }
     };
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     // Supabase Realtime Subscription across all 3 brothers
     const unsubscribe = ledgerService.subscribeToLiveTransactions(() => {
@@ -103,9 +119,9 @@ export const ChatView: React.FC = () => {
     });
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       unsubscribe();
     };
   }, [loadDayData]);
@@ -113,12 +129,19 @@ export const ChatView: React.FC = () => {
   // Execute Save Transaction
   const executeSave = async (
     entry: ParseResult,
-    chosenOption?: ClarificationOption
-  ) => {
+    chosenOption?: ClarificationOption,
+    accountId = selectedAccountId,
+  ): Promise<boolean> => {
+    if (!accountId) return false;
     const type = chosenOption ? chosenOption.type : entry.type;
-    const categoryId = chosenOption ? (chosenOption.categoryId || null) : entry.categoryId;
-    const categoryName = chosenOption ? (chosenOption.categoryName || entry.categoryName || type) : (entry.categoryName || type);
-    const amountPaisa = chosenOption ? chosenOption.amountPaisa : entry.amountPaisa!;
+    const categoryId =
+      chosenOption ? chosenOption.categoryId || null : entry.categoryId;
+    const categoryName =
+      chosenOption ?
+        chosenOption.categoryName || entry.categoryName || type
+      : entry.categoryName || type;
+    const amountPaisa =
+      chosenOption ? chosenOption.amountPaisa : entry.amountPaisa!;
 
     try {
       const res = await ledgerService.recordTransaction(
@@ -126,18 +149,21 @@ export const ChatView: React.FC = () => {
           type,
           categoryId,
           categoryName,
+          accountId,
           amountPaisa,
           businessDate: entry.businessDate,
           rawText: entry.raw,
           createdByName: currentUserName,
           note: entry.note,
         },
-        currentUserId
+        currentUserId,
       );
 
       // If learned fuzzy alias, trigger alias learning in background
       if (entry.isFuzzyOrPhonetic && categoryId && entry.suggestedAlias) {
-        ledgerService.learnAlias(categoryId, entry.suggestedAlias).catch(console.warn);
+        ledgerService
+          .learnAlias(categoryId, entry.suggestedAlias)
+          .catch(console.warn);
       }
 
       await loadDayData();
@@ -152,13 +178,15 @@ export const ChatView: React.FC = () => {
           updatedAt: res.transaction.updated_at || new Date().toISOString(),
         });
       }
+      return true;
     } catch (err) {
-      console.error('Failed to record transaction:', err);
+      console.error("Failed to record transaction:", err);
+      return false;
     }
   };
 
   // Handler for text sent from ChatComposer
-  const handleSendMessage = (rawInput: string) => {
+  const handleSendMessage = async (rawInput: string) => {
     // Recent transactions for duplicate checking (< 3 min)
     const recent = transactions.map((t) => ({
       categoryId: t.category_id,
@@ -167,9 +195,19 @@ export const ChatView: React.FC = () => {
       type: t.type,
     }));
 
-    const parsed = parseMessage(rawInput, recent);
+    const categories = await ledgerService.getParserCategories();
+    if (categories.length === 0) {
+      showToast(
+        "error",
+        "Categories unavailable",
+        "Reconnect to load your shop categories before recording entries.",
+      );
+      return;
+    }
+    const parsed = parseMessage(rawInput, recent, new Date(), categories);
 
     if (parsed.isBatch) {
+      setBatchError(null);
       setBatchEntries(parsed.entries);
       return;
     }
@@ -187,15 +225,35 @@ export const ChatView: React.FC = () => {
   };
 
   // Confirmation modal callbacks
-  const handleConfirmSingle = (entry: ParseResult, chosenOption?: ClarificationOption) => {
+  const handleConfirmSingle = (
+    entry: ParseResult,
+    chosenOption?: ClarificationOption,
+  ) => {
     setActiveClarification(null);
     executeSave(entry, chosenOption);
   };
 
   const handleConfirmBatch = async (entries: ParseResult[]) => {
-    setBatchEntries(null);
-    for (const e of entries) {
-      await executeSave(e);
+    setBatchError(null);
+    setIsSavingBatch(true);
+    const failedEntries: ParseResult[] = [];
+
+    try {
+      for (const entry of entries) {
+        if (!(await executeSave(entry))) failedEntries.push(entry);
+      }
+    } finally {
+      setIsSavingBatch(false);
+    }
+
+    if (failedEntries.length > 0) {
+      const savedCount = entries.length - failedEntries.length;
+      setBatchEntries(failedEntries);
+      setBatchError(
+        `${savedCount} saved; ${failedEntries.length} failed. Only failed entries are shown for retry.`,
+      );
+    } else {
+      setBatchEntries(null);
     }
   };
 
@@ -205,7 +263,7 @@ export const ChatView: React.FC = () => {
       await ledgerService.parkInReviewQueue(rawText, reason, currentUserId);
       await loadDayData();
     } catch (err) {
-      console.error('Failed to park in review queue:', err);
+      console.error("Failed to park in review queue:", err);
     }
   };
 
@@ -213,16 +271,24 @@ export const ChatView: React.FC = () => {
   const handleUndo = async (transactionId: string) => {
     if (!undoState) return;
     try {
-      await ledgerService.voidTransaction(transactionId, '6-second immediate undo', undoState.updatedAt);
+      await ledgerService.voidTransaction(
+        transactionId,
+        "6-second immediate undo",
+        undoState.updatedAt,
+      );
       setUndoState(null);
       await loadDayData();
     } catch (err) {
-      console.error('Failed to undo transaction:', err);
+      console.error("Failed to undo transaction:", err);
     }
   };
 
   // Void Action
-  const handleConfirmVoid = async (id: string, reason: string, currentUpdatedAt: string) => {
+  const handleConfirmVoid = async (
+    id: string,
+    reason: string,
+    currentUpdatedAt: string,
+  ) => {
     await ledgerService.voidTransaction(id, reason, currentUpdatedAt);
     await loadDayData();
   };
@@ -233,7 +299,7 @@ export const ChatView: React.FC = () => {
       await ledgerService.restoreTransaction(tx.id, tx.updated_at);
       await loadDayData();
     } catch (err) {
-      console.error('Failed to restore transaction:', err);
+      console.error("Failed to restore transaction:", err);
     }
   };
 
@@ -241,14 +307,14 @@ export const ChatView: React.FC = () => {
   const handleConfirmEdit = async (
     id: string,
     updates: { amount_paisa?: number; note?: string | null },
-    currentUpdatedAt: string
+    currentUpdatedAt: string,
   ) => {
     await ledgerService.editTransaction(id, updates, currentUpdatedAt);
     await loadDayData();
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 overflow-hidden relative">
+    <div className="relative flex h-full flex-col overflow-hidden bg-surface">
       {/* 1. Today Strip with Income, Expense, Net */}
       <TodayStrip
         summary={summary}
@@ -261,14 +327,19 @@ export const ChatView: React.FC = () => {
       {/* 2. Chat Feed (Bubbles) */}
       <ChatFeed
         transactions={transactions}
-        currentUserId={currentUserId}
         onEdit={(tx) => setEditingTransaction(tx)}
         onVoid={(tx) => setVoidingTransaction(tx)}
         onRestore={handleRestore}
       />
 
       {/* 3. Chat Composer (48px targets, chips, Enter-to-send) */}
-      <ChatComposer onSend={handleSendMessage} />
+      <ChatComposer
+        onSend={handleSendMessage}
+        accounts={accounts}
+        selectedAccountId={selectedAccountId}
+        onAccountChange={setSelectedAccountId}
+        disabled={accounts.length === 0}
+      />
 
       {/* 4. Undo Toast (6-Second countdown) */}
       {undoState && (
@@ -289,10 +360,13 @@ export const ChatView: React.FC = () => {
           batchEntries={batchEntries || undefined}
           onConfirmSingle={handleConfirmSingle}
           onConfirmBatch={handleConfirmBatch}
+          batchError={batchError}
+          isSavingBatch={isSavingBatch}
           onSkipToReview={handleSkipToReview}
           onCancel={() => {
             setActiveClarification(null);
             setBatchEntries(null);
+            setBatchError(null);
           }}
         />
       )}

@@ -192,9 +192,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           ]);
           if (localOrg) setOrganization(localOrg);
           if (profile) {
-            setUser(profile);
-            setRole(profile.role);
             setHasPasswordAccount(Boolean(profile.password_hash));
+            if (localOrg && !account.pin_hash) {
+              activate(profile, localOrg);
+            } else {
+              setUser(profile);
+              setRole(profile.role);
+              setIsLocked(Boolean(account.pin_hash));
+            }
           }
         }
         if (account && (typeof navigator === "undefined" || navigator.onLine))
@@ -217,7 +222,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     if (isSupabaseConfigured()) {
       const { data } = getSupabaseClient().auth.onAuthStateChange(
         async (event, session) => {
-          if (!cancelled && session?.user?.id && (event === "SIGNED_IN" || event === "USER_UPDATED")) {
+          if (
+            !cancelled &&
+            session?.user?.id &&
+            (event === "SIGNED_IN" || event === "USER_UPDATED")
+          ) {
             await activateSupabaseSession(session.user.id);
           }
         },
@@ -280,7 +289,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         profileData.avatar_url = googleAvatar;
         needUpdate = true;
       }
-      if (googleName && (!profileData.full_name || profileData.full_name === profileData.email)) {
+      if (
+        googleName &&
+        (!profileData.full_name || profileData.full_name === profileData.email)
+      ) {
         updates.full_name = googleName;
         profileData.full_name = googleName;
         needUpdate = true;
@@ -302,7 +314,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Cache to local SQLite so offline queries and POS operations always work
     try {
-      const existingOrg = await sqliteRepository.getOrganization(organizationData.id);
+      const existingOrg = await sqliteRepository.getOrganization(
+        organizationData.id,
+      );
       if (!existingOrg) {
         await sqliteRepository.createLocalOwnerAccount(
           organizationData as Organization,
@@ -345,6 +359,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   const lock = () => {
+    if (!hasPinSetup) return;
     setIsLocked(true);
     setSecurityPrincipal(null);
   };
@@ -420,19 +435,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  const setupPin = async (newPin: string): Promise<{ success: boolean; error?: string }> => {
+  const setupPin = async (
+    newPin: string,
+  ): Promise<{ success: boolean; error?: string }> => {
     const pin = newPin.trim();
     if (pin.length < MIN_PIN_LENGTH) {
       return { success: false, error: "PIN must be at least 4 digits." };
     }
     const currentProfileId =
       user?.id ||
-      (typeof window !== "undefined"
-        ? localStorage.getItem(ACTIVE_PROFILE_KEY) || undefined
-        : undefined);
+      (typeof window !== "undefined" ?
+        localStorage.getItem(ACTIVE_PROFILE_KEY) || undefined
+      : undefined);
     const targetOrgId =
       organization.id ||
-      (await sqliteRepository.getLocalAuthAccount(currentProfileId))?.organization_id;
+      (await sqliteRepository.getLocalAuthAccount(currentProfileId))
+        ?.organization_id;
     if (!currentProfileId || !targetOrgId) {
       return { success: false, error: "Active account session required." };
     }
@@ -445,7 +463,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         credential.hash,
         credential.salt,
       );
-      const refreshed = await sqliteRepository.getLocalAuthAccount(currentProfileId);
+      const refreshed =
+        await sqliteRepository.getLocalAuthAccount(currentProfileId);
       setLocalAccount(refreshed);
       setHasLocalAccount(true);
       setHasPinSetup(true);
@@ -496,7 +515,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   ): Promise<{ success: boolean; error?: string }> => {
     const cleanPass = newPassword.trim();
     if (cleanPass.length < 8) {
-      return { success: false, error: "Password must be at least 8 characters." };
+      return {
+        success: false,
+        error: "Password must be at least 8 characters.",
+      };
     }
 
     try {
@@ -519,7 +541,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       return { success: true };
     } catch (err: any) {
-      return { success: false, error: err?.message || "Could not update password." };
+      return {
+        success: false,
+        error: err?.message || "Could not update password.",
+      };
     }
   };
 
@@ -547,7 +572,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       return { success: true };
     } catch (err: any) {
-      return { success: false, error: err?.message || "Could not update profile photo." };
+      return {
+        success: false,
+        error: err?.message || "Could not update profile photo.",
+      };
     }
   };
 
@@ -586,7 +614,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           password: pass,
         });
         if (!response.error && response.data.user) {
-          const activated = await activateSupabaseSession(response.data.user.id);
+          const activated = await activateSupabaseSession(
+            response.data.user.id,
+          );
           if (activated) return {};
         }
       } catch (networkErr) {
@@ -639,6 +669,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           options: {
             data: {
               full_name: fullName.trim(),
+              shop_name: orgName.trim(),
               organization_name: orgName.trim(),
             },
           },
@@ -723,13 +754,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       created_at: now,
     };
     try {
-      await sqliteRepository.createLocalAuthAccount(
-        org,
-        profile,
-        "",
-        "",
-        true,
-      );
+      await sqliteRepository.createLocalAuthAccount(org, profile, "", "", true);
       StorageEngine.createLocalOwnerAccount(org, profile);
       const account = await sqliteRepository.getLocalAuthAccount(profile.id);
       setLocalAccount(account);
@@ -746,7 +771,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const signInWithGoogle = async () => {
     if (!isSupabaseReady) {
-      return { error: "Google sign-in requires network access. Please use email and password." };
+      return {
+        error:
+          "Google sign-in requires network access. Please use email and password.",
+      };
     }
     const response = await getSupabaseClient().auth.signInWithOAuth({
       provider: "google",

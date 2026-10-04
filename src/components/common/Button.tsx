@@ -29,23 +29,22 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     ref,
   ) => {
     const baseStyles =
-      "inline-flex items-center justify-center font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4f46e5]/30 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer active:scale-[0.99]";
+      "inline-flex items-center justify-center font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer active:scale-[0.99]";
 
     const variants = {
       primary:
-        "bg-[#4f46e5] hover:bg-[#4338ca] text-white border border-[#4f46e5] shadow-xs",
+        "bg-primary hover:bg-primary-hover text-white border border-primary shadow-xs",
       indigo:
-        "bg-[#4f46e5] hover:bg-[#4338ca] text-white border border-[#4f46e5] shadow-xs",
+        "bg-primary hover:bg-primary-hover text-white border border-primary shadow-xs",
       secondary:
-        "bg-white hover:bg-[#f7f8fa] text-[#14181f] border border-[#e6e8ec] shadow-xs",
+        "bg-white hover:bg-surface-container-low text-on-surface border border-border-standard shadow-xs",
       outline:
-        "bg-white border border-[#e6e8ec] hover:bg-[#f7f8fa] text-[#14181f]",
+        "bg-white border border-border-standard hover:bg-surface-container-low text-on-surface",
       ghost:
-        "bg-transparent text-[#667085] hover:text-[#14181f] hover:bg-[#f0f2f5]",
+        "bg-transparent text-text-muted hover:text-on-surface hover:bg-surface-container-low",
       danger:
         "bg-[#dc2626] hover:bg-[#b91c1c] text-white border border-[#dc2626] shadow-xs",
-      teal:
-        "bg-[#16a34a] hover:bg-[#15803d] text-white border border-[#16a34a] shadow-xs",
+      teal: "bg-[#16a34a] hover:bg-[#15803d] text-white border border-[#16a34a] shadow-xs",
       emerald:
         "bg-[#16a34a] hover:bg-[#15803d] text-white border border-[#16a34a] shadow-xs",
     };
@@ -63,7 +62,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(baseStyles, variants[variant], sizes[size], className)}
         {...props}
       >
-        {isLoading ? (
+        {isLoading ?
           <svg
             className="animate-spin h-4 w-4 text-current"
             viewBox="0 0 24 24"
@@ -83,7 +82,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
             />
           </svg>
-        ) : null}
+        : null}
         {children}
       </button>
     );
