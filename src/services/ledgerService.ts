@@ -40,6 +40,7 @@ import {
   removeOfflineDraft,
   saveOfflineDraft,
 } from './offlineDraftStore';
+import { sqliteRepository } from './sqliteRepository';
 
 export interface CreateTransactionPayload {
   type: 'income' | 'expense' | 'capital_in' | 'withdrawal' | 'adjustment';
@@ -117,6 +118,27 @@ function isNetworkFailure(error: unknown): boolean {
   return !isOnline() || /failed to fetch|fetch failed|network|load failed/i.test(message);
 }
 
+export function isPermissionOrAuthError(error: unknown): boolean {
+  if (!error) return false;
+  const code = typeof error === 'object' && error !== null && 'code' in error ? String((error as any).code) : '';
+  const status = typeof error === 'object' && error !== null && 'status' in error ? Number((error as any).status) : 0;
+  const message = error instanceof Error
+    ? error.message
+    : typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as any).message)
+      : String(error || '');
+  return (
+    code === '42501' ||
+    status === 401 ||
+    status === 403 ||
+    /permission denied|not authenticated|jwt|unauthorized|insufficient privilege|grant the required privileges/i.test(message)
+  );
+}
+
+export function isUnavailableOrUnauthorized(error: unknown): boolean {
+  return isNetworkFailure(error) || isPermissionOrAuthError(error);
+}
+
 function normalizeAccount(account: any): LedgerAccount {
   return {
     ...account,
@@ -174,7 +196,7 @@ export class LedgerService {
       await removeOfflineDraft(draft.id);
       return syncedDraft;
     } catch (error) {
-      if (isNetworkFailure(error)) return draft;
+      if (isUnavailableOrUnauthorized(error)) return draft;
       await removeOfflineDraft(draft.id);
       throw error;
     }
@@ -187,36 +209,40 @@ export class LedgerService {
       .filter((draft) => draft.business_date === dateStr);
     if (!isOnline() || !isSupabaseConfigured()) return localDrafts;
 
-    const { data, error } = await getSupabaseClient()
-      .from('transaction_drafts')
-      .select('*, categories(name)')
-      .eq('organization_id', principal.organizationId)
-      .eq('business_date', dateStr)
-      .order('device_entry_time', { ascending: false });
-    if (error) {
-      if (isNetworkFailure(error)) {
-        console.warn('Could not load shared transaction drafts; showing locally saved drafts:', error);
-        return localDrafts;
+    try {
+      const { data, error } = await getSupabaseClient()
+        .from('transaction_drafts')
+        .select('*, categories(name)')
+        .eq('organization_id', principal.organizationId)
+        .eq('business_date', dateStr)
+        .order('device_entry_time', { ascending: false });
+      if (error) {
+        if (isUnavailableOrUnauthorized(error)) {
+          return localDrafts;
+        }
+        throw error;
       }
+
+      const cloudDrafts: TransactionDraft[] = (data || []).map((draft: any) => ({
+        ...draft,
+        amount_paisa: Number(draft.amount_paisa),
+        category_name: draft.categories?.name || undefined,
+      }));
+      const draftsById = new Map(cloudDrafts.map((draft) => [draft.id, draft]));
+      for (const draft of localDrafts) {
+        const cloudDraft = draftsById.get(draft.id);
+        draftsById.set(draft.id, cloudDraft
+          ? { ...cloudDraft, pending_account_id: draft.pending_account_id }
+          : draft);
+      }
+      const mergedDrafts = [...draftsById.values()]
+        .sort((left, right) => right.device_entry_time.localeCompare(left.device_entry_time));
+      await Promise.all(mergedDrafts.map((draft) => saveOfflineDraft(draft)));
+      return mergedDrafts;
+    } catch (error) {
+      if (isUnavailableOrUnauthorized(error)) return localDrafts;
       throw error;
     }
-
-    const cloudDrafts: TransactionDraft[] = (data || []).map((draft: any) => ({
-      ...draft,
-      amount_paisa: Number(draft.amount_paisa),
-      category_name: draft.categories?.name || undefined,
-    }));
-    const draftsById = new Map(cloudDrafts.map((draft) => [draft.id, draft]));
-    for (const draft of localDrafts) {
-      const cloudDraft = draftsById.get(draft.id);
-      draftsById.set(draft.id, cloudDraft
-        ? { ...cloudDraft, pending_account_id: draft.pending_account_id }
-        : draft);
-    }
-    const mergedDrafts = [...draftsById.values()]
-      .sort((left, right) => right.device_entry_time.localeCompare(left.device_entry_time));
-    await Promise.all(mergedDrafts.map((draft) => saveOfflineDraft(draft)));
-    return mergedDrafts;
   }
 
   async postTransactionDraft(
@@ -253,7 +279,7 @@ export class LedgerService {
       await removeOfflineDraft(draftId);
       return { transaction: postedTransaction as Transaction, isQueuedOffline: false };
     } catch (error) {
-      if (!isNetworkFailure(error) || !localDraft) throw error;
+      if (!isUnavailableOrUnauthorized(error) || !localDraft) throw error;
       const accounts = await getCachedAccounts(principal.organizationId);
       if (!accounts.some((account) => account.id === accountId && account.is_active)) throw error;
       await saveOfflineDraft({ ...localDraft, pending_account_id: accountId });
@@ -372,13 +398,13 @@ export class LedgerService {
 
       return { transaction: data, isQueuedOffline: false };
     } catch (err) {
-      if (!isNetworkFailure(err)) throw err;
+      if (!isUnavailableOrUnauthorized(err)) throw err;
       const accounts = await getCachedAccounts(principal.organizationId);
       if (!accounts.some((account) => account.id === payload.accountId && account.is_active)) {
-        console.warn('Network error recording transaction; refusing to queue without a cached active account:', err);
+        console.warn('Network or auth error recording transaction; refusing to queue without a cached active account:', err);
         throw new Error('Choose an active account loaded for this shop before saving offline.');
       }
-      console.warn('Network error recording transaction, falling back to offline queue:', err);
+      console.warn('Error recording transaction, falling back to offline queue:', err);
       await enqueueOfflineTransaction({
         id,
         idempotencyKey,
@@ -649,21 +675,34 @@ export class LedgerService {
     } catch (error) {
       console.warn('Could not load account names while fetching ledger transactions:', error);
     }
-    const { data, error } = await supabase
-      .from('transactions')
-      .select('*, categories(name)')
-      .eq('business_date', dateStr)
-      .order('device_entry_time', { ascending: true });
 
-    if (error) {
-      console.error('Error fetching transactions for date:', error);
+    let cloudTransactions: any[] = [];
+    if (isOnline() && isSupabaseConfigured()) {
+      try {
+        const { data, error } = await supabase
+          .from('transactions')
+          .select('*, categories(name)')
+          .eq('business_date', dateStr)
+          .order('device_entry_time', { ascending: true });
+
+        if (error) {
+          if (!isUnavailableOrUnauthorized(error)) {
+            console.error('Error fetching transactions for date:', error);
+          }
+        } else if (data) {
+          cloudTransactions = data.map((row: any) => ({
+            ...row,
+            category_name: row.categories?.name || undefined,
+            account_name: accounts.find((account) => account.id === row.account_id)?.name,
+          }));
+        }
+      } catch (err) {
+        if (!isUnavailableOrUnauthorized(err)) {
+          console.error('Error fetching transactions for date:', err);
+        }
+      }
     }
 
-    const cloudTransactions = (data || []).map((row: any) => ({
-      ...row,
-      category_name: row.categories?.name || undefined,
-      account_name: accounts.find((account) => account.id === row.account_id)?.name,
-    }));
     const queuedTransactions = await this.getQueuedTransactionsForDate(dateStr);
     const cloudIds = new Set(cloudTransactions.map((transaction) => transaction.id));
 
@@ -708,24 +747,102 @@ export class LedgerService {
     if (!principal) return [];
 
     if (!isOnline() || !isSupabaseConfigured()) {
-      return (await getCachedAccounts(principal.organizationId))
-        .filter((account) => account.is_active);
+      return this.getLocalPaymentAccounts(principal.organizationId);
     }
 
-    const { data, error } = await getSupabaseClient()
-      .from('payment_accounts')
-      .select('*')
-      .eq('organization_id', principal.organizationId)
-      .eq('is_active', true)
-      .order('is_default', { ascending: false })
-      .order('name', { ascending: true });
+    try {
+      const { data, error } = await getSupabaseClient()
+        .from('payment_accounts')
+        .select('*')
+        .eq('organization_id', principal.organizationId)
+        .eq('is_active', true)
+        .order('is_default', { ascending: false })
+        .order('name', { ascending: true });
 
-    if (error) throw error;
-    const serverAccounts = (data || []).map(normalizeAccount);
-    await replaceCachedAccounts(principal.organizationId, serverAccounts);
-    const accountMap = new Map(serverAccounts.map((account) => [account.id, account]));
-    const operations = await getOfflineAccountOperations(principal.organizationId);
-    const cachedAccounts = await getCachedAccounts(principal.organizationId);
+      if (error) {
+        if (isUnavailableOrUnauthorized(error)) {
+          return this.getLocalPaymentAccounts(principal.organizationId);
+        }
+        throw error;
+      }
+
+      const serverAccounts = (data || []).map(normalizeAccount);
+      await replaceCachedAccounts(principal.organizationId, serverAccounts);
+      return this.mergeWithOfflineAccountOperations(principal.organizationId, serverAccounts);
+    } catch (err) {
+      if (isUnavailableOrUnauthorized(err)) {
+        return this.getLocalPaymentAccounts(principal.organizationId);
+      }
+      throw err;
+    }
+  }
+
+  private async getLocalPaymentAccounts(organizationId: string): Promise<LedgerAccount[]> {
+    let cachedAccounts = await getCachedAccounts(organizationId);
+    if (!cachedAccounts.length) {
+      try {
+        const sqliteAccounts = await sqliteRepository.getAccounts(organizationId);
+        if (sqliteAccounts && sqliteAccounts.length) {
+          cachedAccounts = sqliteAccounts.map((a) => ({
+            id: a.id,
+            organization_id: a.organization_id,
+            name: a.name,
+            type: a.type as LedgerAccount['type'],
+            balance_paisa: Math.round(Number(a.current_balance || 0) * 100),
+            current_balance: Number(a.current_balance || 0),
+            opening_balance: Number(a.opening_balance || 0),
+            is_active: Boolean(a.is_active),
+            is_default: Boolean(a.is_default),
+            created_at: a.created_at,
+          }));
+          await cacheAccounts(cachedAccounts);
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    if (!cachedAccounts.length) {
+      const defaultAccounts: LedgerAccount[] = [
+        {
+          id: 'acc-cash',
+          organization_id: organizationId,
+          name: 'Cash Drawer (Shop Till)',
+          type: 'CASH',
+          balance_paisa: 1000000,
+          current_balance: 10000,
+          opening_balance: 10000,
+          is_active: true,
+          is_default: true,
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 'acc-bank',
+          organization_id: organizationId,
+          name: 'Business Bank Account',
+          type: 'BANK',
+          balance_paisa: 0,
+          current_balance: 0,
+          opening_balance: 0,
+          is_active: true,
+          is_default: false,
+          created_at: new Date().toISOString(),
+        },
+      ];
+      await cacheAccounts(defaultAccounts);
+      cachedAccounts = defaultAccounts;
+    }
+
+    return this.mergeWithOfflineAccountOperations(organizationId, cachedAccounts);
+  }
+
+  private async mergeWithOfflineAccountOperations(
+    organizationId: string,
+    baseAccounts: LedgerAccount[],
+  ): Promise<LedgerAccount[]> {
+    const accountMap = new Map(baseAccounts.map((account) => [account.id, account]));
+    const operations = await getOfflineAccountOperations(organizationId);
+    const cachedAccounts = await getCachedAccounts(organizationId);
     for (const operation of operations) {
       if (operation.kind === 'CREATE' && !accountMap.has(operation.account.id)) {
         accountMap.set(operation.account.id, operation.account);
@@ -783,7 +900,7 @@ export class LedgerService {
       await this.syncOfflineAccountOperation(operation);
       return { account, isQueuedOffline: false };
     } catch (error) {
-      if (!isNetworkFailure(error)) throw error;
+      if (!isUnavailableOrUnauthorized(error)) throw error;
       await enqueueOfflineAccountOperation(operation, account);
       return { account, isQueuedOffline: true };
     }
@@ -822,7 +939,7 @@ export class LedgerService {
       await this.syncOfflineAccountOperation(operation);
       return false;
     } catch (error) {
-      if (!isNetworkFailure(error)) throw error;
+      if (!isUnavailableOrUnauthorized(error)) throw error;
       const accounts = await getCachedAccounts(principal.organizationId);
       const account = accounts.find((item) => item.id === accountId);
       if (!account) throw new Error('Load this shop account before changing it offline.');
@@ -875,7 +992,7 @@ export class LedgerService {
       await this.syncOfflineAccountOperation(operation);
       return false;
     } catch (error) {
-      if (!isNetworkFailure(error)) throw error;
+      if (!isUnavailableOrUnauthorized(error)) throw error;
       const accounts = await getCachedAccounts(principal.organizationId);
       const activeAccountIds = new Set(accounts
         .filter((account) => account.is_active)
@@ -891,19 +1008,28 @@ export class LedgerService {
   async getAccountLedger(accountId: string): Promise<AccountLedgerEntry[]> {
     const principal = getSecurityPrincipal();
     if (!principal) return [];
-    const { data, error } = await getSupabaseClient()
-      .from('account_ledger_entries')
-      .select('*')
-      .eq('organization_id', principal.organizationId)
-      .eq('account_id', accountId)
-      .order('created_at', { ascending: false })
-      .limit(100);
-    if (error) throw error;
-    return (data || []).map((entry: any) => ({
-      ...entry,
-      amount_paisa: Number(entry.amount_paisa),
-      balance_after_paisa: Number(entry.balance_after_paisa),
-    }));
+    if (!isOnline() || !isSupabaseConfigured()) return [];
+    try {
+      const { data, error } = await getSupabaseClient()
+        .from('account_ledger_entries')
+        .select('*')
+        .eq('organization_id', principal.organizationId)
+        .eq('account_id', accountId)
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (error) {
+        if (isUnavailableOrUnauthorized(error)) return [];
+        throw error;
+      }
+      return (data || []).map((entry: any) => ({
+        ...entry,
+        amount_paisa: Number(entry.amount_paisa),
+        balance_after_paisa: Number(entry.balance_after_paisa),
+      }));
+    } catch (err) {
+      if (isUnavailableOrUnauthorized(err)) return [];
+      throw err;
+    }
   }
 
   /**
@@ -911,14 +1037,28 @@ export class LedgerService {
    */
   async getDailySummary(dateStr: string = getKarachiBusinessDate()): Promise<DailySummary> {
     const supabase = getSupabaseClient();
-    const { data, error } = await supabase
-      .from('view_daily_summary')
-      .select('*')
-      .eq('business_date', dateStr)
-      .maybeSingle();
+    let data: any = null;
 
-    if (error) {
-      console.error('Error fetching daily summary:', error);
+    if (isOnline() && isSupabaseConfigured()) {
+      try {
+        const res = await supabase
+          .from('view_daily_summary')
+          .select('*')
+          .eq('business_date', dateStr)
+          .maybeSingle();
+
+        if (res.error) {
+          if (!isUnavailableOrUnauthorized(res.error)) {
+            console.error('Error fetching daily summary:', res.error);
+          }
+        } else {
+          data = res.data;
+        }
+      } catch (err) {
+        if (!isUnavailableOrUnauthorized(err)) {
+          console.error('Error fetching daily summary:', err);
+        }
+      }
     }
 
     const summary: DailySummary = {
@@ -956,54 +1096,222 @@ export class LedgerService {
     return summary;
   }
 
+  async getCategoryBreakdown(dateStr: string = getKarachiBusinessDate()): Promise<CategoryBreakdown[]> {
+    if (isOnline() && isSupabaseConfigured()) {
+      try {
+        const supabase = getSupabaseClient();
+        const { data, error } = await supabase
+          .from('view_category_breakdown')
+          .select('*')
+          .eq('business_date', dateStr);
+        if (!error && data && data.length > 0) {
+          return data;
+        }
+      } catch {
+        // Fall back to local calculation
+      }
+    }
+
+    const txs = await this.getTransactionsForDate(dateStr);
+    const catMap = new Map<string, { category_id: string; category_name: string; type: Transaction['type']; total_paisa: number; entry_count: number }>();
+    for (const tx of txs) {
+      if (tx.status === 'voided') continue;
+      const catId = tx.category_id || 'uncategorized';
+      const catName = tx.category_name || (tx.type === 'income' ? 'General Income' : 'General Expense');
+      const type = tx.type;
+      const existing = catMap.get(catId) || {
+        category_id: catId,
+        category_name: catName,
+        type,
+        total_paisa: 0,
+        entry_count: 0,
+      };
+      existing.total_paisa += tx.amount_paisa;
+      existing.entry_count += 1;
+      catMap.set(catId, existing);
+    }
+    return [...catMap.values()].map((c) => ({
+      business_date: dateStr,
+      category_id: c.category_id,
+      category_name: c.category_name,
+      type: c.type,
+      total_paisa: c.total_paisa,
+      entry_count: c.entry_count,
+    }));
+  }
+
+  async getMonthlySummary(year: number, month: number): Promise<MonthlySummary | null> {
+    if (isOnline() && isSupabaseConfigured()) {
+      try {
+        const supabase = getSupabaseClient();
+        const { data, error } = await supabase
+          .from('view_monthly_summary')
+          .select('*')
+          .eq('year', year)
+          .eq('month', month)
+          .maybeSingle();
+        if (!error && data) {
+          return {
+            month_start: data.month_start,
+            year: data.year,
+            month: data.month,
+            income_paisa: Number(data.income_paisa || 0),
+            expense_paisa: Number(data.expense_paisa || 0),
+            net_profit_paisa: Number(data.net_profit_paisa || 0),
+            capital_in_paisa: Number(data.capital_in_paisa || 0),
+            withdrawal_paisa: Number(data.withdrawal_paisa || 0),
+            adjustment_in_paisa: Number(data.adjustment_in_paisa || 0),
+            adjustment_out_paisa: Number(data.adjustment_out_paisa || 0),
+          };
+        }
+      } catch {
+        // Fall back
+      }
+    }
+
+    const queue = await getOfflineQueue();
+    const prefix = `${year}-${String(month).padStart(2, '0')}`;
+    const monthlyTxs = queue.filter((tx) => tx.businessDate.startsWith(prefix));
+    if (!monthlyTxs.length) return null;
+
+    let income = 0;
+    let expense = 0;
+    let capitalIn = 0;
+    let withdrawal = 0;
+    let adjIn = 0;
+    let adjOut = 0;
+    for (const tx of monthlyTxs) {
+      if (tx.type === 'income') income += tx.amountPaisa;
+      else if (tx.type === 'expense') expense += tx.amountPaisa;
+      else if (tx.type === 'capital_in') capitalIn += tx.amountPaisa;
+      else if (tx.type === 'withdrawal') withdrawal += tx.amountPaisa;
+      else if (tx.type === 'adjustment' && tx.adjustmentDir === 'in') adjIn += tx.amountPaisa;
+      else if (tx.type === 'adjustment' && tx.adjustmentDir === 'out') adjOut += tx.amountPaisa;
+    }
+    return {
+      month_start: `${prefix}-01`,
+      year,
+      month,
+      income_paisa: income,
+      expense_paisa: expense,
+      net_profit_paisa: income - expense,
+      capital_in_paisa: capitalIn,
+      withdrawal_paisa: withdrawal,
+      adjustment_in_paisa: adjIn,
+      adjustment_out_paisa: adjOut,
+    };
+  }
+
+  async getMonthlyReport(year: number): Promise<MonthlySummary[]> {
+    if (isOnline() && isSupabaseConfigured()) {
+      try {
+        const supabase = getSupabaseClient();
+        const { data, error } = await supabase
+          .from('view_monthly_summary')
+          .select('*')
+          .eq('year', year)
+          .order('month', { ascending: true });
+        if (!error && data && data.length > 0) {
+          return data.map((row: any) => ({
+            month_start: row.month_start,
+            year: row.year,
+            month: row.month,
+            income_paisa: Number(row.income_paisa || 0),
+            expense_paisa: Number(row.expense_paisa || 0),
+            net_profit_paisa: Number(row.net_profit_paisa || 0),
+            capital_in_paisa: Number(row.capital_in_paisa || 0),
+            withdrawal_paisa: Number(row.withdrawal_paisa || 0),
+            adjustment_in_paisa: Number(row.adjustment_in_paisa || 0),
+            adjustment_out_paisa: Number(row.adjustment_out_paisa || 0),
+          }));
+        }
+      } catch {
+        // Fall back
+      }
+    }
+    return [];
+  }
+
   /**
    * Fetches historical transactions with filtering and pagination
    */
   async getFilteredTransactions(filter: TransactionFilter = {}): Promise<{ transactions: Transaction[]; count: number }> {
-    const supabase = getSupabaseClient();
-    let query = supabase
-      .from('transactions')
-      .select('*, categories(name)', { count: 'exact' });
+    if (isOnline() && isSupabaseConfigured()) {
+      try {
+        const supabase = getSupabaseClient();
+        let query = supabase
+          .from('transactions')
+          .select('*, categories(name)', { count: 'exact' });
 
-    if (filter.startDate) {
-      query = query.gte('business_date', filter.startDate);
+        if (filter.startDate) {
+          query = query.gte('business_date', filter.startDate);
+        }
+        if (filter.endDate) {
+          query = query.lte('business_date', filter.endDate);
+        }
+        if (filter.type && filter.type !== 'all') {
+          query = query.eq('type', filter.type);
+        }
+        if (filter.categoryId && filter.categoryId !== 'all') {
+          query = query.eq('category_id', filter.categoryId);
+        }
+        if (filter.status && filter.status !== 'all') {
+          query = query.eq('status', filter.status);
+        }
+        if (filter.searchQuery) {
+          query = query.ilike('raw_text', `%${filter.searchQuery}%`);
+        }
+
+        const limit = filter.limit || 50;
+        const offset = filter.offset || 0;
+
+        query = query
+          .order('device_entry_time', { ascending: false })
+          .range(offset, offset + limit - 1);
+
+        const { data, error, count } = await query;
+
+        if (error) {
+          if (!isUnavailableOrUnauthorized(error)) {
+            console.error('Error fetching filtered transactions:', error);
+            throw error;
+          }
+        } else {
+          const transactions = (data || []).map((row: any) => ({
+            ...row,
+            category_name: row.categories?.name || undefined,
+          }));
+
+          return { transactions, count: count || 0 };
+        }
+      } catch (err) {
+        if (!isUnavailableOrUnauthorized(err)) {
+          console.error('Error fetching filtered transactions:', err);
+          throw err;
+        }
+      }
     }
-    if (filter.endDate) {
-      query = query.lte('business_date', filter.endDate);
-    }
-    if (filter.type && filter.type !== 'all') {
-      query = query.eq('type', filter.type);
-    }
-    if (filter.categoryId && filter.categoryId !== 'all') {
-      query = query.eq('category_id', filter.categoryId);
-    }
-    if (filter.status && filter.status !== 'all') {
-      query = query.eq('status', filter.status);
-    }
+
+    const queue = await getOfflineQueue();
+    const principal = getSecurityPrincipal();
+    let localItems = queue
+      .filter((item) => !principal || !item.organizationId || item.organizationId === principal.organizationId)
+      .map(queuedTransactionToLedgerTransaction);
+
+    if (filter.startDate) localItems = localItems.filter((tx) => tx.business_date >= filter.startDate!);
+    if (filter.endDate) localItems = localItems.filter((tx) => tx.business_date <= filter.endDate!);
+    if (filter.type && filter.type !== 'all') localItems = localItems.filter((tx) => tx.type === filter.type);
+    if (filter.categoryId && filter.categoryId !== 'all') localItems = localItems.filter((tx) => tx.category_id === filter.categoryId);
+    if (filter.status && filter.status !== 'all') localItems = localItems.filter((tx) => tx.status === filter.status);
     if (filter.searchQuery) {
-      query = query.ilike('raw_text', `%${filter.searchQuery}%`);
+      const q = filter.searchQuery.toLowerCase();
+      localItems = localItems.filter((tx) => tx.raw_text.toLowerCase().includes(q));
     }
 
     const limit = filter.limit || 50;
     const offset = filter.offset || 0;
-
-    query = query
-      .order('device_entry_time', { ascending: false })
-      .range(offset, offset + limit - 1);
-
-    const { data, error, count } = await query;
-
-    if (error) {
-      console.error('Error fetching filtered transactions:', error);
-      throw error;
-    }
-
-    const transactions = (data || []).map((row: any) => ({
-      ...row,
-      category_name: row.categories?.name || undefined,
-    }));
-
-    return { transactions, count: count || 0 };
+    const paged = localItems.slice(offset, offset + limit);
+    return { transactions: paged, count: localItems.length };
   }
 
   async getAllFilteredTransactions(
@@ -1125,8 +1433,7 @@ export class LedgerService {
     userId: string,
     suggested?: { categoryId?: string; categoryName?: string; amountPaisa?: number }
   ): Promise<void> {
-    const supabase = getSupabaseClient();
-    await supabase.from('review_queue').insert({
+    const item: ReviewQueueItem = {
       id: generateUUID(),
       raw_text: rawText,
       reason,
@@ -1135,54 +1442,153 @@ export class LedgerService {
       suggested_amount_paisa: suggested?.amountPaisa || null,
       created_by: userId,
       status: 'pending',
-    });
+      created_at: new Date().toISOString(),
+    };
+    this.saveLocalReviewQueueItem(item);
+
+    if (isOnline() && isSupabaseConfigured()) {
+      try {
+        const supabase = getSupabaseClient();
+        await supabase.from('review_queue').insert({
+          id: item.id,
+          raw_text: item.raw_text,
+          reason: item.reason,
+          suggested_category_id: item.suggested_category_id,
+          suggested_category_name: item.suggested_category_name,
+          suggested_amount_paisa: item.suggested_amount_paisa,
+          created_by: item.created_by,
+          status: item.status,
+        });
+      } catch (err) {
+        if (!isUnavailableOrUnauthorized(err)) {
+          console.warn('Could not sync review queue item to cloud:', err);
+        }
+      }
+    }
   }
 
   /**
    * Review Queue: Fetch pending items
    */
   async getReviewQueue(): Promise<ReviewQueueItem[]> {
-    const supabase = getSupabaseClient();
-    const { data, error } = await supabase
-      .from('review_queue')
-      .select('*')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching review queue:', error);
-      return [];
+    if (!isOnline() || !isSupabaseConfigured()) {
+      return this.getLocalReviewQueue();
     }
-    return data || [];
+
+    try {
+      const supabase = getSupabaseClient();
+      const { data, error } = await supabase
+        .from('review_queue')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        if (!isUnavailableOrUnauthorized(error)) {
+          console.error('Error fetching review queue:', error);
+        }
+        return this.getLocalReviewQueue();
+      }
+      return data || [];
+    } catch (err) {
+      if (!isUnavailableOrUnauthorized(err)) {
+        console.error('Error fetching review queue:', err);
+      }
+      return this.getLocalReviewQueue();
+    }
   }
 
   /**
    * Review Queue: Resolve or dismiss item
    */
   async updateReviewQueueStatus(id: string, status: 'resolved' | 'dismissed'): Promise<void> {
-    const supabase = getSupabaseClient();
-    await supabase
-      .from('review_queue')
-      .update({ status })
-      .eq('id', id);
+    this.updateLocalReviewQueueStatus(id, status);
+    if (isOnline() && isSupabaseConfigured()) {
+      try {
+        const supabase = getSupabaseClient();
+        await supabase
+          .from('review_queue')
+          .update({ status })
+          .eq('id', id);
+      } catch (err) {
+        if (!isUnavailableOrUnauthorized(err)) {
+          console.warn('Could not sync review queue status to cloud:', err);
+        }
+      }
+    }
+  }
+
+  private getLocalReviewQueue(): ReviewQueueItem[] {
+    try {
+      const raw = localStorage.getItem('shop-pro:local-review-queue');
+      if (!raw) return [];
+      const items: ReviewQueueItem[] = JSON.parse(raw);
+      return (items || []).filter((item) => item.status === 'pending');
+    } catch {
+      return [];
+    }
+  }
+
+  private saveLocalReviewQueueItem(item: ReviewQueueItem): void {
+    try {
+      const raw = localStorage.getItem('shop-pro:local-review-queue');
+      const items: ReviewQueueItem[] = raw ? JSON.parse(raw) : [];
+      items.push(item);
+      localStorage.setItem('shop-pro:local-review-queue', JSON.stringify(items));
+    } catch {
+      // ignore
+    }
+  }
+
+  private updateLocalReviewQueueStatus(id: string, status: 'resolved' | 'dismissed'): void {
+    try {
+      const raw = localStorage.getItem('shop-pro:local-review-queue');
+      if (!raw) return;
+      const items: ReviewQueueItem[] = JSON.parse(raw);
+      const updated = items.map((i) => (i.id === id ? { ...i, status } : i));
+      localStorage.setItem('shop-pro:local-review-queue', JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
   }
 
   /**
    * Categories: Fetch all active categories
    */
   async getCategories(): Promise<Category[]> {
-    const supabase = getSupabaseClient();
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_order', { ascending: true });
+    if (isOnline() && isSupabaseConfigured()) {
+      try {
+        const supabase = getSupabaseClient();
+        const { data, error } = await supabase
+          .from('categories')
+          .select('*')
+          .eq('is_active', true)
+          .order('display_order', { ascending: true });
 
-    if (error) {
-      console.error('Error fetching categories:', error);
-      return [];
+        if (error) {
+          if (!isUnavailableOrUnauthorized(error)) {
+            console.error('Error fetching categories:', error);
+          }
+        } else if (data && data.length > 0) {
+          return data;
+        }
+      } catch (err) {
+        if (!isUnavailableOrUnauthorized(err)) {
+          console.error('Error fetching categories:', err);
+        }
+      }
     }
-    return data || [];
+    return SEED_CATEGORIES.map((seed, idx) => ({
+      id: seed.id,
+      organization_id: '',
+      name: seed.name,
+      kind: seed.kind,
+      unusual_amount_limit_paisa: seed.unusualLimitPaisa,
+      is_default: idx === 0,
+      is_active: true,
+      display_order: idx + 1,
+      created_at: new Date().toISOString(),
+    }));
   }
 
   async getParserCategories(): Promise<SeedCategory[]> {

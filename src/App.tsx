@@ -113,7 +113,7 @@ const MainShell: React.FC = () => {
 };
 
 const WorkspaceGate: React.FC = () => {
-  const { isLoading, isLocked, user, hasLocalAccount } = useAuth();
+  const { isLoading, isLocked, user, hasLocalAccount, isPasswordRecovery } = useAuth();
 
   if (isLoading) {
     return (
@@ -121,6 +121,11 @@ const WorkspaceGate: React.FC = () => {
         Loading workspace...
       </div>
     );
+  }
+
+  // If password recovery is active, show password reset form
+  if (isPasswordRecovery) {
+    return <AuthScreen />;
   }
 
   // If no user profile or local shop account is configured, show single unified AuthScreen

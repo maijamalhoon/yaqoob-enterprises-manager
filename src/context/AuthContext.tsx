@@ -108,6 +108,7 @@ interface AuthContextType {
   hasLocalAccount: boolean;
   hasPasswordAccount: boolean;
   hasPinSetup: boolean;
+  isPasswordRecovery: boolean;
   unlock: (pin: string) => Promise<boolean>;
   lock: () => void;
   setupPin: (newPin: string) => Promise<{ success: boolean; error?: string }>;
@@ -140,9 +141,11 @@ interface AuthContextType {
     pass: string,
     fullName: string,
     orgName: string,
-  ) => Promise<{ error?: string }>;
-  signInWithGoogle: () => Promise<{ error?: string }>;
-  sendPasswordReset: (email: string) => Promise<{ error?: string }>;
+  ) => Promise<{ error?: string; emailConfirmationRequired?: boolean }>;
+  signInWithGoogle: () => Promise<{ error?: string; authUrl?: string }>;
+  sendPasswordReset: (email: string) => Promise<{ error?: string; message?: string }>;
+  completePasswordReset: (newPassword: string) => Promise<{ error?: string }>;
+  cancelPasswordReset: () => void;
   signOut: () => Promise<void>;
   updateOrganization: (org: Partial<Organization>) => void;
   completeOnboarding: (orgData: Partial<Organization>) => void;
@@ -170,25 +173,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     );
   const [error, setError] = useState<string | null>(null);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
   const isSupabaseReady = isSupabaseConfigured();
 
   useEffect(() => {
     let cancelled = false;
+
+    // Check if URL contains password recovery hash or parameter
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash || "";
+      const search = window.location.search || "";
+      if (
+        hash.includes("type=recovery") ||
+        search.includes("type=recovery") ||
+        hash.includes("type=invite")
+      ) {
+        setIsPasswordRecovery(true);
+      }
+    }
+
     async function initialize() {
       setIsLoading(true);
       setSecurityPrincipal(null);
       try {
         await sqliteRepository.migrateLegacyLocalStorage();
+
+        const isExplicitlySignedOut =
+          typeof window !== "undefined" &&
+          localStorage.getItem("yaqoob_signed_out") === "true";
+
         const activeProfileId =
           typeof window !== "undefined" ?
             localStorage.getItem(ACTIVE_PROFILE_KEY) || undefined
           : undefined;
+
+        // If user explicitly signed out and didn't select an active profile, don't auto-login first account
         const account =
-          await sqliteRepository.getLocalAuthAccount(activeProfileId);
+          isExplicitlySignedOut && !activeProfileId ?
+            null
+          : await sqliteRepository.getLocalAuthAccount(activeProfileId);
+
         if (cancelled) return;
         setLocalAccount(account);
         setHasLocalAccount(Boolean(account));
         setHasPinSetup(Boolean(account?.pin_hash));
+
         if (account) {
           const [localOrg, profile] = await Promise.all([
             sqliteRepository.getOrganization(account.organization_id),
@@ -206,11 +235,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             }
           }
         }
+
         if (account && (typeof navigator === "undefined" || navigator.onLine))
           syncEngine.syncNow().catch(() => {});
+
         if (isSupabaseConfigured()) {
           const sessionResult = await getSupabaseClient().auth.getSession();
           if (!cancelled && sessionResult.data.session?.user.id) {
+            if (typeof window !== "undefined") {
+              localStorage.removeItem("yaqoob_signed_out");
+            }
             await activateSupabaseSession(sessionResult.data.session.user.id);
           }
         }
@@ -226,11 +260,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     if (isSupabaseConfigured()) {
       const { data } = getSupabaseClient().auth.onAuthStateChange(
         async (event, session) => {
+          if (event === "PASSWORD_RECOVERY") {
+            setIsPasswordRecovery(true);
+            return;
+          }
           if (
             !cancelled &&
             session?.user?.id &&
             (event === "SIGNED_IN" || event === "USER_UPDATED")
           ) {
+            if (typeof window !== "undefined") {
+              localStorage.removeItem("yaqoob_signed_out");
+            }
             await activateSupabaseSession(session.user.id);
           }
         },
@@ -238,9 +279,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       authSubscription = data.subscription;
     }
 
+    // Cross-window communication listener for Google OAuth popup
+    const handleAuthMessage = async (event: MessageEvent) => {
+      if (event.data?.type === "OAUTH_AUTH_SUCCESS") {
+        if (isSupabaseConfigured()) {
+          const sessionResult = await getSupabaseClient().auth.getSession();
+          if (!cancelled && sessionResult.data.session?.user.id) {
+            if (typeof window !== "undefined") {
+              localStorage.removeItem("yaqoob_signed_out");
+            }
+            await activateSupabaseSession(sessionResult.data.session.user.id);
+          }
+        }
+      }
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("message", handleAuthMessage);
+    }
+
     return () => {
       cancelled = true;
       authSubscription?.unsubscribe();
+      if (typeof window !== "undefined") {
+        window.removeEventListener("message", handleAuthMessage);
+      }
     };
   }, [isSupabaseReady]);
 
@@ -250,19 +312,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setRole(profile.role);
     setSecurityPrincipal(profile);
     setIsLocked(false);
-    if (typeof window !== "undefined")
+    if (typeof window !== "undefined") {
       localStorage.setItem(ACTIVE_PROFILE_KEY, profile.id);
+      localStorage.removeItem("yaqoob_signed_out");
+    }
   };
 
   const activateSupabaseSession = async (
     profileId: string,
   ): Promise<boolean> => {
     const client = getSupabaseClient();
-    let { data: profileData } = await client
-      .from("profiles")
-      .select("*")
-      .eq("id", profileId)
-      .maybeSingle();
+    let profileData: any = null;
+
+    try {
+      const response = await client
+        .from("profiles")
+        .select("*")
+        .eq("id", profileId)
+        .maybeSingle();
+      profileData = response.data;
+    } catch (err) {
+      console.warn("Could not query profiles table:", err);
+    }
 
     if (!profileData?.organization_id) {
       try {
@@ -274,70 +345,121 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           .maybeSingle();
         profileData = refreshed.data;
       } catch (e) {
-        console.warn("Could not auto-provision Supabase profile:", e);
+        console.warn("Auto-provision Supabase profile RPC note:", e);
       }
     }
 
-    if (!profileData?.organization_id) return false;
-
     // Pull metadata (Google name + avatar) from auth.users if available
+    let authUser: any = null;
     try {
       const { data: authUserData } = await client.auth.getUser();
-      const meta = authUserData?.user?.user_metadata || {};
+      authUser = authUserData?.user;
+      const meta = authUser?.user_metadata || {};
       const googleAvatar = meta.avatar_url || meta.picture;
       const googleName = meta.full_name || meta.name;
       let needUpdate = false;
       const updates: any = {};
-      if (googleAvatar && !profileData.avatar_url) {
-        updates.avatar_url = googleAvatar;
-        profileData.avatar_url = googleAvatar;
-        needUpdate = true;
-      }
-      if (
-        googleName &&
-        (!profileData.full_name || profileData.full_name === profileData.email)
-      ) {
-        updates.full_name = googleName;
-        profileData.full_name = googleName;
-        needUpdate = true;
-      }
-      if (needUpdate) {
-        await client.from("profiles").update(updates).eq("id", profileId);
-        await sqliteRepository.updateProfile({ id: profileId, ...updates });
+      if (profileData) {
+        if (googleAvatar && !profileData.avatar_url) {
+          updates.avatar_url = googleAvatar;
+          profileData.avatar_url = googleAvatar;
+          needUpdate = true;
+        }
+        if (
+          googleName &&
+          (!profileData.full_name || profileData.full_name === profileData.email)
+        ) {
+          updates.full_name = googleName;
+          profileData.full_name = googleName;
+          needUpdate = true;
+        }
+        if (needUpdate) {
+          await client.from("profiles").update(updates).eq("id", profileId);
+          await sqliteRepository.updateProfile({ id: profileId, ...updates });
+        }
       }
     } catch (metaErr) {
       console.warn("Could not sync user metadata:", metaErr);
     }
 
-    const { data: organizationData } = await client
-      .from("organizations")
-      .select("*")
-      .eq("id", profileData.organization_id)
-      .maybeSingle();
-    if (!organizationData) return false;
+    let organizationData: Organization | null = null;
+    if (profileData?.organization_id) {
+      try {
+        const { data: orgData } = await client
+          .from("organizations")
+          .select("*")
+          .eq("id", profileData.organization_id)
+          .maybeSingle();
+        organizationData = orgData as Organization;
+      } catch (orgErr) {
+        console.warn("Could not query organization:", orgErr);
+      }
+    }
 
-    // Cache to local SQLite so offline queries and POS operations always work
+    // Fallback: If organization was not fetched directly via Supabase query, construct safe defaults
+    if (!organizationData) {
+      const meta = authUser?.user_metadata || {};
+      const shopName =
+        meta.shop_name ||
+        meta.organization_name ||
+        (profileData?.full_name ? `${profileData.full_name}'s Shop` : "Shop Pro");
+      const ownerName =
+        profileData?.full_name ||
+        meta.full_name ||
+        meta.name ||
+        authUser?.email?.split("@")[0] ||
+        "Owner";
+
+      organizationData = {
+        ...EMPTY_ORGANIZATION,
+        id: profileData?.organization_id || crypto.randomUUID(),
+        name: shopName,
+        owner_name: ownerName,
+        email: profileData?.email || authUser?.email,
+        created_at: new Date().toISOString(),
+      };
+    }
+
+    if (!profileData) {
+      profileData = {
+        id: profileId,
+        email: authUser?.email || "",
+        full_name: organizationData.owner_name,
+        role: "OWNER",
+        organization_id: organizationData.id,
+        is_active: true,
+        created_at: new Date().toISOString(),
+      };
+    }
+
+    // Cache to local SQLite so offline queries, transactions, and POS checkout always work
     try {
-      const existingOrg = await sqliteRepository.getOrganization(
-        organizationData.id,
-      );
+      const existingOrg = await sqliteRepository.getOrganization(organizationData.id);
       if (!existingOrg) {
         await sqliteRepository.createLocalOwnerAccount(
-          organizationData as Organization,
+          organizationData,
           profileData as UserProfile,
         );
       }
       StorageEngine.ensureOrganizationDefaults(organizationData.id);
+
+      const localAcc = await sqliteRepository.getLocalAuthAccount(profileData.id);
+      await sqliteRepository.upsertLocalAuthAccount(
+        organizationData.id,
+        profileData.id,
+        localAcc?.pin_hash || "",
+        localAcc?.pin_salt || "",
+      );
+
+      const refreshedAcc = await sqliteRepository.getLocalAuthAccount(profileData.id);
+      setLocalAccount(refreshedAcc);
+      setHasLocalAccount(Boolean(refreshedAcc));
+      setHasPinSetup(Boolean(refreshedAcc?.pin_hash));
     } catch (e) {
       console.warn("Could not sync local organization cache:", e);
     }
 
-    const localAcc = await sqliteRepository.getLocalAuthAccount(profileData.id);
-    setLocalAccount(localAcc);
-    setHasLocalAccount(Boolean(localAcc));
-    setHasPinSetup(Boolean(localAcc?.pin_hash));
-
-    activate(profileData as UserProfile, organizationData as Organization);
+    activate(profileData as UserProfile, organizationData);
     setHasPasswordAccount(true);
     return true;
   };
@@ -648,26 +770,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setOnboardingCompleted(true);
   };
 
-  const signIn = async (email: string, pass: string) => {
+  const signIn = async (
+    email: string,
+    pass: string,
+  ): Promise<{ error?: string }> => {
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail || !pass)
-      return { error: "Enter your email and password." };
+      return { error: "Please enter your email and password." };
+
     if (isSupabaseReady) {
       try {
         const response = await getSupabaseClient().auth.signInWithPassword({
           email: normalizedEmail,
           password: pass,
         });
-        if (!response.error && response.data.user) {
+
+        if (response.error) {
+          const msg = response.error.message.toLowerCase();
+          if (
+            msg.includes("failed to fetch") ||
+            msg.includes("network") ||
+            msg.includes("timeout")
+          ) {
+            console.warn("Supabase unreachable during signIn, trying offline account...");
+          } else if (
+            msg.includes("invalid login credentials") ||
+            msg.includes("invalid grant")
+          ) {
+            return {
+              error: "Invalid email or password. Please verify your credentials.",
+            };
+          } else if (msg.includes("email not confirmed")) {
+            return {
+              error:
+                "Your email has not been confirmed yet. Please check your inbox for the confirmation email.",
+            };
+          } else if (
+            msg.includes("too many requests") ||
+            msg.includes("rate limit")
+          ) {
+            return {
+              error:
+                "Too many sign-in attempts. Please wait a moment before trying again.",
+            };
+          } else {
+            return { error: response.error.message };
+          }
+        } else if (response.data.user) {
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("yaqoob_signed_out");
+          }
           const activated = await activateSupabaseSession(
             response.data.user.id,
           );
           if (activated) return {};
+          return {
+            error:
+              "Authentication succeeded, but failed to load workspace. Please refresh.",
+          };
         }
-      } catch (networkErr) {
+      } catch (networkErr: any) {
         console.warn("Supabase network error during signIn:", networkErr);
       }
     }
+
     // Offline / Local SQLite account fallback
     const profile =
       await sqliteRepository.findLocalProfileByEmail(normalizedEmail);
@@ -680,12 +846,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       !(await verifyPassword(pass, profile.password_hash))
     ) {
       return {
-        error: "Incorrect email or password. Please try again.",
+        error: "Invalid email or password. Please try again.",
       };
     }
     const org = await sqliteRepository.getOrganization(profile.organization_id);
     if (!org || !profile.is_active)
       return { error: "This account is no longer active." };
+
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("yaqoob_signed_out");
+    }
     setLocalAccount(account);
     setHasLocalAccount(true);
     setHasPasswordAccount(true);
@@ -699,12 +869,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     pass: string,
     fullName: string,
     orgName: string,
-  ) => {
+  ): Promise<{ error?: string; emailConfirmationRequired?: boolean }> => {
     const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail || !pass || !fullName.trim() || !orgName.trim())
-      return { error: "Complete all required fields." };
+    const cleanName = fullName.trim();
+    const cleanOrg = orgName.trim();
+
+    if (!normalizedEmail || !pass || !cleanName || !cleanOrg)
+      return { error: "Please complete all required fields." };
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return { error: "Please enter a valid email address." };
+    }
     if (pass.length < 8)
-      return { error: "Password must be at least 8 characters." };
+      return { error: "Password must be at least 8 characters long." };
 
     if (isSupabaseReady) {
       try {
@@ -713,77 +889,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           password: pass,
           options: {
             data: {
-              full_name: fullName.trim(),
-              shop_name: orgName.trim(),
-              organization_name: orgName.trim(),
+              full_name: cleanName,
+              shop_name: cleanOrg,
+              organization_name: cleanOrg,
             },
           },
         });
+
         if (response.error) {
+          const msg = response.error.message.toLowerCase();
+          if (msg.includes("already") || msg.includes("exists")) {
+            return {
+              error: "An account with this email already exists. Please sign in instead.",
+            };
+          }
           return {
-            error:
-              response.error.message.toLowerCase().includes("already") ?
-                "An account with this email already exists."
-              : response.error.message || "Could not create your account.",
+            error: response.error.message || "Could not create your account.",
           };
         }
-        // Mirror to local SQLite so offline mode works seamlessly
-        const now = new Date().toISOString();
-        const org: Organization = {
-          ...EMPTY_ORGANIZATION,
-          id: crypto.randomUUID(),
-          name: orgName.trim(),
-          owner_name: fullName.trim(),
-          email: normalizedEmail,
-          created_at: now,
-          updated_at: now,
-        };
-        const profile: UserProfile = {
-          id: response.data.user?.id || crypto.randomUUID(),
-          email: normalizedEmail,
-          full_name: fullName.trim(),
-          role: "OWNER",
-          organization_id: org.id,
-          is_active: true,
-          password_hash: await hashPassword(pass),
-          created_at: now,
-        };
 
-        try {
-          await sqliteRepository.createLocalAuthAccount(
-            org,
-            profile,
-            "",
-            "",
-            true,
-          );
-          StorageEngine.createLocalOwnerAccount(org, profile);
-        } catch {
-          // If already exists locally
+        // Supabase returns an empty identities list when email already exists to prevent enumeration
+        if (
+          response.data.user?.identities &&
+          response.data.user.identities.length === 0
+        ) {
+          return {
+            error: "An account with this email already exists. Please sign in instead.",
+          };
         }
 
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("yaqoob_signed_out");
+        }
+
+        // If email confirmation is enabled on the Supabase project
+        if (response.data.user && !response.data.session) {
+          return {
+            emailConfirmationRequired: true,
+          };
+        }
+
+        // If user is auto-confirmed or session is immediately available
         if (response.data.session && response.data.user) {
           await activateSupabaseSession(response.data.user.id);
           setHasPinSetup(false);
           return {};
         }
-
-        activate(profile, org);
-        setHasPinSetup(false);
-        return {};
       } catch (networkErr: any) {
-        // Fallback to local account creation on network error
+        console.warn("Supabase network error during signUp:", networkErr);
       }
     }
 
+    // Offline / Local SQLite account fallback
     if (await sqliteRepository.findLocalProfileByEmail(normalizedEmail))
-      return { error: "An account with this email already exists." };
+      return { error: "An account with this email already exists. Please sign in instead." };
+
     const now = new Date().toISOString();
     const org: Organization = {
       ...EMPTY_ORGANIZATION,
       id: crypto.randomUUID(),
-      name: orgName.trim(),
-      owner_name: fullName.trim(),
+      name: cleanOrg,
+      owner_name: cleanName,
       email: normalizedEmail,
       created_at: now,
       updated_at: now,
@@ -791,17 +957,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const profile: UserProfile = {
       id: crypto.randomUUID(),
       email: normalizedEmail,
-      full_name: fullName.trim(),
+      full_name: cleanName,
       role: "OWNER",
       organization_id: org.id,
       is_active: true,
       password_hash: await hashPassword(pass),
       created_at: now,
     };
+
     try {
       await sqliteRepository.createLocalAuthAccount(org, profile, "", "", true);
       StorageEngine.createLocalOwnerAccount(org, profile);
       const account = await sqliteRepository.getLocalAuthAccount(profile.id);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("yaqoob_signed_out");
+      }
       setLocalAccount(account);
       setHasLocalAccount(true);
       setHasPasswordAccount(true);
@@ -810,42 +980,148 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       activate(profile, org);
       return {};
     } catch {
-      return { error: "Could not create the account. Please try again." };
+      return { error: "Could not create the local account. Please try again." };
     }
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (): Promise<{
+    error?: string;
+    authUrl?: string;
+  }> => {
     if (!isSupabaseReady) {
       return {
         error:
-          "Google sign-in requires network access. Please use email and password.",
+          "Google sign-in requires an active Supabase cloud connection. Please configure Supabase or sign in with email and password.",
       };
     }
-    const response = await getSupabaseClient().auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin },
-    });
-    return response.error ?
-        { error: "Google sign-in could not be started." }
-      : {};
+
+    const redirectUrl =
+      typeof window !== "undefined" ?
+        `${window.location.origin}${window.location.pathname}`
+      : "";
+    const isInIframe =
+      typeof window !== "undefined" && window.self !== window.top;
+
+    try {
+      const response = await getSupabaseClient().auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: isInIframe,
+          queryParams: {
+            access_type: "offline",
+            prompt: "select_account",
+          },
+        },
+      });
+
+      if (response.error) {
+        const msg = response.error.message.toLowerCase();
+        if (
+          msg.includes("provider is not enabled") ||
+          msg.includes("unsupported provider")
+        ) {
+          return {
+            error:
+              "Google provider is not enabled in your Supabase project. Please enable Google in Supabase Dashboard -> Authentication -> Providers.",
+          };
+        }
+        return {
+          error: response.error.message || "Failed to initiate Google sign-in.",
+        };
+      }
+
+      if (isInIframe && response.data?.url) {
+        const popup = window.open(
+          response.data.url,
+          "google_oauth_popup",
+          "width=520,height=650,left=200,top=100,menubar=no,toolbar=no,location=no,status=no",
+        );
+        if (!popup || popup.closed || typeof popup.closed === "undefined") {
+          return {
+            error:
+              "Popup was blocked by your browser. Please allow popups or use the direct link.",
+            authUrl: response.data.url,
+          };
+        }
+        return { authUrl: response.data.url };
+      }
+
+      return {};
+    } catch (err: any) {
+      return {
+        error: err?.message || "Google sign-in could not be initiated.",
+      };
+    }
   };
 
-  const sendPasswordReset = async (email: string) => {
-    if (!email.trim()) return { error: "Enter your account email first." };
+  const sendPasswordReset = async (
+    email: string,
+  ): Promise<{ error?: string; message?: string }> => {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail) return { error: "Please enter your email address first." };
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return { error: "Please enter a valid email address." };
+    }
     if (!isSupabaseReady)
       return {
-        error: "Password recovery requires network access.",
+        error: "Password reset requires an active Supabase cloud connection.",
       };
+
+    const redirectUrl = `${window.location.origin}${window.location.pathname}`;
     const response = await getSupabaseClient().auth.resetPasswordForEmail(
-      email.trim(),
-      { redirectTo: window.location.origin },
+      cleanEmail,
+      { redirectTo: redirectUrl },
     );
-    return response.error ?
-        { error: "We could not send a reset email. Please try again." }
-      : { error: "Check your email for password reset instructions." };
+
+    if (response.error) {
+      return {
+        error: response.error.message || "Could not send password reset email.",
+      };
+    }
+    return {
+      message: `Password reset instructions have been sent to ${cleanEmail}. Please check your inbox.`,
+    };
+  };
+
+  const completePasswordReset = async (
+    newPassword: string,
+  ): Promise<{ error?: string }> => {
+    const cleanPass = newPassword.trim();
+    if (cleanPass.length < 8) {
+      return { error: "Password must be at least 8 characters long." };
+    }
+    try {
+      const { error: supaErr } = await getSupabaseClient().auth.updateUser({
+        password: cleanPass,
+      });
+      if (supaErr) {
+        return { error: supaErr.message };
+      }
+      setIsPasswordRecovery(false);
+      if (typeof window !== "undefined") {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+      return {};
+    } catch (e: any) {
+      return {
+        error: e?.message || "Failed to update password. Please try again.",
+      };
+    }
+  };
+
+  const cancelPasswordReset = () => {
+    setIsPasswordRecovery(false);
+    if (typeof window !== "undefined") {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
   };
 
   const signOut = async () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("yaqoob_signed_out", "true");
+      localStorage.removeItem(ACTIVE_PROFILE_KEY);
+    }
     if (isSupabaseReady)
       await getSupabaseClient()
         .auth.signOut()
@@ -859,9 +1135,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setOrganization(EMPTY_ORGANIZATION);
     setSecurityPrincipal(null);
     setIsLocked(true);
-    if (typeof window !== "undefined")
-      localStorage.removeItem(ACTIVE_PROFILE_KEY);
   };
+
   return (
     <AuthContext.Provider
       value={{
@@ -874,6 +1149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         hasLocalAccount,
         hasPasswordAccount,
         hasPinSetup,
+        isPasswordRecovery,
         unlock,
         lock,
         setupPin,
@@ -887,6 +1163,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         signUp,
         signInWithGoogle,
         sendPasswordReset,
+        completePasswordReset,
+        cancelPasswordReset,
         signOut,
         updateOrganization,
         completeOnboarding,

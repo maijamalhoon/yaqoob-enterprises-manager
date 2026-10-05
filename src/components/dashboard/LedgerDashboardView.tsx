@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getSupabaseClient } from "../../lib/supabase";
+import { ledgerService } from "../../services/ledgerService";
 import { getKarachiBusinessDate } from "../../lib/dates";
 import { formatPaisa } from "../../lib/money";
 import {
@@ -30,63 +30,19 @@ export const LedgerDashboardView: React.FC = () => {
 
   const loadData = async () => {
     setIsLoading(true);
-    const supabase = getSupabaseClient();
     try {
       if (period === "day") {
-        const { data } = await supabase
-          .from("view_daily_summary")
-          .select("*")
-          .eq("business_date", currentDate)
-          .maybeSingle();
-
-        if (data) {
-          setDailyData({
-            business_date: data.business_date,
-            income_paisa: Number(data.income_paisa || 0),
-            expense_paisa: Number(data.expense_paisa || 0),
-            net_profit_paisa: Number(data.net_profit_paisa || 0),
-            capital_in_paisa: Number(data.capital_in_paisa || 0),
-            withdrawal_paisa: Number(data.withdrawal_paisa || 0),
-            adjustment_in_paisa: Number(data.adjustment_in_paisa || 0),
-            adjustment_out_paisa: Number(data.adjustment_out_paisa || 0),
-            transaction_count: Number(data.transaction_count || 0),
-          });
-        } else {
-          setDailyData(null);
-        }
-
-        const { data: bData } = await supabase
-          .from("view_category_breakdown")
-          .select("*")
-          .eq("business_date", currentDate);
+        const [daySummary, bData] = await Promise.all([
+          ledgerService.getDailySummary(currentDate),
+          ledgerService.getCategoryBreakdown(currentDate),
+        ]);
+        setDailyData(daySummary);
         setBreakdowns(bData || []);
       } else {
         const year = parseInt(currentDate.split("-")[0], 10);
         const month = parseInt(currentDate.split("-")[1], 10);
-
-        const { data } = await supabase
-          .from("view_monthly_summary")
-          .select("*")
-          .eq("year", year)
-          .eq("month", month)
-          .maybeSingle();
-
-        if (data) {
-          setMonthlyData({
-            month_start: data.month_start,
-            year: data.year,
-            month: data.month,
-            income_paisa: Number(data.income_paisa || 0),
-            expense_paisa: Number(data.expense_paisa || 0),
-            net_profit_paisa: Number(data.net_profit_paisa || 0),
-            capital_in_paisa: Number(data.capital_in_paisa || 0),
-            withdrawal_paisa: Number(data.withdrawal_paisa || 0),
-            adjustment_in_paisa: Number(data.adjustment_in_paisa || 0),
-            adjustment_out_paisa: Number(data.adjustment_out_paisa || 0),
-          });
-        } else {
-          setMonthlyData(null);
-        }
+        const mData = await ledgerService.getMonthlySummary(year, month);
+        setMonthlyData(mData);
       }
     } catch (err) {
       console.error("Error fetching dashboard summary views:", err);

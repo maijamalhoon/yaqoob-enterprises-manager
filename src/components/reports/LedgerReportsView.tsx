@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getSupabaseClient } from "../../lib/supabase";
+import { ledgerService } from "../../services/ledgerService";
 import { formatPaisa } from "../../lib/money";
 import { getKarachiBusinessDate } from "../../lib/dates";
 import {
@@ -32,20 +32,10 @@ export const LedgerReportsView: React.FC = () => {
 
   const loadData = async () => {
     setIsLoading(true);
-    const supabase = getSupabaseClient();
     try {
-      const { data, error } = await supabase
-        .from("view_monthly_summary")
-        .select("*")
-        .eq("year", selectedYear)
-        .order("month", { ascending: true });
-
-      if (error) {
-        console.error("Error fetching monthly report view:", error);
-      }
-
+      const data = await ledgerService.getMonthlyReport(selectedYear);
       setMonthlyData(
-        (data || []).map((row: any) => ({
+        data.map((row) => ({
           month_start: row.month_start,
           year: row.year,
           month: row.month,
