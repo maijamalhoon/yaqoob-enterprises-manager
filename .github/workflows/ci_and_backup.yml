@@ -34,7 +34,12 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci || npm install
+          else
+            npm install
+          fi
 
       - name: Run Vitest Suite (Unit, Deterministic Parser Corpus, WASM PGlite DB Tests)
         run: npx vitest run
@@ -54,7 +59,12 @@ jobs:
           cache: 'npm'
 
       - name: Install Dependencies
-        run: npm ci
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci || npm install
+          else
+            npm install
+          fi
 
       - name: Execute Paginated Backup & Row Integrity Verification
         env:

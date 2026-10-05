@@ -34,7 +34,10 @@ export const AuthScreen: React.FC = () => {
     sendPasswordReset,
     completePasswordReset,
     cancelPasswordReset,
+    resetConnectionAndSession,
     isPasswordRecovery,
+    error: authError,
+    clearError,
   } = useAuth();
 
   const [mode, setMode] = useState<"signIn" | "signUp" | "forgotPassword">("signIn");
@@ -44,6 +47,7 @@ export const AuthScreen: React.FC = () => {
     type: "error" | "success" | "info";
     text: string;
     authUrl?: string;
+    isRateLimit?: boolean;
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -59,6 +63,16 @@ export const AuthScreen: React.FC = () => {
     email: "",
     password: "",
   });
+
+  useEffect(() => {
+    if (authError) {
+      setFeedback({
+        type: "error",
+        text: authError,
+      });
+      clearError();
+    }
+  }, [authError, clearError]);
 
   useEffect(() => {
     // Detect OAuth errors or callback tokens passed back in URL hash or query params
@@ -191,7 +205,11 @@ export const AuthScreen: React.FC = () => {
         );
 
         if (result.error) {
-          setFeedback({ type: "error", text: result.error });
+          setFeedback({
+            type: "error",
+            text: result.error,
+            isRateLimit: result.rateLimitExceeded,
+          });
         } else if (result.emailConfirmationRequired) {
           setEmailConfirmationSent(form.email.trim());
         }
@@ -237,13 +255,25 @@ export const AuthScreen: React.FC = () => {
           text: result.error,
           authUrl: result.authUrl,
         });
+        setIsGoogleLoading(false);
+      } else if (result.pendingPopup && result.authUrl) {
+        setFeedback({
+          type: "info",
+          text: "Google Sign-In window is open. Please choose your account to continue.",
+          authUrl: result.authUrl,
+        });
+      } else if (result.authUrl) {
+        setFeedback({
+          type: "info",
+          text: "Redirecting to Google Sign-In...",
+          authUrl: result.authUrl,
+        });
       }
     } catch {
       setFeedback({
         type: "error",
         text: "Google sign-in could not be initiated.",
       });
-    } finally {
       setIsGoogleLoading(false);
     }
   };
@@ -637,7 +667,7 @@ export const AuthScreen: React.FC = () => {
 
           {feedback && (
             <div
-              className={`p-3 rounded-lg text-xs leading-relaxed flex flex-col gap-1.5 ${
+              className={`p-3 rounded-lg text-xs leading-relaxed flex flex-col gap-2 ${
                 feedback.type === "error" ?
                   "bg-red-50 border border-red-200 text-[#b91c1c]"
                 : feedback.type === "success" ?
@@ -648,19 +678,49 @@ export const AuthScreen: React.FC = () => {
               <div className="flex items-start gap-2">
                 {feedback.type === "error" ?
                   <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                : feedback.type === "info" && isGoogleLoading ?
+                  <Loader2 className="h-4 w-4 shrink-0 mt-0.5 animate-spin text-blue-600" />
                 : <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />}
                 <span>{feedback.text}</span>
               </div>
+
               {feedback.authUrl && (
-                <a
-                  href={feedback.authUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 font-semibold underline mt-1 text-primary hover:text-primary-hover"
-                >
-                  <span>Click here to open Google Sign-In</span>
-                  <ExternalLink className="h-3 w-3" />
-                </a>
+                <div className="mt-1 flex items-center gap-3 font-semibold">
+                  <a
+                    href={feedback.authUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 underline text-primary hover:text-primary-hover cursor-pointer"
+                  >
+                    <span>Click here to open Google Sign-In</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                  {isGoogleLoading && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsGoogleLoading(false);
+                        setFeedback(null);
+                      }}
+                      className="text-text-muted hover:text-on-surface hover:underline cursor-pointer font-normal"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {feedback.isRateLimit && (
+                <div className="mt-1 flex flex-col gap-2 pt-2 border-t border-red-200/60">
+                  <button
+                    type="button"
+                    onClick={handleGoogleSignIn}
+                    className="flex h-9 w-full items-center justify-center gap-2 rounded-md bg-white border border-border-standard text-xs font-semibold text-on-surface hover:bg-surface transition cursor-pointer"
+                  >
+                    <span>Sign in instantly with Google</span>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -733,6 +793,23 @@ export const AuthScreen: React.FC = () => {
               </button>
             </p>
           }
+
+          <div className="mt-4 pt-3 border-t border-border-standard/60 text-center">
+            <button
+              type="button"
+              onClick={async () => {
+                setIsSubmitting(true);
+                setFeedback({
+                  type: "info",
+                  text: "Clearing stale credentials and resetting connection...",
+                });
+                await resetConnectionAndSession();
+              }}
+              className="text-[11px] text-text-muted hover:text-primary transition underline cursor-pointer"
+            >
+              Reset connection & clear cached session
+            </button>
+          </div>
         </div>
       </main>
     </div>

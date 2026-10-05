@@ -141,11 +141,12 @@ interface AuthContextType {
     pass: string,
     fullName: string,
     orgName: string,
-  ) => Promise<{ error?: string; emailConfirmationRequired?: boolean }>;
-  signInWithGoogle: () => Promise<{ error?: string; authUrl?: string }>;
+  ) => Promise<{ error?: string; emailConfirmationRequired?: boolean; rateLimitExceeded?: boolean }>;
+  signInWithGoogle: () => Promise<{ error?: string; authUrl?: string; pendingPopup?: boolean }>;
   sendPasswordReset: (email: string) => Promise<{ error?: string; message?: string }>;
   completePasswordReset: (newPassword: string) => Promise<{ error?: string }>;
   cancelPasswordReset: () => void;
+  resetConnectionAndSession: () => Promise<void>;
   signOut: () => Promise<void>;
   updateOrganization: (org: Partial<Organization>) => void;
   completeOnboarding: (orgData: Partial<Organization>) => void;
@@ -283,13 +284,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const handleAuthMessage = async (event: MessageEvent) => {
       if (event.data?.type === "OAUTH_AUTH_SUCCESS") {
         if (isSupabaseConfigured()) {
-          const sessionResult = await getSupabaseClient().auth.getSession();
-          if (!cancelled && sessionResult.data.session?.user.id) {
-            if (typeof window !== "undefined") {
-              localStorage.removeItem("yaqoob_signed_out");
+          try {
+            if (event.data.accessToken && event.data.refreshToken) {
+              const { data } = await getSupabaseClient().auth.setSession({
+                access_token: event.data.accessToken,
+                refresh_token: event.data.refreshToken,
+              });
+              if (data?.session?.user?.id) {
+                if (typeof window !== "undefined") {
+                  localStorage.removeItem("yaqoob_signed_out");
+                }
+                await activateSupabaseSession(data.session.user.id);
+                return;
+              }
             }
-            await activateSupabaseSession(sessionResult.data.session.user.id);
+
+            const sessionResult = await getSupabaseClient().auth.getSession();
+            if (!cancelled && sessionResult.data.session?.user.id) {
+              if (typeof window !== "undefined") {
+                localStorage.removeItem("yaqoob_signed_out");
+              }
+              await activateSupabaseSession(sessionResult.data.session.user.id);
+            }
+          } catch (e) {
+            console.warn("OAuth session handling warning:", e);
           }
+        }
+      } else if (event.data?.type === "OAUTH_AUTH_ERROR") {
+        const desc = event.data.errorDescription || "";
+        const code = event.data.errorCode || event.data.error || "";
+        if (
+          code === "403" ||
+          code === "access_denied" ||
+          desc.toLowerCase().includes("access_denied")
+        ) {
+          setError(
+            "Google Sign-In Access Denied (403): Your OAuth consent screen in Google Cloud Console is in 'Testing' mode. Please add your email (jamalarain186@gmail.com) under 'Test Users' in Google Cloud Console -> APIs & Services -> OAuth consent screen, or publish the application to Production.",
+          );
+        } else if (
+          desc.toLowerCase().includes("redirect_uri_mismatch") ||
+          code === "redirect_uri_mismatch"
+        ) {
+          setError(
+            "Google Sign-In configuration mismatch: The current application redirect URI is not listed under Authorized Redirect URIs in your Google Cloud Console OAuth Client credentials.",
+          );
+        } else {
+          setError(desc || "Google authentication was cancelled or encountered an error.");
         }
       }
     };
@@ -322,8 +362,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     profileId: string,
   ): Promise<boolean> => {
     const client = getSupabaseClient();
-    let profileData: any = null;
 
+    // 1. Verify user exists in Supabase auth.users (critical if user accounts were deleted in Supabase)
+    let authUser: any = null;
+    try {
+      const { data: authUserData, error: userError } = await client.auth.getUser();
+      if (userError || !authUserData?.user) {
+        console.warn(
+          "Supabase auth user does not exist or was deleted:",
+          userError?.message,
+        );
+        try {
+          await client.auth.signOut({ scope: "local" });
+        } catch {}
+        if (typeof window !== "undefined") {
+          localStorage.removeItem(ACTIVE_PROFILE_KEY);
+          localStorage.removeItem("yaqoob_signed_out");
+        }
+        setUser(null);
+        setRole(null);
+        setIsLocked(true);
+        setError(
+          "Your previous cloud session expired or user accounts were reset in Supabase. Please sign in or create a new account.",
+        );
+        return false;
+      }
+      authUser = authUserData.user;
+    } catch (e) {
+      console.warn("Could not verify auth user in Supabase:", e);
+      return false;
+    }
+
+    let profileData: any = null;
     try {
       const response = await client
         .from("profiles")
@@ -350,10 +420,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     // Pull metadata (Google name + avatar) from auth.users if available
-    let authUser: any = null;
     try {
-      const { data: authUserData } = await client.auth.getUser();
-      authUser = authUserData?.user;
       const meta = authUser?.user_metadata || {};
       const googleAvatar = meta.avatar_url || meta.picture;
       const googleName = meta.full_name || meta.name;
@@ -374,8 +441,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           needUpdate = true;
         }
         if (needUpdate) {
-          await client.from("profiles").update(updates).eq("id", profileId);
-          await sqliteRepository.updateProfile({ id: profileId, ...updates });
+          try {
+            await client.from("profiles").update(updates).eq("id", profileId);
+            await sqliteRepository.updateProfile({ id: profileId, ...updates });
+          } catch {}
         }
       }
     } catch (metaErr) {
@@ -869,7 +938,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     pass: string,
     fullName: string,
     orgName: string,
-  ): Promise<{ error?: string; emailConfirmationRequired?: boolean }> => {
+  ): Promise<{ error?: string; emailConfirmationRequired?: boolean; rateLimitExceeded?: boolean }> => {
     const normalizedEmail = email.trim().toLowerCase();
     const cleanName = fullName.trim();
     const cleanOrg = orgName.trim();
@@ -901,6 +970,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           if (msg.includes("already") || msg.includes("exists")) {
             return {
               error: "An account with this email already exists. Please sign in instead.",
+            };
+          }
+          if (
+            msg.includes("rate limit") ||
+            response.error.status === 429 ||
+            (response.error as any).code === "over_email_send_rate_limit"
+          ) {
+            return {
+              error:
+                "Supabase email confirmation rate limit reached (free tier limit of 3 emails/hour). You can use 'Continue with Google' to sign in instantly, or create an offline local account below.",
+              rateLimitExceeded: true,
             };
           }
           return {
@@ -987,6 +1067,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const signInWithGoogle = async (): Promise<{
     error?: string;
     authUrl?: string;
+    pendingPopup?: boolean;
   }> => {
     if (!isSupabaseReady) {
       return {
@@ -1040,10 +1121,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         if (!popup || popup.closed || typeof popup.closed === "undefined") {
           return {
             error:
-              "Popup was blocked by your browser. Please allow popups or use the direct link.",
+              "Popup was blocked by your browser. Please allow popups or use the direct link below.",
             authUrl: response.data.url,
           };
         }
+        return { pendingPopup: true, authUrl: response.data.url };
+      }
+
+      if (response.data?.url && !isInIframe) {
         return { authUrl: response.data.url };
       }
 
@@ -1052,6 +1137,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       return {
         error: err?.message || "Google sign-in could not be initiated.",
       };
+    }
+  };
+
+  const resetConnectionAndSession = async () => {
+    try {
+      if (isSupabaseReady) {
+        await getSupabaseClient()
+          .auth.signOut({ scope: "local" })
+          .catch(() => {});
+      }
+    } catch {}
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.clear();
+        sessionStorage.clear();
+      } catch {}
+      window.location.href = window.location.pathname;
     }
   };
 
@@ -1165,6 +1267,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         sendPasswordReset,
         completePasswordReset,
         cancelPasswordReset,
+        resetConnectionAndSession,
         signOut,
         updateOrganization,
         completeOnboarding,
