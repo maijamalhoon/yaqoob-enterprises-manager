@@ -107,6 +107,23 @@ In Pakistani retail environments, internet outages and electrical load shedding 
    - If **Online:** The background sync worker immediately attempts an idempotent upsert to cloud Supabase.
 5. **Resolution & Cleanup:** Upon successful cloud acknowledgment, the item is removed from `sync_queue` and the local record's `sync_status` is updated to `'synced'`.
 
+### Text Ledger Entry and Draft Posting
+
+Chat entry and the header quick-entry shortcut both use the same review modal.
+The deterministic parser proposes a type/category/date and the user reviews or
+corrects the values, selects an active account belonging to the current shop,
+and confirms. The UI first persists a recoverable transaction draft, then calls
+`post_transaction_draft(draft_id, selected_account_id)`, which validates shop,
+category, and account ownership and inserts the final transaction atomically.
+The RPC's idempotency key prevents a retry from creating another posting. Older
+unposted drafts remain available in the ledger feed for account assignment.
+
+Voiding, restoring, and editing are online-only. Their updates include the
+current `updated_at` value and shop scope. The database mutation trigger records
+the authenticated actor, reason, timestamp, and audit entry; the account-ledger
+trigger applies the reversal or reinstatement exactly once. The client does not
+apply a second balance change.
+
 ### Idempotency & Deduplication
 To prevent duplicate sales or ghost expenses if a network connection drops mid-flight, all cloud upserts utilize deterministic primary keys (`onConflict: 'id'`). If an identical record is delivered multiple times, PostgreSQL performs an idempotent in-place update without creating duplicates.
 

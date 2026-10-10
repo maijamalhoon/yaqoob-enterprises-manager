@@ -21,6 +21,7 @@ interface ChatFeedProps {
   transactions: Transaction[];
   drafts: TransactionDraft[];
   accounts: LedgerAccount[];
+  canManageTransactions: boolean;
   onEdit: (tx: Transaction) => void;
   onVoid: (tx: Transaction) => void;
   onRestore: (tx: Transaction) => void;
@@ -31,6 +32,7 @@ export const ChatFeed: React.FC<ChatFeedProps> = ({
   transactions,
   drafts,
   accounts,
+  canManageTransactions,
   onEdit,
   onVoid,
   onRestore,
@@ -246,15 +248,17 @@ export const ChatFeed: React.FC<ChatFeedProps> = ({
                     <Ban className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                     Voided: {tx.void_reason}
                   </p>
-                  <button
-                    onClick={() => onRestore(tx)}
-                    className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border-standard bg-white px-2.5 text-xs font-medium text-primary transition-colors hover:bg-surface-container-low"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />{" "}
-                    Restore
-                  </button>
+                  {canManageTransactions && (
+                    <button
+                      onClick={() => onRestore(tx)}
+                      className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-border-standard bg-white px-2.5 text-xs font-medium text-primary transition-colors hover:bg-surface-container-low"
+                    >
+                      <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />{" "}
+                      Restore
+                    </button>
+                  )}
                 </div>
-              : <div className="ml-12 mt-2 flex items-center gap-2">
+              : canManageTransactions && <div className="ml-12 mt-2 flex items-center gap-2">
                   <button
                     onClick={() => onEdit(tx)}
                     aria-label={`Edit ${tx.category_name || tx.type} transaction`}

@@ -55,24 +55,26 @@ describe('End-to-End Real-World Shop Verification (Sections 11 to 18)', () => {
   });
 
   // ==============================================================================
-  // SECTION 12: SINGLE-OWNER PERMISSION MODEL (ALL ROLES UNRESTRICTED)
+  // SECTION 12: ROLE-BASED PERMISSIONS
   // ==============================================================================
-  describe('Section 12: Single-Owner Permission Model', () => {
-    it('grants all permissions unconditionally regardless of role', () => {
-      // In single-owner mode, every action is permitted for any role
-      for (const role of ['CASHIER', 'MANAGER', 'OWNER'] as const) {
-        expect(canPerformQuickSale(role)).toBe(true);
-        expect(canRecordExpense(role)).toBe(true);
-        expect(canSubmitDailyClosing(role)).toBe(true);
-        expect(canVoidSale(role)).toBe(true);
-        expect(canVoidExpense(role)).toBe(true);
-        expect(canManageInventory(role)).toBe(true);
-        expect(canTransferFunds(role)).toBe(true);
-        expect(canViewReports(role)).toBe(true);
-        expect(canManageBusinessConfig(role)).toBe(true);
-        expect(canManageStaff(role)).toBe(true);
-        expect(canRestoreDatabase(role)).toBe(true);
-      }
+  describe('Section 12: Role-based permissions', () => {
+    it('matches the database permission matrix for cashier, manager, and owner', () => {
+      expect(canPerformQuickSale('CASHIER')).toBe(true);
+      expect(canRecordExpense('CASHIER')).toBe(true);
+      expect(canSubmitDailyClosing('CASHIER')).toBe(true);
+      expect(canVoidSale('CASHIER')).toBe(false);
+      expect(canVoidExpense('CASHIER')).toBe(false);
+      expect(canManageInventory('CASHIER')).toBe(false);
+      expect(canTransferFunds('CASHIER')).toBe(false);
+      expect(canViewReports('CASHIER')).toBe(false);
+      expect(canManageBusinessConfig('CASHIER')).toBe(false);
+      expect(canManageStaff('CASHIER')).toBe(false);
+      expect(canRestoreDatabase('CASHIER')).toBe(false);
+
+      expect(canVoidExpense('MANAGER')).toBe(true);
+      expect(canManageBusinessConfig('MANAGER')).toBe(false);
+      expect(canRestoreDatabase('MANAGER')).toBe(false);
+      expect(canRestoreDatabase('OWNER')).toBe(true);
     });
   });
 

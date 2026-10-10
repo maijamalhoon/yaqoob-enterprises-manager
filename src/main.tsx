@@ -2,6 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { applyTheme, getSavedTheme } from './lib/theme';
 
 // Handle OAuth popup window callback: notify parent window and auto-close
 if (typeof window !== 'undefined' && window.opener && window.opener !== window) {
@@ -49,8 +50,7 @@ if (typeof window !== 'undefined' && window.opener && window.opener !== window) 
   }
 }
 
-const savedTheme = localStorage.getItem('yaqoob-theme');
-document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+applyTheme(getSavedTheme());
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

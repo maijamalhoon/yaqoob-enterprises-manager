@@ -156,6 +156,33 @@
   --radius-full: 9999px;
 }
 
+.dark {
+  --color-surface: var(--surface);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-surface-variant: var(--surface-variant);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-border-standard: var(--border-standard);
+  --color-text-primary: var(--text-primary);
+  --color-text-muted: var(--text-muted);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-border: var(--warning-border);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-border: var(--danger-border);
+}
+
 @layer base {
   * {
     border-color: var(--border-standard);
@@ -270,7 +297,7 @@ button {
   overflow: hidden;
   border: 1px solid var(--border-standard);
   border-radius: 0.875rem;
-  background: #ffffff;
+  background: var(--surface-bright);
   box-shadow: 0 1px 2px rgba(21, 43, 32, 0.025);
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
@@ -291,7 +318,7 @@ button {
 .workspace-metric {
   border: 1px solid var(--border-standard);
   border-radius: 0.875rem;
-  background: #ffffff;
+  background: var(--surface-bright);
   box-shadow: 0 1px 2px rgba(21, 43, 32, 0.025);
   box-shadow: var(--shadow-1);
   padding: 1.25rem;
@@ -307,9 +334,9 @@ button {
 
 .workspace-control {
   min-height: 2.75rem;
-  border: 1px solid #dce5df;
+  border: 1px solid var(--outline-variant);
   border-radius: 0.625rem;
-  background-color: #ffffff;
+  background-color: var(--surface-bright);
   transition:
     border-color 150ms ease,
     box-shadow 150ms ease,
@@ -342,7 +369,7 @@ button {
 
 .data-table th {
   color: var(--text-muted);
-  background: #f7f9f8;
+  background: var(--surface-container-low);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -381,7 +408,7 @@ button {
   min-height: 10rem;
   border: 1px solid var(--border-standard);
   border-radius: 0.875rem;
-  background: linear-gradient(145deg, #ffffff 35%, var(--metric-tint));
+  background: linear-gradient(145deg, var(--surface-bright) 35%, var(--metric-tint));
   padding: 1.25rem;
   box-shadow: 0 1px 2px rgba(21, 43, 32, 0.03);
   transition: transform 160ms ease, box-shadow 160ms ease;
@@ -436,7 +463,7 @@ button {
 .summary-metric {
   border: 1px solid var(--border-standard);
   border-radius: 0.75rem;
-  background: #ffffff;
+  background: var(--surface-bright);
   padding: 0.75rem 0.875rem;
 }
 
@@ -455,7 +482,7 @@ button {
 }
 
 .ledger-composer {
-  background: rgba(255, 255, 255, 0.96);
+  background: color-mix(in srgb, var(--surface-bright) 96%, transparent);
   box-shadow: 0 -4px 18px rgba(23, 37, 29, 0.035);
 }
 
@@ -573,6 +600,10 @@ html.dark body,
 html.dark #root {
   background-color: var(--surface);
   color: var(--on-surface);
+}
+
+html.dark body {
+  color-scheme: dark;
 }
 
 html.dark .app-shell,
@@ -699,6 +730,95 @@ html.dark .text-indigo-900 {
   color: #a8a2ff;
 }
 
+html.dark [class*="bg-amber-50"],
+html.dark [class*="bg-amber-100"] {
+  background-color: #382e19;
+}
+
+html.dark [class*="text-amber-"] {
+  color: #f0c36a;
+}
+
+html.dark [class*="border-amber-"] {
+  border-color: #5b4927;
+}
+
+html.dark [class*="bg-red-50"],
+html.dark [class*="bg-red-100"],
+html.dark [class*="bg-rose-50"],
+html.dark [class*="bg-rose-100"] {
+  background-color: #3a2423;
+}
+
+html.dark [class*="text-red-"],
+html.dark [class*="text-rose-"] {
+  color: #ffaaa4;
+}
+
+html.dark [class*="border-red-"],
+html.dark [class*="border-rose-"] {
+  border-color: #5a3431;
+}
+
+html.dark [class*="bg-blue-50"],
+html.dark [class*="bg-blue-100"],
+html.dark [class*="bg-indigo-50"],
+html.dark [class*="bg-indigo-100"] {
+  background-color: #233344;
+}
+
+html.dark [class*="text-blue-"],
+html.dark [class*="text-indigo-"] {
+  color: #a8c8ee;
+}
+
+html.dark [class*="border-blue-"],
+html.dark [class*="border-indigo-"] {
+  border-color: #3e5872;
+}
+
+html.dark [class*="bg-purple-50"],
+html.dark [class*="bg-purple-100"] {
+  background-color: #33283d;
+}
+
+html.dark [class*="text-purple-"] {
+  color: #d2b2ec;
+}
+
+html.dark [class*="border-purple-"] {
+  border-color: #59476a;
+}
+
+html.dark [class*="bg-emerald-50"],
+html.dark [class*="bg-emerald-100"],
+html.dark [class*="bg-green-50"],
+html.dark [class*="bg-green-100"] {
+  background-color: #1b3828;
+}
+
+html.dark [class*="text-emerald-"],
+html.dark [class*="text-green-"] {
+  color: #9be3ae;
+}
+
+html.dark [class*="border-emerald-"],
+html.dark [class*="border-green-"] {
+  border-color: #2b5137;
+}
+
+html.dark [class*="text-[#b91c1c]"] {
+  color: #ffaaa4;
+}
+
+html.dark [class*="text-[#047857]"] {
+  color: #9be3ae;
+}
+
+html.dark [class*="text-[#1d4ed8]"] {
+  color: #a8c8ee;
+}
+
 html.dark .settings-icon {
   border-color: rgba(120, 198, 165, 0.2);
   background: rgba(120, 198, 165, 0.1);
@@ -737,7 +857,7 @@ html.dark #mobile-more-menu {
 .data-table thead th {
   border-bottom: 1px solid var(--border-standard);
   color: var(--text-muted);
-  background: #f7f9f8;
+  background: var(--surface-container-low);
 }
 
 .data-table tbody tr {
@@ -745,7 +865,7 @@ html.dark #mobile-more-menu {
 }
 
 .data-table tbody tr:hover {
-  background: #f7faf8;
+  background: var(--surface-container-low);
 }
 
 #profile-menu,

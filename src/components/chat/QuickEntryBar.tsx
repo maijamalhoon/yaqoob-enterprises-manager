@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import { CornerDownLeft, X } from "lucide-react";
 import { ledgerService } from "../../services/ledgerService";
-import { parseMessage, ParseResult, ClarificationOption } from "../../parser";
+import { parseMessage, ParseResult, SeedCategory } from "../../parser";
+import { LedgerAccount } from "../../types/ledger";
 import { useAuth } from "../../context/AuthContext";
+import { useApp } from "../../context/AppContext";
 import { ConfirmationModal } from "./ConfirmationModal";
 
 interface QuickEntryBarProps {
@@ -13,6 +15,7 @@ export const QuickEntryBar: React.FC<QuickEntryBarProps> = ({
   onTransactionSaved,
 }) => {
   const { user } = useAuth();
+  const { showToast } = useApp();
   const currentUserId = user?.id || "offline-user";
   const currentUserName =
     user?.full_name || user?.email?.split("@")[0] || "Shop Brother";
@@ -20,6 +23,11 @@ export const QuickEntryBar: React.FC<QuickEntryBarProps> = ({
   const [text, setText] = useState("");
   const [activeClarification, setActiveClarification] =
     useState<ParseResult | null>(null);
+  const [batchEntries, setBatchEntries] = useState<ParseResult[] | null>(null);
+  const [accounts, setAccounts] = useState<LedgerAccount[]>([]);
+  const [categories, setCategories] = useState<SeedCategory[]>([]);
+  const [batchError, setBatchError] = useState<string | null>(null);
+  const [isSavingBatch, setIsSavingBatch] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -51,25 +59,17 @@ export const QuickEntryBar: React.FC<QuickEntryBarProps> = ({
 
   const executeSave = async (
     entry: ParseResult,
-    chosenOption?: ClarificationOption,
+    accountId: string,
   ) => {
-    const type = chosenOption ? chosenOption.type : entry.type;
-    const categoryId =
-      chosenOption ? chosenOption.categoryId : entry.categoryId;
-    const categoryName =
-      chosenOption ?
-        chosenOption.categoryName || entry.categoryName || type
-      : entry.categoryName || type;
-    const amountPaisa =
-      chosenOption ? chosenOption.amountPaisa : entry.amountPaisa!;
-
     try {
-      await ledgerService.createTransactionDraft(
+      if (entry.amountPaisa === null) throw new Error("A valid amount is required.");
+      const draft = await ledgerService.createTransactionDraft(
         {
-          type,
-          categoryId,
-          categoryName,
-          amountPaisa,
+          type: entry.type,
+          categoryId: entry.categoryId,
+          categoryName: entry.categoryName || entry.type,
+          amountPaisa: entry.amountPaisa,
+          adjustmentDir: entry.adjustmentDir,
           businessDate: entry.businessDate,
           rawText: entry.raw,
           createdByName: currentUserName,
@@ -77,11 +77,26 @@ export const QuickEntryBar: React.FC<QuickEntryBarProps> = ({
         },
         currentUserId,
       );
+      const result = await ledgerService.postTransactionDraft(draft.id, accountId);
 
-      setText("");
-      onTransactionSaved?.();
+      if (result.isQueuedOffline) {
+        showToast(
+          "warning",
+          "Posting queued offline",
+          "Your entry is retained and will post to the selected account after synchronization.",
+        );
+      } else {
+        showToast("success", "Transaction posted");
+      }
+      return true;
     } catch (err) {
-      console.error("Quick entry save error:", err);
+      console.error("Quick entry posting error:", err);
+      showToast(
+        "error",
+        "Transaction not posted",
+        err instanceof Error ? err.message : "Check the entry and try again.",
+      );
+      return false;
     }
   };
 
@@ -92,13 +107,16 @@ export const QuickEntryBar: React.FC<QuickEntryBarProps> = ({
     const categories = await ledgerService.getParserCategories();
     if (categories.length === 0) return;
     const parsed = parseMessage(trimmed, [], new Date(), categories);
+    const availableAccounts = await ledgerService.getPaymentAccounts();
+    setCategories(categories);
+    setAccounts(availableAccounts);
+    if (parsed.isBatch) {
+      setBatchError(null);
+      setBatchEntries(parsed.entries);
+      return;
+    }
     if (parsed.entries.length > 0) {
-      const entry = parsed.entries[0];
-      if (entry.canAutoSave) {
-        executeSave(entry);
-      } else {
-        setActiveClarification(entry);
-      }
+      setActiveClarification(parsed.entries[0]);
     }
   };
 
@@ -142,20 +160,52 @@ export const QuickEntryBar: React.FC<QuickEntryBarProps> = ({
       </div>
 
       {/* Confirmation Modal */}
-      {activeClarification && (
+      {(activeClarification || batchEntries) && (
         <ConfirmationModal
           result={activeClarification}
-          onConfirmSingle={(entry, opt) => {
-            setActiveClarification(null);
-            executeSave(entry, opt);
+          batchEntries={batchEntries || undefined}
+          accounts={accounts}
+          categories={categories}
+          batchError={batchError}
+          isSavingBatch={isSavingBatch}
+          onConfirmSingle={async (entry, accountId) => {
+            if (await executeSave(entry, accountId)) {
+              setActiveClarification(null);
+              setText("");
+              onTransactionSaved?.();
+            } else {
+              throw new Error("Quick entry could not be posted.");
+            }
           }}
-          onConfirmBatch={() => {}}
+          onConfirmBatch={async (entries, accountIds) => {
+            const failed: ParseResult[] = [];
+            setIsSavingBatch(true);
+            setBatchError(null);
+            try {
+              for (const [index, entry] of entries.entries()) {
+                if (!(await executeSave(entry, accountIds[index]))) failed.push(entry);
+              }
+            } finally {
+              setIsSavingBatch(false);
+            }
+            if (failed.length) {
+              setBatchEntries(failed);
+              setBatchError(`${entries.length - failed.length} saved; ${failed.length} failed. Only failed entries are shown for retry.`);
+              return;
+            }
+            setBatchEntries(null);
+            setText("");
+            onTransactionSaved?.();
+          }}
           onSkipToReview={async (raw, reason) => {
             setActiveClarification(null);
             await ledgerService.parkInReviewQueue(raw, reason, currentUserId);
             setText("");
           }}
-          onCancel={() => setActiveClarification(null)}
+          onCancel={() => {
+            setActiveClarification(null);
+            setBatchEntries(null);
+          }}
         />
       )}
     </>

@@ -5,7 +5,7 @@
  */
 
 import { getSupabaseClient, isSupabaseConfigured } from '../lib/supabase';
-import { getSecurityPrincipal } from '../lib/security';
+import { getSecurityPrincipal, requirePermission } from '../lib/security';
 import {
   Transaction,
   DailySummary,
@@ -797,40 +797,13 @@ export class LedgerService {
           }));
           await cacheAccounts(cachedAccounts);
         }
-      } catch {
-        // ignore
+      } catch (error) {
+        console.warn('Could not load local shop accounts:', error);
       }
     }
 
     if (!cachedAccounts.length) {
-      const defaultAccounts: LedgerAccount[] = [
-        {
-          id: 'acc-cash',
-          organization_id: organizationId,
-          name: 'Cash Drawer (Shop Till)',
-          type: 'CASH',
-          balance_paisa: 1000000,
-          current_balance: 10000,
-          opening_balance: 10000,
-          is_active: true,
-          is_default: true,
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: 'acc-bank',
-          organization_id: organizationId,
-          name: 'Business Bank Account',
-          type: 'BANK',
-          balance_paisa: 0,
-          current_balance: 0,
-          opening_balance: 0,
-          is_active: true,
-          is_default: false,
-          created_at: new Date().toISOString(),
-        },
-      ];
-      await cacheAccounts(defaultAccounts);
-      cachedAccounts = defaultAccounts;
+      return [];
     }
 
     return this.mergeWithOfflineAccountOperations(organizationId, cachedAccounts);
@@ -1342,6 +1315,12 @@ export class LedgerService {
     if (!reason || reason.trim().length === 0) {
       throw new Error('Void reason is mandatory');
     }
+    if (!isOnline() || !isSupabaseConfigured()) {
+      throw new Error('Voiding transactions requires a connection. No changes were made; reconnect and try again.');
+    }
+    const principal = getSecurityPrincipal();
+    if (!principal) throw new Error('Sign in to this shop before voiding a transaction.');
+    requirePermission(principal.organizationId, 'VOID_EXPENSE');
 
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
@@ -1349,9 +1328,12 @@ export class LedgerService {
       .update({
         status: 'voided',
         void_reason: reason.trim(),
+        voided_by: principal.id,
         voided_at: new Date().toISOString(),
       })
       .eq('id', id)
+      .eq('organization_id', principal.organizationId)
+      .eq('status', 'active')
       .eq('updated_at', currentUpdatedAt)
       .select('id')
       .maybeSingle();
@@ -1371,6 +1353,13 @@ export class LedgerService {
    * Restores a previously voided transaction
    */
   async restoreTransaction(id: string, currentUpdatedAt: string): Promise<boolean> {
+    if (!isOnline() || !isSupabaseConfigured()) {
+      throw new Error('Restoring transactions requires a connection. No changes were made; reconnect and try again.');
+    }
+    const principal = getSecurityPrincipal();
+    if (!principal) throw new Error('Sign in to this shop before restoring a transaction.');
+    requirePermission(principal.organizationId, 'VOID_EXPENSE');
+
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('transactions')
@@ -1381,6 +1370,8 @@ export class LedgerService {
         voided_by: null,
       })
       .eq('id', id)
+      .eq('organization_id', principal.organizationId)
+      .eq('status', 'voided')
       .eq('updated_at', currentUpdatedAt)
       .select('id')
       .maybeSingle();
@@ -1404,11 +1395,20 @@ export class LedgerService {
     updates: { amount_paisa?: number; note?: string | null; category_id?: string | null },
     currentUpdatedAt: string
   ): Promise<boolean> {
+    if (!isOnline() || !isSupabaseConfigured()) {
+      throw new Error('Editing transactions requires a connection. No changes were made; reconnect and try again.');
+    }
+    const principal = getSecurityPrincipal();
+    if (!principal) throw new Error('Sign in to this shop before editing a transaction.');
+    requirePermission(principal.organizationId, 'VOID_EXPENSE');
+
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('transactions')
       .update(updates)
       .eq('id', id)
+      .eq('organization_id', principal.organizationId)
+      .eq('status', 'active')
       .eq('updated_at', currentUpdatedAt)
       .select('id')
       .maybeSingle();

@@ -7,7 +7,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7.3-blue.svg)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19.0.0-61dafb.svg)](https://react.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase%20RLS-3ECF8E.svg)](https://supabase.com/)
-[![Vitest](https://img.shields.io/badge/Vitest-145%20Passed-green.svg)](https://vitest.dev/)
+[![Vitest](https://img.shields.io/badge/tests-Vitest-green.svg)](https://vitest.dev/)
 [![PWA](https://img.shields.io/badge/PWA-Installable-purple.svg)](https://web.dev/progressive-web-apps/)
 
 ---
@@ -20,12 +20,12 @@ Shop Pro replaces handwritten registers with a fast business ledger that works a
 graph TD
   A["📱 Phone / PC Chat Input<br/>('PRINT 300', 'PAPER - 2000')"] --> B["⚡ Local Deterministic Parser<br/>(Normalizer + Levenshtein + Metaphone)"]
   B --> C{"Decision Gate"}
-  C -->|"Exact Alias & Consistent Sign"| D["Immediate Auto-Save<br/>(6-second Undo Toast)"]
-  C -->|"Fuzzy/Phonetic Match"| E["Ask: 'Did you mean?'<br/>(Learns Confirmed Alias)"]
-  C -->|"Sign Conflict / Bare Number"| F["Clarification Card<br/>(Ask Expense / Income / Capital)"]
-  C -->|"Capital / Withdrawal / Adjust"| G["Confirmation Card<br/>(Non-Operating Activity)"]
+  C -->|"Every entry"| D["Unified Review<br/>(Type, category, amount, date, account)"]
+  D -->|"Confirmed valid entry"| E["Post once through ledger service"]
+  D -->|"Ambiguous / fuzzy / conflict"| F["Clarify in the same review"]
+  D -->|"No connection"| G["Keep recoverable and show pending status"]
   C -->|"Skip For Now"| H["Review Queue<br/>(Excluded from Totals)"]
-  D & E & F & G --> I["💾 Integer Paisa PostgreSQL Ledger<br/>(Security Invoker Views, Total Anon Lockout)"]
+  E --> I["💾 Integer Paisa PostgreSQL Ledger<br/>(Security Invoker Views, Total Anon Lockout)"]
   I --> J["📊 Realtime Reports & Shared Views<br/>(Today Strip, Day/Month/Year Overview)"]
 ```
 
@@ -37,7 +37,7 @@ graph TD
 - **Instant Processing:** Split multi-line -> normalize (case, spaces, currency symbols, commas, `/-`, `=/-`) -> tokenize (amount, sign, date chips) -> match category -> classify.
 - **Strict Safety Policies:**
   - Minus sign (`-`) = Expense.
-  - Exact known alias + consistent type = Auto-save with a **6-second Undo toast**.
+  - Every text entry opens a single review where the user confirms its classification, date, amount, and active payment account before posting.
   - **Fuzzy tolerance scaled by word length:** $\le 3$ characters: exact match only; $4-6$ characters: max 1 edit; $> 6$ characters: max 2 edits.
   - **Urdu/English Phonetic matching:** Metaphone/Soundex maps typos like `LMNYON` $\to$ `Lamination`, `PRNT` $\to$ `Print`.
   - **Mandatory Clarification Prompts:**
@@ -51,6 +51,8 @@ graph TD
   - **Multi-Line Messages:** Single batch preview card with blocking gates on flagged lines.
   - **Backdating:** Defaults to today in `Asia/Karachi`; supports "yesterday" or explicit date chips (`YYYY-MM-DD`).
   - **Review Queue:** "Skip for now" parks entries in the Review queue, strictly excluded from ledger totals.
+
+Existing unposted drafts remain available in the ledger feed for account assignment. Voiding, restoring, and editing require a connection; failed attempts do not change local account balances or report success.
 
 ### 2. Bulletproof Integer Paisa PostgreSQL Foundation
 - **No Float Rounding Errors:** All monetary amounts stored as integer paisa ($1\text{ Rupee} = 100\text{ paisa}$).

@@ -22,7 +22,7 @@ describe('Unauthenticated Security Access Control', () => {
     expect(session.error).toBeNull();
   });
 
-  it('verifies ledgerService gracefully degrades to local data when Supabase returns 42501 permission denied', async () => {
+  it('gracefully degrades to known local data without fabricating shop accounts when Supabase returns 42501', async () => {
     setSecurityPrincipal({
       id: 'local-user-1',
       organizationId: 'org-test-42501',
@@ -71,10 +71,9 @@ describe('Unauthenticated Security Access Control', () => {
     const transactions = await ledgerService.getTransactionsForDate('2026-10-05');
     expect(Array.isArray(transactions)).toBe(true);
 
-    // 4. getPaymentAccounts should not throw and return available local accounts
+    // Empty local setup must not turn sample Cash/Bank records into real accounts.
     const accounts = await ledgerService.getPaymentAccounts();
-    expect(Array.isArray(accounts)).toBe(true);
-    expect(accounts.length).toBeGreaterThan(0);
+    expect(accounts).toEqual([]);
 
     vi.restoreAllMocks();
   });

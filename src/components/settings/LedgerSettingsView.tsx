@@ -22,6 +22,7 @@ import {
 import { PaperRegisterImportModal } from "./PaperRegisterImportModal";
 import { useAuth } from "../../context/AuthContext";
 import { useApp } from "../../context/AppContext";
+import { applyTheme } from "../../lib/theme";
 
 export const LedgerSettingsView: React.FC = () => {
   const { user, changePassword } = useAuth();
@@ -204,13 +205,17 @@ export const LedgerSettingsView: React.FC = () => {
   };
 
   const handleToggleAppearance = (theme: "light" | "dark") => {
+    applyTheme(theme);
+    setAppearance(theme);
     try {
       localStorage.setItem("yaqoob-theme", theme);
-      document.documentElement.classList.toggle("dark", theme === "dark");
-      setAppearance(theme);
     } catch (err) {
       console.error("Could not save appearance preference:", err);
-      showToast("error", "Appearance not saved", "Check browser storage permissions.");
+      showToast(
+        "warning",
+        "Theme changed for this session",
+        "Browser storage is unavailable, so this choice may not survive a reload.",
+      );
     }
   };
 

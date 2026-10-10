@@ -149,6 +149,11 @@ elevation:
 > and restrained motion. The current palette is surface `#f6f8f7`, text
 > `#19251f`, primary `#176b54`, and border `#e3eae6`. Keep that stylesheet as
 > the source of truth when changing component appearance.
+>
+> The stylesheet also defines the persisted `yaqoob-theme` dark palette. New
+> dialogs, tables, and controls should use semantic surface/state tokens instead
+> of fixed white/gray colors and retain visible focus and readable contrast in
+> both themes. Chat and header quick entry share the same transaction review UI.
 
 **Origin Project**: Solo Retail POS Manager (`projects/1203123875469000231`)  
 **Target Platform**: Desktop POS / Retail Manager (Responsive down to Tablet/Mobile)  

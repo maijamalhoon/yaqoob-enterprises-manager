@@ -33,6 +33,7 @@ export interface ParseResult {
   amountPaisa: number | null;
   businessDate: string;
   note: string | null;
+  adjustmentDir?: 'in' | 'out' | null;
   reason?: string;
   clarificationPrompt?: string;
   options?: ClarificationOption[];

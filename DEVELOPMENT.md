@@ -48,4 +48,7 @@
 - **New Views:** Add new views to `src/components/<domain>/` and register them inside `App.tsx` and `types/index.ts` under `AppView`.
 - **Database Access:** Always route mutations and queries through the repository contracts in `src/services/contracts.ts` rather than querying drivers directly.
 - **Financial Calculations:** Never perform raw arithmetic on financial amounts without wrapping results in `roundMoney(...)` from `src/lib/utils.ts`.
-- **Theme & Styles:** The design uses a deep navy foundation (`bg-slate-950`, `bg-slate-900`, `border-slate-800`) paired with cyan (`#06b6d4`), teal, and amber accents.
+- **Ledger Entry:** Text entries use the shared review modal. Confirm amount, type, category/date, and an active account there; submit through `ledgerService` and its draft-posting RPC. Retain the Review Queue path for uncertain input and old drafts for recovery.
+- **Theme & Styles:** `src/index.css` is authoritative. Use semantic surface, text, border, and state tokens so light and dark appearances remain coherent; the persisted preference key is `yaqoob-theme`.
+- **Ledger Mutations:** Voids/restores/edits are online-only and use optimistic timestamps. Voids require a reason and derive actor attribution from the authenticated database context; database ledger triggers own account reversals.
+- **Validation:** Run `npm run lint`, `npm run test`, and `npm run build` for changes to the application or its database contracts.

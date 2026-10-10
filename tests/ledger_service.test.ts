@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as supabaseLib from '../src/lib/supabase';
 import { ledgerService } from '../src/services/ledgerService';
 import { LedgerAccount, Transaction } from '../src/types/ledger';
+import { setSecurityPrincipal } from '../src/lib/security';
 import {
   cacheAccounts,
   enqueueOfflineAccountOperation,
@@ -129,6 +130,70 @@ describe('ledger mutation concurrency', () => {
     mockUpdateResult({ id: 'tx-1' });
 
     await expect(run()).resolves.toBe(true);
+  });
+
+  it('attributes a void to the authenticated actor and scopes the optimistic update to the active shop', async () => {
+    const query = {
+      eq: vi.fn(),
+      select: vi.fn(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: { id: 'tx-1' }, error: null }),
+    };
+    query.eq.mockReturnValue(query);
+    query.select.mockReturnValue(query);
+    const update = vi.fn().mockReturnValue(query);
+    const mockClient = {
+      from: vi.fn().mockReturnValue({ update }),
+    };
+    vi.spyOn(supabaseLib, 'getSupabaseClient').mockReturnValue(mockClient as never);
+
+    await ledgerService.voidTransaction('tx-1', 'Correction', timestamp);
+
+    expect(update).toHaveBeenCalledWith(expect.objectContaining({
+      status: 'voided',
+      void_reason: 'Correction',
+      voided_by: creatorId,
+      voided_at: expect.any(String),
+    }));
+    expect(query.eq).toHaveBeenCalledWith('organization_id', organizationId);
+    expect(query.eq).toHaveBeenCalledWith('status', 'active');
+    expect(query.eq).toHaveBeenCalledWith('updated_at', timestamp);
+  });
+
+  it('rejects a cashier void before making a database request', async () => {
+    setSecurityPrincipal({
+      id: 'test-cashier',
+      organizationId,
+      role: 'CASHIER',
+      fullName: 'Test Cashier',
+    });
+    const getClient = vi.spyOn(supabaseLib, 'getSupabaseClient');
+
+    await expect(
+      ledgerService.voidTransaction('tx-1', 'Correction', timestamp),
+    ).rejects.toThrow(/permission denied/i);
+    expect(getClient).not.toHaveBeenCalled();
+  });
+
+  it('does not claim an offline void succeeded or queue a partial mutation', async () => {
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+    const getClient = vi.spyOn(supabaseLib, 'getSupabaseClient');
+
+    await expect(
+      ledgerService.voidTransaction('tx-1', 'Correction', timestamp),
+    ).rejects.toThrow(/requires a connection/i);
+    expect(getClient).not.toHaveBeenCalled();
+  });
+
+  it('does not invent Cash or Bank accounts when an offline shop has no cached setup', async () => {
+    setSecurityPrincipal({
+      id: creatorId,
+      organizationId: 'shop-with-no-cached-accounts',
+      role: 'OWNER',
+      fullName: 'Test Owner',
+    });
+    Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
+
+    await expect(ledgerService.getPaymentAccounts()).resolves.toEqual([]);
   });
 
   it('loads all filtered transaction pages for export', async () => {

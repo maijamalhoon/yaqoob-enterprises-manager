@@ -650,37 +650,10 @@ export class SQLiteRepository {
   async getAccounts(organizationId: string): Promise<PaymentAccount[]> {
     requireOrganization(organizationId);
     const db = await this.database();
-    let accounts = await db.select<PaymentAccount>(
+    return db.select<PaymentAccount>(
       'SELECT * FROM payment_accounts WHERE organization_id = ? ORDER BY name',
       [organizationId]
     );
-    if (!accounts.length) {
-      const defaultAccounts = [
-        { name: 'Cash Drawer (Shop Till)', type: 'CASH', balance: 10000, is_default: 1 },
-        { name: 'Business Bank Account', type: 'BANK', balance: 0, is_default: 0 },
-        { name: 'JazzCash Merchant Wallet', type: 'DIGITAL_WALLET', balance: 0, is_default: 0 },
-        { name: 'Easypaisa Business Wallet', type: 'DIGITAL_WALLET', balance: 0, is_default: 0 },
-      ];
-      for (const acc of defaultAccounts) {
-        await this.insert(db, 'payment_accounts', {
-          id: id(),
-          organization_id: organizationId,
-          name: acc.name,
-          type: acc.type,
-          current_balance: acc.balance,
-          opening_balance: acc.balance,
-          is_active: 1,
-          is_default: acc.is_default,
-          created_at: now(),
-          updated_at: now(),
-        });
-      }
-      accounts = await db.select<PaymentAccount>(
-        'SELECT * FROM payment_accounts WHERE organization_id = ? ORDER BY name',
-        [organizationId]
-      );
-    }
-    return accounts;
   }
   async getAccountById(organizationId: string, accountId: string): Promise<PaymentAccount | null> { return (await this.getAccounts(organizationId)).find((account) => account.id === accountId) || null; }
   async saveAccount(organizationId: string, account: Partial<PaymentAccount> & { name: string; type: PaymentAccount['type'] }): Promise<PaymentAccount> { requirePermission(organizationId, 'MANAGE_BUSINESS_CONFIG'); const record: PaymentAccount = { id: account.id || id(), organization_id: organizationId, name: account.name, type: account.type, account_number: account.account_number, current_balance: account.current_balance ?? account.opening_balance ?? 0, opening_balance: account.opening_balance ?? 0, is_active: account.is_active ?? true, is_default: account.is_default ?? false, created_at: account.created_at || now() }; await this.transaction(async (db) => { await this.insert(db, 'payment_accounts', { ...record, is_active: record.is_active ? 1 : 0, is_default: record.is_default ? 1 : 0, updated_at: now() }); await this.queue(db, organizationId, 'payment_accounts', record.id, account.id ? 'UPDATE' : 'INSERT', record as unknown as Record<string, unknown>); }); return record; }

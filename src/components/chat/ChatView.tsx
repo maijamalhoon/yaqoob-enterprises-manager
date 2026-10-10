@@ -11,7 +11,7 @@ import {
   ledgerService,
   OFFLINE_SYNC_COMPLETE_EVENT,
 } from "../../services/ledgerService";
-import { parseMessage, ParseResult, ClarificationOption } from "../../parser";
+import { parseMessage, ParseResult, SeedCategory } from "../../parser";
 import {
   LedgerAccount,
   Transaction,
@@ -21,6 +21,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { useApp } from "../../context/AppContext";
 import { getKarachiBusinessDate } from "../../lib/dates";
+import { hasPermission } from "../../lib/permissions";
 
 interface UndoState {
   transactionId: string;
@@ -36,11 +37,13 @@ export const ChatView: React.FC = () => {
   const currentUserId = user?.id || "offline-user";
   const currentUserName =
     user?.full_name || user?.email?.split("@")[0] || "Shop Brother";
+  const canManageTransactions = hasPermission(user?.role, "VOID_EXPENSE");
 
   // State
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [drafts, setDrafts] = useState<TransactionDraft[]>([]);
   const [accounts, setAccounts] = useState<LedgerAccount[]>([]);
+  const [parserCategories, setParserCategories] = useState<SeedCategory[]>([]);
   const [summary, setSummary] = useState<DailySummary>({
     business_date: getKarachiBusinessDate(),
     income_paisa: 0,
@@ -140,25 +143,20 @@ export const ChatView: React.FC = () => {
   // Execute Save Transaction
   const executeSave = async (
     entry: ParseResult,
-    chosenOption?: ClarificationOption,
+    accountId: string,
   ): Promise<boolean> => {
-    const type = chosenOption ? chosenOption.type : entry.type;
-    const categoryId =
-      chosenOption ? chosenOption.categoryId || null : entry.categoryId;
-    const categoryName =
-      chosenOption ?
-        chosenOption.categoryName || entry.categoryName || type
-      : entry.categoryName || type;
-    const amountPaisa =
-      chosenOption ? chosenOption.amountPaisa : entry.amountPaisa!;
-
     try {
-      await ledgerService.createTransactionDraft(
+      if (entry.amountPaisa === null) {
+        throw new Error("Enter and verify a transaction amount.");
+      }
+      if (!accountId) throw new Error("Choose an account before posting.");
+      const draft = await ledgerService.createTransactionDraft(
         {
-          type,
-          categoryId,
-          categoryName,
-          amountPaisa,
+          type: entry.type,
+          categoryId: entry.categoryId,
+          categoryName: entry.categoryName || entry.type,
+          amountPaisa: entry.amountPaisa,
+          adjustmentDir: entry.adjustmentDir,
           businessDate: entry.businessDate,
           rawText: entry.raw,
           createdByName: currentUserName,
@@ -166,22 +164,30 @@ export const ChatView: React.FC = () => {
         },
         currentUserId,
       );
-      if (entry.isFuzzyOrPhonetic && categoryId && entry.suggestedAlias) {
-        ledgerService
-          .learnAlias(categoryId, entry.suggestedAlias)
-          .catch(console.warn);
-      }
-
+      const posting = await ledgerService.postTransactionDraft(draft.id, accountId);
       await loadDayData();
+      if (entry.isFuzzyOrPhonetic && entry.categoryId && entry.suggestedAlias) {
+        try {
+          await ledgerService.learnAlias(entry.categoryId, entry.suggestedAlias);
+        } catch (error) {
+          console.error("Could not save confirmed category alias:", error);
+        }
+      }
       showToast(
-        "success",
-        "Entry saved",
-        "Choose an account from the entry when you are ready to update its balance.",
+        posting.isQueuedOffline ? "warning" : "success",
+        posting.isQueuedOffline ? "Posting queued offline" : "Transaction posted",
+        posting.isQueuedOffline
+          ? "The saved entry is waiting for a connection. It will be posted to the selected account when synchronization succeeds."
+          : `${entry.categoryName || entry.type} was posted to ${accounts.find((account) => account.id === accountId)?.name || "the selected account"}.`,
       );
       return true;
     } catch (err) {
       console.error("Failed to record transaction:", err);
-      showToast("error", "Entry not saved", "Please check the entry and try again.");
+      showToast(
+        "error",
+        "Transaction not posted",
+        err instanceof Error ? err.message : "Please check the entry and try again.",
+      );
       return false;
     }
   };
@@ -205,6 +211,7 @@ export const ChatView: React.FC = () => {
       );
       return;
     }
+    setParserCategories(categories);
     const parsed = parseMessage(rawInput, recent, new Date(), categories);
 
     if (parsed.isBatch) {
@@ -214,34 +221,29 @@ export const ChatView: React.FC = () => {
     }
 
     if (parsed.entries.length === 1) {
-      const entry = parsed.entries[0];
-      if (entry.canAutoSave) {
-        // Auto-save with 6-second undo toast
-        executeSave(entry);
-      } else {
-        // Show confirmation or clarification card
-        setActiveClarification(entry);
-      }
+      setActiveClarification(parsed.entries[0]);
     }
   };
 
   // Confirmation modal callbacks
   const handleConfirmSingle = (
     entry: ParseResult,
-    chosenOption?: ClarificationOption,
-  ) => {
-    setActiveClarification(null);
-    executeSave(entry, chosenOption);
+    accountId: string,
+  ): Promise<void> => {
+    return executeSave(entry, accountId).then((saved) => {
+      if (!saved) throw new Error("The transaction was not posted. Review the error and try again.");
+      setActiveClarification(null);
+    });
   };
 
-  const handleConfirmBatch = async (entries: ParseResult[]) => {
+  const handleConfirmBatch = async (entries: ParseResult[], accountIds: string[]) => {
     setBatchError(null);
     setIsSavingBatch(true);
     const failedEntries: ParseResult[] = [];
 
     try {
-      for (const entry of entries) {
-        if (!(await executeSave(entry))) failedEntries.push(entry);
+      for (const [index, entry] of entries.entries()) {
+        if (!(await executeSave(entry, accountIds[index]))) failedEntries.push(entry);
       }
     } finally {
       setIsSavingBatch(false);
@@ -316,8 +318,14 @@ export const ChatView: React.FC = () => {
     try {
       await ledgerService.restoreTransaction(tx.id, tx.updated_at);
       await loadDayData();
+      showToast("success", "Transaction restored", "The account balance has been updated.");
     } catch (err) {
       console.error("Failed to restore transaction:", err);
+      showToast(
+        "error",
+        "Transaction not restored",
+        err instanceof Error ? err.message : "Reconnect and try again.",
+      );
     }
   };
 
@@ -347,6 +355,7 @@ export const ChatView: React.FC = () => {
         transactions={transactions}
         drafts={drafts}
         accounts={accounts}
+        canManageTransactions={canManageTransactions}
         onEdit={(tx) => setEditingTransaction(tx)}
         onVoid={(tx) => setVoidingTransaction(tx)}
         onRestore={handleRestore}
@@ -376,6 +385,8 @@ export const ChatView: React.FC = () => {
         <ConfirmationModal
           result={activeClarification}
           batchEntries={batchEntries || undefined}
+          accounts={accounts}
+          categories={parserCategories}
           onConfirmSingle={handleConfirmSingle}
           onConfirmBatch={handleConfirmBatch}
           batchError={batchError}

@@ -13,6 +13,7 @@ describe('Real PostgreSQL Engine & RLS Security Tests (PGlite)', () => {
   const strangerId = '99999999-9999-9999-9999-999999999999';
   const outsiderId = '88888888-8888-8888-8888-888888888888';
   const provisionedUserId = '77777777-7777-7777-7777-777777777777';
+  const cashierId = '66666666-6666-6666-6666-666666666666';
   const strangerOrgId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
   let defaultAccountId = '';
   let strangerAccountId = '';
@@ -121,7 +122,8 @@ describe('Real PostgreSQL Engine & RLS Security Tests (PGlite)', () => {
         ('${brother3Id}', 'usman@yaqoob.shop', '{"full_name": "Usman"}'::jsonb),
         ('${strangerId}', 'stranger@example.com', '{"full_name": "Stranger"}'::jsonb),
         ('${outsiderId}', 'outsider@example.com', '{"full_name": "Outsider"}'::jsonb),
-        ('${provisionedUserId}', 'new-owner@example.com', '{"full_name": "New Owner", "shop_name": "New Owner Shop"}'::jsonb);
+        ('${provisionedUserId}', 'new-owner@example.com', '{"full_name": "New Owner", "shop_name": "New Owner Shop"}'::jsonb),
+        ('${cashierId}', 'cashier@example.com', '{"full_name": "Cashier"}'::jsonb);
 
       INSERT INTO public.profiles (id, email, full_name, role, organization_id) VALUES
         ('${brother1Id}', 'yaqoob@yaqoob.shop', 'Yaqoob', 'OWNER', '00000000-0000-0000-0000-000000000001'),
@@ -162,6 +164,15 @@ describe('Real PostgreSQL Engine & RLS Security Tests (PGlite)', () => {
       '../supabase/migrations/20261004006000_repair_shop_provisioning.sql'
     );
     await pg.exec(fs.readFileSync(provisioningMigrationPath, 'utf8'));
+    const integrityMigrationPath = path.resolve(
+      __dirname,
+      '../supabase/migrations/20261004007000_transaction_integrity_and_authorization.sql'
+    );
+    await pg.exec(fs.readFileSync(integrityMigrationPath, 'utf8'));
+    await pg.exec(`
+      INSERT INTO public.shop_members (user_id, organization_id, full_name, email, role)
+      VALUES ('${cashierId}', '00000000-0000-0000-0000-000000000001', 'Cashier', 'cashier@example.com', 'CASHIER');
+    `);
 
     const accountRows = await pg.query<{ id: string; organization_id: string }>(
       'SELECT id, organization_id FROM public.payment_accounts WHERE is_default = TRUE;'
@@ -419,6 +430,123 @@ describe('Real PostgreSQL Engine & RLS Security Tests (PGlite)', () => {
       `SELECT COUNT(*)::int AS count FROM public.account_ledger_entries WHERE organization_id = '00000000-0000-0000-0000-000000000001';`
     );
     expect(ledgerCount.rows[0].count).toBeGreaterThanOrEqual(210);
+  });
+
+  it('attributes a void from auth context and reverses/restores its posting exactly once', async () => {
+    await setAuthContext(brother1Id, 'authenticated');
+    const before = await pg.query<{ balance_paisa: number }>(
+      `SELECT balance_paisa FROM public.payment_accounts WHERE id = '${defaultAccountId}';`
+    );
+    await pg.exec(`
+      INSERT INTO public.transactions (
+        account_id, type, amount_paisa, business_date, raw_text,
+        idempotency_key, created_by, created_by_name
+      ) VALUES (
+        '${defaultAccountId}', 'capital_in', 12345, '2026-10-04',
+        'CAPITAL 123.45', 'void-attribution-regression',
+        '${brother1Id}', 'Yaqoob'
+      );
+    `);
+    const posted = await pg.query<{ id: string }>(
+      `SELECT id FROM public.transactions WHERE idempotency_key = 'void-attribution-regression';`
+    );
+    const afterPost = await pg.query<{ balance_paisa: number }>(
+      `SELECT balance_paisa FROM public.payment_accounts WHERE id = '${defaultAccountId}';`
+    );
+
+    await pg.exec(`
+      UPDATE public.transactions
+      SET status = 'voided', void_reason = 'Duplicate', voided_by = '${strangerId}'
+      WHERE id = '${posted.rows[0].id}';
+      UPDATE public.transactions
+      SET status = 'voided', void_reason = 'Repeated attempt'
+      WHERE id = '${posted.rows[0].id}';
+    `);
+    const voided = await pg.query<{ voided_by: string; voided_at: string }>(
+      `SELECT voided_by, voided_at FROM public.transactions WHERE id = '${posted.rows[0].id}';`
+    );
+    const afterVoid = await pg.query<{ balance_paisa: number }>(
+      `SELECT balance_paisa FROM public.payment_accounts WHERE id = '${defaultAccountId}';`
+    );
+    const voidReversals = await pg.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count FROM public.account_ledger_entries
+       WHERE transaction_id = '${posted.rows[0].id}' AND entry_type = 'REVERSAL';`
+    );
+
+    await pg.exec(`
+      UPDATE public.transactions
+      SET status = 'active'
+      WHERE id = '${posted.rows[0].id}';
+      UPDATE public.transactions
+      SET status = 'active'
+      WHERE id = '${posted.rows[0].id}';
+    `);
+    const afterRestore = await pg.query<{ balance_paisa: number }>(
+      `SELECT balance_paisa FROM public.payment_accounts WHERE id = '${defaultAccountId}';`
+    );
+    const lifecycleAudit = await pg.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count FROM public.audit_log
+       WHERE transaction_id = '${posted.rows[0].id}' AND action IN ('void', 'restore');`
+    );
+
+    expect(Number(afterPost.rows[0].balance_paisa) - Number(before.rows[0].balance_paisa))
+      .toBe(12345);
+    expect(voided.rows[0].voided_by).toBe(brother1Id);
+    expect(voided.rows[0].voided_at).toBeTruthy();
+    expect(Number(afterVoid.rows[0].balance_paisa)).toBe(Number(before.rows[0].balance_paisa));
+    expect(voidReversals.rows[0].count).toBe(1);
+    expect(Number(afterRestore.rows[0].balance_paisa)).toBe(Number(afterPost.rows[0].balance_paisa));
+    expect(lifecycleAudit.rows[0].count).toBe(2);
+  });
+
+  it('denies a cashier transaction update through database row-level security', async () => {
+    await setAuthContext(brother1Id, 'authenticated');
+    await pg.exec(`
+      INSERT INTO public.transactions (
+        account_id, type, amount_paisa, business_date, raw_text,
+        idempotency_key, created_by, created_by_name
+      ) VALUES (
+        '${defaultAccountId}', 'capital_in', 500, '2026-10-04',
+        'CAPITAL 5', 'cashier-update-denied',
+        '${brother1Id}', 'Yaqoob'
+      );
+    `);
+
+    await setAuthContext(cashierId, 'authenticated');
+    const result = await pg.query<{ id: string }>(`
+      UPDATE public.transactions
+      SET status = 'voided', void_reason = 'Not allowed'
+      WHERE idempotency_key = 'cashier-update-denied'
+      RETURNING id;
+    `);
+    const unchanged = await pg.query<{ status: string }>(
+      `SELECT status FROM public.transactions WHERE idempotency_key = 'cashier-update-denied';`
+    );
+
+    expect(result.rows).toHaveLength(0);
+    expect(unchanged.rows[0].status).toBe('active');
+  });
+
+  it('rejects attaching a category from another shop to a transaction', async () => {
+    await pg.exec('RESET ROLE;');
+    const foreignCategory = await pg.query<{ id: string }>(
+      `SELECT id FROM public.categories
+       WHERE organization_id = '${strangerOrgId}'
+       ORDER BY id LIMIT 1;`
+    );
+    expect(foreignCategory.rows).toHaveLength(1);
+    await setAuthContext(brother1Id, 'authenticated');
+
+    await expect(pg.exec(`
+      INSERT INTO public.transactions (
+        account_id, type, amount_paisa, category_id, business_date,
+        raw_text, idempotency_key, created_by, created_by_name
+      ) VALUES (
+        '${defaultAccountId}', 'income', 100, '${foreignCategory.rows[0].id}',
+        '2026-10-04', 'PRINT 1', 'cross-shop-category-rejected',
+        '${brother1Id}', 'Yaqoob'
+      );
+    `)).rejects.toThrow();
   });
 
   it('proves hard DELETE is blocked at database level by trigger and permission revocation', async () => {

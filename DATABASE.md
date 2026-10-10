@@ -108,3 +108,11 @@ Harden multi-tenant RLS policies and automates owner signup without leaking admi
 2. **Comprehensive RLS**: Covers all tables (`categories`, `expense_categories`, `service_components`, `profiles`, `organization_members`) ensuring no cross-tenant leaks.
 3. **Automated Provisioning Trigger (`handle_new_user_registration`)**:
    When a new user signs up in `auth.users`, a database trigger creates an `organizations` record, adds the user to `profiles` with role `'OWNER'`, and provisions initial categories and payment accounts—all securely on PostgreSQL without exposing the `service_role` key to the desktop app.
+
+### Ledger Posting and Integrity Migrations
+
+- `20261004003000_account_balances_and_postings.sql` maintains account balances and immutable ledger entries from transaction status/type mutations. Its trigger reverses an active posting on void and reinstates it on restore; clients must not apply a second balance change.
+- `20261004004000_transaction_drafts.sql` retains incomplete drafts and provides the atomic, idempotent `post_transaction_draft` RPC for assigning an active shop account and posting.
+- `20261004007000_transaction_integrity_and_authorization.sql` adds composite shop/category foreign keys, limits transaction mutations to Owner/Manager members, and sets void actor/timestamp from the authenticated database context. The client still supplies a non-empty reason and optimistic `updated_at` guard.
+
+Transaction edits, voids, and restores are online-only. The client does not mutate account balances or claim a successful operation if the database request fails.
