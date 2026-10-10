@@ -10,9 +10,14 @@ export function normalizeSupabaseUrl(rawUrl?: string): string {
   return url;
 }
 
+const DEFAULT_SUPABASE_URL = 'https://ukyeghjdvydclgllhrpu.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_Qt9wU3CYzPdCWcNsJ40Idw_VKPolEnm';
+
 export function getSupabaseConfig(): { url: string; anonKey: string } {
-  const rawUrl = (import.meta.env.VITE_SUPABASE_URL as string) || '';
-  const rawKey = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || '';
+  const rawUrl =
+    (import.meta.env.VITE_SUPABASE_URL as string) || DEFAULT_SUPABASE_URL;
+  const rawKey =
+    (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || DEFAULT_SUPABASE_ANON_KEY;
   return {
     url: normalizeSupabaseUrl(rawUrl),
     anonKey: rawKey.trim(),

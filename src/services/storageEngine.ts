@@ -216,9 +216,33 @@ export class StorageEngine {
 
   static createLocalOwnerAccount(org: Organization, profile: UserProfile): void {
     const db = this.getDB();
-    if (db.profiles.some((candidate) => candidate.email.toLowerCase() === profile.email.toLowerCase())) {
-      throw new Error('A local account with this email already exists');
+    const existingIndex = db.profiles.findIndex(
+      (candidate) => candidate.email.toLowerCase() === profile.email.toLowerCase(),
+    );
+
+    if (existingIndex >= 0) {
+      const existing = db.profiles[existingIndex];
+      // If it's the initial default/placeholder profile, upgrade/replace it
+      if (existing.id === 'usr-owner-1') {
+        db.profiles[existingIndex] = { ...existing, ...profile };
+        const orgIdx = db.organizations.findIndex(
+          (o) =>
+            o.id === DEFAULT_ORGANIZATION.id ||
+            o.id === existing.organization_id ||
+            o.id === org.id,
+        );
+        if (orgIdx >= 0) {
+          db.organizations[orgIdx] = { ...db.organizations[orgIdx], ...org };
+        } else {
+          db.organizations.push(org);
+        }
+        this.setDB(db);
+        this.ensureOrganizationDefaults(org.id);
+        return;
+      }
+      throw new Error('A local account with this email already exists. Please sign in instead.');
     }
+
     db.organizations.push(org);
     db.profiles.push(profile);
     this.setDB(db);

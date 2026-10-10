@@ -904,13 +904,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     // Offline / Local SQLite account fallback
-    const profile =
+    let profile =
       await sqliteRepository.findLocalProfileByEmail(normalizedEmail);
-    const account =
+    if (!profile) {
+      const storageProfile =
+        StorageEngine.findLocalProfileByEmail(normalizedEmail);
+      if (storageProfile && storageProfile.password_hash) {
+        profile = storageProfile;
+      }
+    }
+    let account =
       profile ? await sqliteRepository.getLocalAuthAccount(profile.id) : null;
     if (
       !profile ||
-      !account ||
       !profile.password_hash ||
       !(await verifyPassword(pass, profile.password_hash))
     ) {
@@ -918,7 +924,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         error: "Invalid email or password. Please try again.",
       };
     }
-    const org = await sqliteRepository.getOrganization(profile.organization_id);
+    if (!account && profile) {
+      try {
+        await sqliteRepository.upsertLocalAuthAccount(
+          profile.organization_id,
+          profile.id,
+          "",
+          "",
+        );
+        account = await sqliteRepository.getLocalAuthAccount(profile.id);
+      } catch {}
+    }
+    const org =
+      (await sqliteRepository.getOrganization(profile.organization_id)) ||
+      StorageEngine.getOrganization(profile.organization_id);
     if (!org || !profile.is_active)
       return { error: "This account is no longer active." };
 
@@ -1021,8 +1040,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     // Offline / Local SQLite account fallback
-    if (await sqliteRepository.findLocalProfileByEmail(normalizedEmail))
-      return { error: "An account with this email already exists. Please sign in instead." };
+    const existingSqliteProfile =
+      await sqliteRepository.findLocalProfileByEmail(normalizedEmail);
+    const existingStorageProfile =
+      StorageEngine.findLocalProfileByEmail(normalizedEmail);
+    if (
+      existingSqliteProfile ||
+      (existingStorageProfile && existingStorageProfile.id !== "usr-owner-1")
+    ) {
+      return {
+        error: "An account with this email already exists. Please sign in instead.",
+      };
+    }
 
     const now = new Date().toISOString();
     const org: Organization = {
@@ -1059,8 +1088,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       setOnboardingCompleted(true);
       activate(profile, org);
       return {};
-    } catch {
-      return { error: "Could not create the local account. Please try again." };
+    } catch (creationError: any) {
+      console.error("Local account creation error:", creationError);
+      return {
+        error:
+          creationError?.message ||
+          "Could not create the local account. Please try again.",
+      };
     }
   };
 
@@ -1129,6 +1163,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       if (response.data?.url && !isInIframe) {
+        if (typeof window !== "undefined") {
+          window.location.assign(response.data.url);
+        }
         return { authUrl: response.data.url };
       }
 

@@ -128,8 +128,8 @@ const WorkspaceGate: React.FC = () => {
     return <AuthScreen />;
   }
 
-  // If no user profile or local shop account is configured, show single unified AuthScreen
-  if (!user && !hasLocalAccount) {
+  // If no active user session, show unified AuthScreen
+  if (!user) {
     return <AuthScreen />;
   }
 
